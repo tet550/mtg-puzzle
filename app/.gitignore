@@ -4,5 +4,6 @@ dist/
 public/engine/*.jar
 public/engine/*.zip
 public/engine/preload.json
+public/engine/manifest.json
 test-results/
 playwright-report/

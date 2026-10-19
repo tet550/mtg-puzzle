@@ -5,7 +5,8 @@
   各ディレクトリの <名前>.json と <名前>.solution.json の組（Solver で解けたもの）を集める。
   CATALOG に名前があるものだけを、その順で同梱する。
 
-解答手順（*.solution.json）も一緒に置く。E2E テストが使う（画面には出さない）。
+解答手順（*.solution.json）があれば一緒に置く。E2E テストと build-engine.sh の解き直しが使う（画面には出さない）。
+解答手順の無い問題も同梱できる（相手のブロックを考えると探索で解けない問題。人が解く）。
 """
 import json
 import shutil
@@ -31,12 +32,13 @@ def main():
         f.unlink()
     index = []
     for name in names:
-        src = next((d for d in dirs if (d / f"{name}.json").exists() and (d / f"{name}.solution.json").exists()), None)
+        src = next((d for d in dirs if (d / f"{name}.json").exists()), None)
         if src is None:
-            sys.exit(f"{name}: 問題か解答が見つかりません（{', '.join(map(str, dirs))}）")
+            sys.exit(f"{name}: 問題が見つかりません（{', '.join(map(str, dirs))}）")
         puzzle = json.loads((src / f"{name}.json").read_text(encoding="utf-8"))
         shutil.copy(src / f"{name}.json", OUT / f"{name}.json")
-        shutil.copy(src / f"{name}.solution.json", OUT / f"{name}.solution.json")
+        if (src / f"{name}.solution.json").exists():
+            shutil.copy(src / f"{name}.solution.json", OUT / f"{name}.solution.json")
         source = puzzle.get("source") or {}
         index.append({
             "id": name,

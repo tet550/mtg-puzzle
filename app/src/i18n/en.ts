@@ -197,6 +197,7 @@ export const en: Messages = {
   "error.catalog": "Couldn't load the puzzle list ({status})",
   "error.puzzleId": "Invalid puzzle id: {id}",
   "error.puzzle": "Couldn't load puzzle {id} ({status})",
+  "error.manifest": "Couldn't load the engine file list (manifest.json) ({status})",
   "error.worker": "Worker error",
   "error.version": "Engine API version mismatch ({got}, expected {want})",
   "error.stopped": "The engine was stopped",

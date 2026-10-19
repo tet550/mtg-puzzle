@@ -10,17 +10,21 @@ import forge.game.player.Player;
 import forge.game.spellability.SpellAbility;
 
 /**
- * 相手（p2）のコントローラー。要件 4.3: 任意の呪文・能力は使わず、常に優先権をパスする。攻撃・ブロックもしない。
+ * 相手（p2）のコントローラー。要件 4.3: 任意の呪文・能力は使わず、常に優先権をパスする。攻撃しない。
+ * ブロックは、受けるダメージが最も少なくなるように決める（BlockPlanner。パズルは「どうブロックされても勝てる」ことを求めるため）。
  * 強制選択には BaseAdapterController の既定の答え（先頭から最小数を選ぶ）を返し、FallbackLog に記録する。
  * これが「問題で定めた方針」の既定値になる。forge-ai には依存しない。
  */
 class PassingPlayerController extends BaseAdapterController {
 
     private final DecisionChannel channel;
+    /** ブロックの方針（PuzzleDefinition.Opponent.block） */
+    private final String blockPolicy;
 
-    PassingPlayerController(Game game, Player p, LobbyPlayer lp, DecisionChannel channel, FallbackLog fallbackLog) {
+    PassingPlayerController(Game game, Player p, LobbyPlayer lp, DecisionChannel channel, FallbackLog fallbackLog, String blockPolicy) {
         super(game, p, lp, fallbackLog);
         this.channel = channel;
+        this.blockPolicy = blockPolicy;
     }
 
     @Override
@@ -43,9 +47,12 @@ class PassingPlayerController extends BaseAdapterController {
         // 攻撃しない
     }
 
+    /** 受けるダメージが最も少なくなるようにブロックする（問題で block: "none" ならブロックしない） */
     @Override
     public void declareBlockers(Player defender, Combat combat) {
-        // ブロックしない
+        if (!"none".equals(blockPolicy)) {
+            BlockPlanner.declare(defender, combat);
+        }
     }
 
     /** 相手の強制的な対象選択（例: 相手がコントロールする誘発能力）は、候補の先頭から必要数を選ぶ */

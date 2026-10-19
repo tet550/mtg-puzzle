@@ -331,6 +331,9 @@ public final class ForgeSession implements AutoCloseable {
         if (p.goal == null || !"win".equals(p.goal.type) || !"current_turn".equals(p.goal.deadline)) {
             throw new PuzzleValidationException("未対応の goal です");
         }
+        if (p.opponent != null && !List.of("minimize", "none").contains(p.opponent.block)) {
+            throw new PuzzleValidationException("未対応の opponent.block です: " + p.opponent.block);
+        }
         p.playerIndex(p.game.activePlayer);
         p.playerIndex(p.goal.player);
         StaticData data = StaticData.instance();
@@ -370,7 +373,8 @@ public final class ForgeSession implements AutoCloseable {
                 String name = puzzle.game.players.get(i).id;
                 LobbyPlayer lp = new AdapterLobbyPlayer(name, (pl, self) -> external
                         ? new ExternalPlayerController(pl.getGame(), pl, self, ch, fallbackLog)
-                        : new PassingPlayerController(pl.getGame(), pl, self, ch, fallbackLog));
+                        : new PassingPlayerController(pl.getGame(), pl, self, ch, fallbackLog,
+                                puzzle.opponent == null ? "minimize" : puzzle.opponent.block));
                 RegisteredPlayer rp = new RegisteredPlayer(new Deck()).setPlayer(lp);
                 rp.setStartingHand(0);
                 players.add(rp);

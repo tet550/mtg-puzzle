@@ -54,6 +54,8 @@ public class PuzzleDefinition {
 
         public static class Opponent {
         public String policy = "pass";
+        /** ブロックの方針: minimize（受けるダメージが最も少なくなるようにブロックする。既定）/ none（ブロックしない） */
+        public String block = "minimize";
     }
 
     // ---------------- JSON から読む（Jackson を使わない） ----------------
@@ -94,6 +96,7 @@ public class PuzzleDefinition {
         if (opp != null) {
             p.opponent = new Opponent();
             p.opponent.policy = str(opp, "policy", p.opponent.policy);
+            p.opponent.block = str(opp, "block", p.opponent.block);
         }
         return p;
     }

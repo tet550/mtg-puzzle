@@ -207,6 +207,7 @@ export const ja = {
   "error.catalog": "問題の一覧を読めません（{status}）",
   "error.puzzleId": "問題の ID が不正です: {id}",
   "error.puzzle": "問題を読めません: {id}（{status}）",
+  "error.manifest": "エンジンのファイルの一覧（manifest.json）を読めません（{status}）",
   "error.worker": "Worker のエラー",
   "error.version": "エンジンの API のバージョンが違います（{got}、必要なのは {want}）",
   "error.stopped": "エンジンを停止しました",

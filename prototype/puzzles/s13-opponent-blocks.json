@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "title": "S13 Opponent blocks",
+  "description": "Win this turn",
+  "engine": {
+    "type": "forge",
+    "version": "2.0.15"
+  },
+  "game": {
+    "activePlayer": "p1",
+    "phase": "main1",
+    "players": [
+      {
+        "id": "p1",
+        "life": 20,
+        "battlefield": [
+          {
+            "id": "g1",
+            "cardId": "Hill Giant"
+          },
+          {
+            "id": "b1",
+            "cardId": "Grizzly Bears"
+          }
+        ],
+        "library": [
+          {
+            "id": "p1L0",
+            "cardId": "Island"
+          },
+          {
+            "id": "p1L1",
+            "cardId": "Island"
+          },
+          {
+            "id": "p1L2",
+            "cardId": "Island"
+          }
+        ]
+      },
+      {
+        "id": "p2",
+        "life": 3,
+        "battlefield": [
+          {
+            "id": "w1",
+            "cardId": "Wall of Wood"
+          }
+        ],
+        "library": [
+          {
+            "id": "p2L0",
+            "cardId": "Island"
+          },
+          {
+            "id": "p2L1",
+            "cardId": "Island"
+          },
+          {
+            "id": "p2L2",
+            "cardId": "Island"
+          }
+        ]
+      }
+    ]
+  },
+  "goal": {
+    "type": "win",
+    "player": "p1",
+    "deadline": "current_turn"
+  },
+  "opponent": {
+    "policy": "pass"
+  }
+}

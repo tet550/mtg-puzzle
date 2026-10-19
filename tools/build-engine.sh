@@ -20,11 +20,22 @@ mvn -B -q -f "$ADAPTER/pom.xml" package -DskipTests
 "$ADAPTER/shrink.sh" all | tail -1 | grep -q "ALL OK" || { echo "スモークテストに失敗しました"; exit 1; }
 
 mkdir -p "$OUT"
-cp "$ADAPTER/target/forge-adapter-min-all.jar" "$OUT/forge-adapter.jar"
-"$JAVA" -cp "$ADAPTER/target/forge-adapter-all.jar" mtgpuzzle.adapter.ResBundler "$RES" "$PUZZLES" "$OUT/res-mini.zip" | tail -1
-cp "$ROOT/prototype/web/cheerpj/preload.json" "$OUT/preload.json"
+TMP="$ADAPTER/target/engine-out"
+rm -rf "$TMP" && mkdir -p "$TMP"
+"$JAVA" -cp "$ADAPTER/target/forge-adapter-all.jar" mtgpuzzle.adapter.ResBundler "$RES" "$PUZZLES" "$TMP/res-mini.zip" | tail -1
 
 rm -rf "$ADAPTER/target/verify-res"
-"$JAVA" -cp "$OUT/forge-adapter.jar" mtgpuzzle.adapter.Solver --verify "$OUT/res-mini.zip" "$ADAPTER/target/verify-res" "$PUZZLES" 2>/dev/null \
+"$JAVA" -cp "$ADAPTER/target/forge-adapter-min-all.jar" mtgpuzzle.adapter.Solver --verify "$TMP/res-mini.zip" "$ADAPTER/target/verify-res" "$PUZZLES" 2>/dev/null \
   | grep -E "^(OK|NG|ALL|[0-9]+ FAILED)"
+
+# ファイル名に中身のハッシュを付けて置く。CheerpJ は /app/ のファイルを URL ごとに保存するので、
+# 同じ名前で中身を差し替えると古いものが読まれる（公開後のキャッシュも同じ）。どれを読むかは manifest.json で渡す
+hash() { shasum -a 256 "$1" | cut -c1-12; }
+JAR="forge-adapter-$(hash "$ADAPTER/target/forge-adapter-min-all.jar").jar"
+ZIP="res-mini-$(hash "$TMP/res-mini.zip").zip"
+rm -f "$OUT"/forge-adapter*.jar "$OUT"/res-mini*.zip
+cp "$ADAPTER/target/forge-adapter-min-all.jar" "$OUT/$JAR"
+cp "$TMP/res-mini.zip" "$OUT/$ZIP"
+cp "$ROOT/prototype/web/cheerpj/preload.json" "$OUT/preload.json"
+printf '{\n  "jar": "%s",\n  "res": "%s",\n  "preload": "preload.json"\n}\n' "$JAR" "$ZIP" > "$OUT/manifest.json"
 ls -la "$OUT"

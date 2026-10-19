@@ -386,4 +386,36 @@ class ScenarioTest {
             assertNotNull(tap);
         }
     }
+
+    /** S13: 相手は受けるダメージが最も少なくなるようにブロックする（Hill Giant を壁で止め、灰色熊の 2 点では足りない） */
+    @Test
+    void s13_opponentBlocksToMinimizeDamage() throws Exception {
+        try (ForgeSession s = ForgeSession.load(puzzle("s13-opponent-blocks"))) {
+            StepResult r = attackWithAll(s);
+            log("S13 end", r);
+            assertEquals(Status.FAILED, r.status(), r.reason());
+            assertEquals(1, s.getState().players().get(1).life(), "灰色熊の 2 点だけが通る");
+        }
+        PuzzleDefinition noBlock = puzzle("s13-opponent-blocks");
+        noBlock.opponent.block = "none";
+        try (ForgeSession s = ForgeSession.load(noBlock)) {
+            StepResult r = attackWithAll(s);
+            assertEquals(Status.CLEARED, r.status(), r.reason());
+        }
+    }
+
+    /** 戦闘まで進め、攻撃できるクリーチャーすべてで攻撃して、最後まで進める */
+    private static StepResult attackWithAll(ForgeSession s) {
+        StepResult r = s.lastStep();
+        int guard = 0;
+        while (s.getPendingDecision() != null && guard++ < 20) {
+            Decision d = s.getPendingDecision();
+            if (d.kind() == Decision.Kind.ATTACKERS) {
+                r = s.submit(d.options().stream().map(Decision.Option::id).toArray(String[]::new));
+            } else {
+                r = s.submit("pass");
+            }
+        }
+        return r;
+    }
 }

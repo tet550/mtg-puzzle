@@ -44,10 +44,10 @@ export interface EngineOptions {
 const BASE = import.meta.env.BASE_URL;
 
 const DEFAULTS: Required<EngineOptions> = {
-  jar: `/app${BASE}engine/forge-adapter.jar`,
-  resZip: `/app${BASE}engine/res-mini.zip`,
-  resDir: "/files/forge-res",
-  preloadUrl: `${BASE}engine/preload.json`,
+  jar: "",
+  resZip: "",
+  resDir: "",
+  preloadUrl: "",
   workerUrl: `${BASE}engine/worker.js`,
   bootTimeoutMs: 90_000,
   callTimeoutMs: 30_000,
@@ -104,24 +104,42 @@ export class ForgeEngine {
     this.worker = new Worker(this.opts.workerUrl);
     this.worker.onmessage = (e: MessageEvent<WorkerResponse>) => this.onMessage(e.data);
     this.worker.onerror = (e) => this.failAll(new EngineError("WORKER", e.message || t("error.worker")));
+    // どのファイルを読むかは manifest.json（tools/build-engine.sh が作る。ファイル名に中身のハッシュが付いている）
+    const files = await this.resolveFiles();
     let preload: unknown;
     try {
-      const res = await fetch(this.opts.preloadUrl);
+      const res = await fetch(files.preloadUrl);
       if (res.ok) preload = await res.json();
     } catch {
       // プリロード一覧は無くても動く
     }
-    await this.raw("boot", { jar: this.opts.jar, preload }, this.opts.bootTimeoutMs);
+    await this.raw("boot", { jar: files.jar, preload }, this.opts.bootTimeoutMs);
     this.metrics.bootMs = Math.round(performance.now() - t0);
     this.setStatus("initializing");
     const version = parse<VersionInfo>(await this.raw("version", {}, this.opts.callTimeoutMs));
     if (version.api !== API_VERSION) {
       throw new EngineError("VERSION", t("error.version", { got: version.api, want: API_VERSION }));
     }
-    const init = parse<InitResult>(await this.raw("init", { zip: this.opts.resZip, dir: this.opts.resDir }, this.opts.bootTimeoutMs));
+    const init = parse<InitResult>(await this.raw("init", { zip: files.resZip, dir: files.resDir }, this.opts.bootTimeoutMs));
     this.metrics.initMs = init.initMs;
     this.metrics.readyMs = Math.round(performance.now() - t0);
     this.setStatus("ready");
+  }
+
+  private async resolveFiles(): Promise<{ jar: string; resZip: string; resDir: string; preloadUrl: string }> {
+    if (this.opts.jar && this.opts.resZip) {
+      return { jar: this.opts.jar, resZip: this.opts.resZip, resDir: this.opts.resDir || "/files/forge-res", preloadUrl: this.opts.preloadUrl };
+    }
+    const res = await fetch(`${BASE}engine/manifest.json`, { cache: "no-cache" });
+    if (!res.ok) throw new EngineError("WORKER", t("error.manifest", { status: res.status }));
+    const m = (await res.json()) as { jar: string; res: string; preload?: string };
+    return {
+      jar: `/app${BASE}engine/${m.jar}`,
+      resZip: `/app${BASE}engine/${m.res}`,
+      // 展開先もバンドルごとに分ける（古いバンドルの展開物を使わない）
+      resDir: `/files/${m.res.replace(/\.zip$/, "")}`,
+      preloadUrl: `${BASE}engine/${m.preload ?? "preload.json"}`,
+    };
   }
 
   load(puzzle: unknown): Promise<StepResult> {

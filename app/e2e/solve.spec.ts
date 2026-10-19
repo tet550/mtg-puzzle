@@ -1,6 +1,6 @@
 // 同梱のサンプル問題を、解答手順どおりに画面（盤面のカード・操作の欄のボタン）を押して解く。
 import { expect, test, type Page } from "@playwright/test";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 interface Step { kind: string; indexes: number[]; labels: string[] }
@@ -50,7 +50,8 @@ async function clickOption(page: Page, opt: Opt, onBoard: boolean, menuIndex: nu
   await page.locator(".actions .listed .opt").nth(listIndex).click();
 }
 
-for (const entry of catalog) {
+// 解答手順のある問題だけを解く（相手のブロックを考えると探索で解けない問題は、解答手順を持たない）
+for (const entry of catalog.filter((e) => existsSync(`${dir}${e.id}.solution.json`))) {
   test(`${entry.id}: ${entry.title}`, async ({ page }) => {
     const solution: Solution = JSON.parse(readFileSync(`${dir}${entry.id}.solution.json`, "utf-8"));
     page.on("console", (m) => { if (m.type() === "error") console.log(`[console] ${m.text()}`); });
