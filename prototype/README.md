@@ -24,7 +24,7 @@ forge-game とその依存モジュールだけをビルドする（Git Bash か
 cd prototype/forge && JAVA_HOME="/c/Program Files/Android/Android Studio/jbr" ~/tools/apache-maven-3.9.16/bin/mvn -B -pl forge-game -am install -DskipTests -Dcheckstyle.skip
 ```
 
-forge-ai も含めてビルドする（forge-adapter が依存している）:
+forge-ai もビルドする場合（C3 以降、forge-adapter は forge-ai に依存していない。V1・V2 当時の構成を再現するときだけ必要）:
 
 ```bash
 cd prototype/forge && JAVA_HOME="/c/Program Files/Android/Android Studio/jbr" ~/tools/apache-maven-3.9.16/bin/mvn -B -pl forge-ai -am install -DskipTests -Dcheckstyle.skip

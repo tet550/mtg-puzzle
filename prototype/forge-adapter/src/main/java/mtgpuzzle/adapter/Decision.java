@@ -15,7 +15,11 @@ public record Decision(int seq, Kind kind, String prompt, List<Option> options, 
         /** 攻撃クリーチャーの宣言 */
         ATTACKERS,
         /** はい／いいえ（任意の誘発など） */
-        CONFIRM
+        CONFIRM,
+        /** マナの支払い: 起動するマナ源を 1 つ選ぶ（"auto" で残りを自動、"cancel" で取りやめ） */
+        PAY_MANA,
+        /** コストに使うカードを選ぶ（生け贄・捨てる・タップなど） */
+        CHOOSE_CARDS
     }
 
     public record Option(String id, String label) { }

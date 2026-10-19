@@ -10,7 +10,6 @@ import java.util.Map;
 import forge.CardStorageReader;
 import forge.ImageKeys;
 import forge.StaticData;
-import forge.ai.AiProfileUtil;
 import forge.card.CardType;
 import forge.game.card.CardUtil;
 import forge.util.FileSection;
@@ -63,8 +62,6 @@ public final class ForgeRuntime {
                     "LATEST_ART_ALL_EDITIONS", true, true, false, false);
             mark("staticData");
 
-            AiProfileUtil.loadAllProfiles(res + "ai");
-            mark("aiProfiles");
             loadDynamicGamedata(res);
             mark("typeLists");
         } catch (Exception e) {

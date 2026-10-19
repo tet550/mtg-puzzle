@@ -18,10 +18,10 @@
     </properties>
 
     <dependencies>
-        <!-- forge-ai は forge-game / forge-core を推移的に含む。マナ自動支払い・コスト処理・未実装の選択の代行に使う -->
+        <!-- C3: forge-ai には依存しない。マナ・コストの支払いと既定の選択は Adapter 側で実装している -->
         <dependency>
             <groupId>forge</groupId>
-            <artifactId>forge-ai</artifactId>
+            <artifactId>forge-game</artifactId>
             <version>${forge.version}</version>
         </dependency>
         <dependency>

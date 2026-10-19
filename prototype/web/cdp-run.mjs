@@ -56,7 +56,7 @@ for (let i = 1; i <= Number(times); i++) {
   const waited = Date.now() - t0;
   let play = null;
   if (m && m !== "null" && JSON.parse(m).readyMs) {
-    play = await evaluate(`__harness.play("s1-bolt", ["Lightning Bolt", "player:p2", "Pass"]).then(r => r.status + " " + r.reason)`);
+    play = await evaluate(`__harness.play("s1-bolt", ${process.env.PICKS || JSON.stringify(["Lightning Bolt", "player:p2", "Mountain", "Pass"])}).then(r => r.status + " " + r.reason)`);
     m = await evaluate("JSON.stringify(window.__metrics || null)"); // 操作後の計測値（load / submit / longTasks）も含める
   }
   let extra = null;

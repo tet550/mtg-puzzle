@@ -56,7 +56,8 @@
         log("worker boot " + JAR);
         await call("boot", { jar: JAR, preload });
       },
-      init: () => call("init", { zip: "/app/web/res-mini.zip", dir: "/files/forge-res" }),
+      // ?res=res-mini-withai などで res バンドルを切り替える（展開先もバンドルごとに分ける）
+      init: () => call("init", { zip: `/app/web/${params.get("res") || "res-mini"}.zip`, dir: `/files/${params.get("res") || "forge-res"}` }),
       load: (json) => call("load", { json }),
       submit: (ids) => call("submit", { ids }),
       reset: () => call("reset"),

@@ -65,9 +65,13 @@ class ScenarioTest {
             Decision t = expect(s, Decision.Kind.TARGETS);
             r = s.submit(t.findByLabelPrefix("player:p2").id());
             log("S1 target", r);
+            // マナの支払い: 起動するマナ源を手動で選ぶ
+            Decision pay = expect(s, Decision.Kind.PAY_MANA);
+            r = s.submit(pay.findByLabelPrefix("Mountain").id());
+            log("S1 pay", r);
             // スタックに積まれた状態で p1 に優先権が戻る → パスすると解決
             assertEquals(1, s.getState().stackSize());
-            assertTrue(card(s.getState(), "c2").tapped(), "Mountain が自動でタップされている");
+            assertTrue(card(s.getState(), "c2").tapped(), "選んだ Mountain がタップされている");
             r = s.submit("pass");
             log("S1 resolve", r);
             assertEquals(Status.CLEARED, r.status(), r.reason());
@@ -116,6 +120,7 @@ class ScenarioTest {
         try (ForgeSession s = ForgeSession.load(puzzle("s3-self-bolt"))) {
             s.submit(expect(s, Decision.Kind.PRIORITY).findByLabelPrefix("Lightning Bolt").id());
             s.submit(expect(s, Decision.Kind.TARGETS).findByLabelPrefix("player:p1").id());
+            s.submit(expect(s, Decision.Kind.PAY_MANA).findByLabelPrefix("Auto pay").id());
             StepResult r = s.submit("pass");
             log("S3b", r);
             assertEquals(Status.FAILED, r.status(), r.reason());
@@ -127,6 +132,7 @@ class ScenarioTest {
     void s4_etbTriggerTargetsExternally() throws Exception {
         try (ForgeSession s = ForgeSession.load(puzzle("s4-etb-trigger"))) {
             s.submit(expect(s, Decision.Kind.PRIORITY).findByLabelPrefix("Flametongue Kavu").id());
+            s.submit(expect(s, Decision.Kind.PAY_MANA).findByLabelPrefix("Auto pay").id()); // 4 マナを自動で支払う
             StepResult r = s.submit("pass"); // FTK を解決 → ETB 誘発 → 対象選択
             log("S4 resolve creature", r);
             Decision t = expect(s, Decision.Kind.TARGETS);
@@ -148,6 +154,7 @@ class ScenarioTest {
             GameSnapshot initial = s.getState();
             s.submit(expect(s, Decision.Kind.PRIORITY).findByLabelPrefix("Lightning Bolt").id());
             s.submit(expect(s, Decision.Kind.TARGETS).findByLabelPrefix("player:p2").id());
+            s.submit(expect(s, Decision.Kind.PAY_MANA).findByLabelPrefix("Auto pay").id());
             assertTrue(card(s.getState(), "c2").tapped());
 
             long t0 = System.nanoTime();
@@ -159,6 +166,7 @@ class ScenarioTest {
             // リセット後もそのまま解ける
             s.submit(expect(s, Decision.Kind.PRIORITY).findByLabelPrefix("Lightning Bolt").id());
             s.submit(expect(s, Decision.Kind.TARGETS).findByLabelPrefix("player:p2").id());
+            s.submit(expect(s, Decision.Kind.PAY_MANA).findByLabelPrefix("Auto pay").id());
             assertEquals(Status.CLEARED, s.submit("pass").status());
         }
     }
@@ -196,7 +204,24 @@ class ScenarioTest {
             assertEquals(d, s.getPendingDecision());
             s.submit(d.findByLabelPrefix("Lightning Bolt").id());
             s.submit(expect(s, Decision.Kind.TARGETS).findByLabelPrefix("player:p2").id());
+            s.submit(expect(s, Decision.Kind.PAY_MANA).findByLabelPrefix("Auto pay").id());
             assertEquals(Status.CLEARED, s.submit("pass").status());
+        }
+    }
+
+    @Test
+    void cancelManaPaymentRollsBack() throws Exception {
+        try (ForgeSession s = ForgeSession.load(puzzle("s1-bolt"))) {
+            s.submit(expect(s, Decision.Kind.PRIORITY).findByLabelPrefix("Lightning Bolt").id());
+            s.submit(expect(s, Decision.Kind.TARGETS).findByLabelPrefix("player:p2").id());
+            StepResult r = s.submit(expect(s, Decision.Kind.PAY_MANA).findByLabelPrefix("Cancel").id());
+            log("cancel pay", r);
+            // 支払いを取りやめると、唱える前の状態に戻る（Bolt は手札、Mountain はアンタップ、スタックは空）
+            GameSnapshot st = s.getState();
+            assertEquals("HAND", card(st, "c1").zone().toUpperCase());
+            assertFalse(card(st, "c2").tapped());
+            assertEquals(0, st.stackSize());
+            assertEquals(Decision.Kind.PRIORITY, s.getPendingDecision().kind());
         }
     }
 

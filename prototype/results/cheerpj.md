@@ -7,8 +7,8 @@
 
 | 指標 | V2（初版） | 今回 | 目標（プラン） |
 |---|---|---|---|
-| jar | 16 MB | **5.4 MB** | 8 MB 以下 ✅ |
-| res バンドル | 2.2 MB / 1,622 ファイル | **178 KB / 90 ファイル** | 1 MB 以下 ✅ |
+| jar | 16 MB | **4.3 MB**（forge-ai なし。C3 の前は 5.4 MB） | 8 MB 以下 ✅ |
+| res バンドル | 2.2 MB / 1,622 ファイル | **148 KB**（C3 の前は 178 KB / 90 ファイル） | 1 MB 以下 ✅ |
 | 準備完了（初回、キャッシュなし） | 10.8 秒 | **7.7 秒**（3 回平均） | — |
 | 準備完了（2 回目以降） | 6.1 秒 | **2.6 秒**（8 回） | 5 秒以内 ✅（GC1） |
 | 1 操作（submit） | 約 40 ms | 80〜120 ms（Worker 経由・状態込み） | — |
@@ -90,6 +90,36 @@
 
 4 倍遅い条件での初期化の内訳: StaticData 4.7 秒、Localizer 1.4 秒、cardReaders 0.4 秒、その他 0.4 秒。CheerpJ 上でのクラス読み込みと実行のコストが大半で、res をこれ以上減らしても大きくは縮まない見込み。
 
+### C3: forge-ai の切り離し
+
+**forge-ai に依存せずに動くようになった。** JVM のテスト 11 件（手動のマナ支払いと、支払い取りやめの巻き戻しを追加）、ProGuard 後のスモークテスト、CheerpJ（Worker 版）での S1 がすべて通った。fallbackLog（既定の答えを返した選択の記録）はすべてのシナリオで空になった。
+
+方針: 呪文の唱え方・コスト・マナの支払いは、forge-game にある**人間用の経路**（`PlaySpellAbility.playSpellAbility` / `payManaCost`、`SpellAbility.setupTargets`）をそのまま使う。コントローラー側には、その経路が呼ぶ判断だけを用意した。
+
+| ファイル | 行数 | 内容 |
+|---|---|---|
+| `BaseAdapterController.java` | 606 | `PlayerController` の抽象メソッド 109 個の既定実装。`tools/gen_base_controller.py`（192 行）で Forge のソースから**自動生成**する。既定の方針は「選択肢があれば先頭から最小数を選ぶ／任意なら選ばない／確認は No」。呼ばれたら fallbackLog に記録する |
+| `PlayerControllerSupport.java` | 116 | 共通処理（先頭 N 件、同時誘発の処理、戦闘ダメージの既定の割り振り、対象の候補） |
+| `AdapterCostDecision.java` | 249 | `AiCostDecision` の代わり。コスト 40 種のうち 27 種に対応した。カードを選ぶコストは `chooseCardsForCost` に任せる |
+| `ManaPayer.java` | 94 | `ComputerUtilMana` の代わり。forge-gui の `InputPayMana` から GUI に依存しない部分を移した。プールから払い、残りはマナ源を 1 つずつ選んで起動する |
+| `ExternalPlayerController.java` | 180 | p1 用。外部入力に `PAY_MANA`（マナ源の選択。「自動」「取りやめ」もある）と `CHOOSE_CARDS`（コストに使うカード）を追加した |
+| `PassingPlayerController.java` | 48 | p2 用。強制的な対象選択は候補の先頭から選ぶ |
+
+- **未対応のコスト（13 種）**: Behold、BeholdExile、Blight、CollectEvidence、Enlist、ExileFromStack、ExiledMoveToGrave、Forage、GainControl、GainLife、PromiseGift、PutCardToLib、RemoveAnyCounter。ほかに、一部の条件付き（ランダムに捨てる、同名のカード、合計値の条件など）も未対応。どれも、支払えないものとして扱い、fallbackLog に「未対応のコスト」として残る。問題を作るときの検証で検出できる。
+- **サイズ**:
+
+| | forge-ai あり | forge-ai なし |
+|---|---|---|
+| 依存込み jar | 14.0 MB | **10.8 MB** |
+| ProGuard 後 | 5.42 MB | **4.34 MB** |
+| res バンドル | 178 KB（AI プロファイル込み） | **148 KB** |
+
+- **起動時間**: AI あり／なしの jar を、同じ条件（Worker 版、プリロードあり、毎回まっさらなプロファイル）で交互に 3 回ずつ計測した。準備完了は、初回が 3.5〜4.5 秒と 4.0〜4.5 秒、2 回目以降が 2.7〜2.9 秒と 2.6〜3.2 秒で、**差はなかった**。C3 の効果は、速度ではなくサイズと、以下の点。
+  - 相手の強制選択が AI の判断ではなく**決まった規則**になった。要件 4.3「問題で定めた方針」の土台になる。
+  - マナを**手動で支払える**ようになった（要件 8 章「マナ支払いは段階的に操作」）。
+  - AI の初期化（プロファイルの読み込み）が不要になった。
+- 以前の初回計測（7.7 秒）との差は、CDN までのネットワーク状況のばらつきと考えられる。初回の時間は、計測した時間帯によって 3〜8 秒と幅がある。
+
 ## 方式A: TS から Java を呼ぶ
 
 ### A1: Web Worker 上で動かす
@@ -140,6 +170,5 @@
 | P1 | Cloudflare Pages での配信（Range リクエスト・キャッシュ） | 外部への公開を伴うため、アカウントとデプロイ先の判断が必要 |
 | P3 | ライセンスの確認 | Leaning Technologies への問い合わせが必要 |
 | C7 | スマホ実機（iOS Safari / Android Chrome） | 端末が必要。Worker 版の実際の速さもここで確かめる |
-| C3 | forge-ai の切り離し（マナ・コスト支払いの自前実装） | 実行時に使う forge-ai のクラスは 23 個だけだが、jar の 1 MB を占める。数日規模の作業 |
 | B | デスクトップ版の起動（1 日で打ち切り） | 未着手 |
 | A2 / A3 / A7 | 待ち方の比較、Java からの逐次通知、API の確定 | 未着手。現行の待ち方（ゲームスレッドをブロックする方式）は Worker 上でも問題なく動いている |

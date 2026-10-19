@@ -1,32 +1,23 @@
 package mtgpuzzle.adapter;
 
 import java.util.List;
-import java.util.Map;
 
 import forge.LobbyPlayer;
-import forge.ai.PlayerControllerAi;
 import forge.game.Game;
-import forge.game.GameEntity;
-import forge.game.card.Card;
-import forge.game.card.CardCollectionView;
+import forge.game.GameObject;
 import forge.game.combat.Combat;
-import forge.game.player.DelayedReveal;
 import forge.game.player.Player;
-import forge.game.player.PlayerActionConfirmMode;
 import forge.game.spellability.SpellAbility;
-import forge.util.collect.FCollectionView;
 
 /**
- * 相手（p2）のコントローラー。要件 4.3: 任意の呪文・能力は使わず、常に優先権をパスする。
- * 攻撃・ブロックもしない。強制選択は PoC では AI に任せ、呼ばれた事実を記録する
- * （本番では「問題で定めた方針」で答え、対応できない選択は作成時の検証で弾く）。
+ * 相手（p2）のコントローラー。要件 4.3: 任意の呪文・能力は使わず、常に優先権をパスする。攻撃・ブロックもしない。
+ * 強制選択には BaseAdapterController の既定の答え（先頭から最小数を選ぶ）を返し、FallbackLog に記録する。
+ * これが「問題で定めた方針」の既定値になる。forge-ai には依存しない。
  */
-class PassingPlayerController extends PlayerControllerAi {
-    private final FallbackLog fallbackLog;
+class PassingPlayerController extends BaseAdapterController {
 
     PassingPlayerController(Game game, Player p, LobbyPlayer lp, FallbackLog fallbackLog) {
-        super(game, p, lp);
-        this.fallbackLog = fallbackLog;
+        super(game, p, lp, fallbackLog);
     }
 
     @Override
@@ -44,36 +35,14 @@ class PassingPlayerController extends PlayerControllerAi {
         // ブロックしない
     }
 
+    /** 相手の強制的な対象選択（例: 相手がコントロールする誘発能力）は、候補の先頭から必要数を選ぶ */
     @Override
-    public void orderAndPlaySimultaneousSa(List<SpellAbility> activePlayerSAs) {
-        fallbackLog.add(player, "orderAndPlaySimultaneousSa(" + activePlayerSAs.size() + ")");
-        super.orderAndPlaySimultaneousSa(activePlayerSAs);
-    }
-
-    @Override
-    public <T extends GameEntity> T chooseSingleEntityForEffect(FCollectionView<T> optionList, DelayedReveal delayedReveal,
-            SpellAbility sa, String title, boolean isOptional, Player targetedPlayer, Map<String, Object> params) {
-        fallbackLog.add(player, "chooseSingleEntityForEffect: " + title);
-        return super.chooseSingleEntityForEffect(optionList, delayedReveal, sa, title, isOptional, targetedPlayer, params);
-    }
-
-    @Override
-    public CardCollectionView chooseCardsForEffect(CardCollectionView sourceList, SpellAbility sa, String title,
-            int min, int max, boolean isOptional, Map<String, Object> params) {
-        fallbackLog.add(player, "chooseCardsForEffect: " + title);
-        return super.chooseCardsForEffect(sourceList, sa, title, min, max, isOptional, params);
-    }
-
-    @Override
-    public boolean confirmAction(SpellAbility sa, PlayerActionConfirmMode mode, String message, List<String> options,
-            Card cardToShow, Map<String, Object> params) {
-        fallbackLog.add(player, "confirmAction: " + message);
-        return super.confirmAction(sa, mode, message, options, cardToShow, params);
-    }
-
-    @Override
-    public CardCollectionView chooseCardsToDiscardToMaximumHandSize(int numDiscard) {
-        fallbackLog.add(player, "chooseCardsToDiscardToMaximumHandSize");
-        return super.chooseCardsToDiscardToMaximumHandSize(numDiscard);
+    public boolean chooseTargetsFor(SpellAbility sa) {
+        List<GameObject> candidates = targetCandidates(sa);
+        fallback("chooseTargetsFor: " + sa);
+        for (GameObject o : firstN(candidates, sa.getMinTargets())) {
+            sa.getTargets().add(o);
+        }
+        return sa.isTargetNumberValid();
     }
 }

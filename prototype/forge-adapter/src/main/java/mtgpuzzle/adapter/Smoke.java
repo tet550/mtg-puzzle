@@ -15,10 +15,10 @@ public final class Smoke {
     private record Case(String puzzle, List<String> picks, String expect) { }
 
     private static final List<Case> CASES = List.of(
-            new Case("s1-bolt", List.of("Lightning Bolt", "player:p2", "Pass"), "CLEARED"),
+            new Case("s1-bolt", List.of("Lightning Bolt", "player:p2", "Mountain", "Pass"), "CLEARED"),
             new Case("s2-attack", List.of("Pass", "Pass", "Hill Giant", "Pass", "Pass", "Pass", "Pass"), "CLEARED"),
-            new Case("s3-self-bolt", List.of("Lightning Bolt", "player:p1", "Pass"), "FAILED"),
-            new Case("s4-etb-trigger", List.of("Flametongue Kavu", "Pass", "Grizzly Bears", "Pass"), "IN_PROGRESS"),
+            new Case("s3-self-bolt", List.of("Lightning Bolt", "player:p1", "Auto pay", "Pass"), "FAILED"),
+            new Case("s4-etb-trigger", List.of("Flametongue Kavu", "Auto pay", "Pass", "Grizzly Bears", "Pass"), "IN_PROGRESS"),
             new Case("s6-activated", List.of("Prodigal Pyromancer", "player:p2", "Pass"), "CLEARED"),
             new Case("s8-sick-attacker", List.of("Pass", "Pass", "Pass", "Pass", "Pass", "Pass", "Pass", "Pass", "Pass", "Pass"), "FAILED"));
 

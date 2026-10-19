@@ -26,7 +26,7 @@ import java.util.zip.ZipOutputStream;
  * 使い方: ResBundler <forge res dir> <puzzles dir> <output zip> [--full-editions] [--all-tokens] [追加カード名...]
  */
 public final class ResBundler {
-    private static final List<String> WHOLE_DIRS = List.of("blockdata", "setlookup", "ai");
+    private static final List<String> WHOLE_DIRS = List.of("blockdata", "setlookup");
     private static final java.util.regex.Pattern TOKEN_SCRIPT = java.util.regex.Pattern.compile("TokenScript\\$\\s*([^|]+)");
     private static final List<String> FILES = List.of("lists/TypeLists.txt", "lists/NonStackingKWList.txt",
             "languages/en-US.properties");
