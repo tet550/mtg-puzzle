@@ -336,7 +336,6 @@ export function detailBody(c: CardView, art: string | null, artist: string | nul
     c.damage && t("card.damage", { n: c.damage })].filter(Boolean).join(" · ");
   return h("div.detail", null,
     art ? h("img.big", { src: art, alt: displayName(c.name) }) : null,
-    art && artist ? h("div.muted.credit", null, `Illustrated by ${artist}`) : null,
     h("div.dname", null, displayName(c.name), c.manaCost && c.manaCost !== "no cost" ? h("span.cost", null, " ", c.manaCost) : null),
     displayName(c.name) !== c.name ? h("div.muted", null, c.name) : null,
     h("div.tl", null, c.typeLine),
@@ -346,6 +345,7 @@ export function detailBody(c: CardView, art: string | null, artist: string | nul
         h("details.oracle-en", null, h("summary", null, t("card.oracleEn")), h("div.otext", null, oracle))]
       : h("div.otext", null, oracle),
     state ? h("div.muted", null, state) : null,
+    art && artist ? h("div.muted.credit", null, `Illustrated by ${artist}`) : null,
   );
 }
 

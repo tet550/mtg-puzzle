@@ -215,7 +215,8 @@ button svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke
 .float.min .fhead { border-bottom: none; }
 .stackbox { right: 8px; top: 8px; width: 320px; max-width: calc(100% - 16px); max-height: 55%; border-color: var(--accent); }
 .combatbox { right: 8px; top: 50%; transform: translateY(-50%); max-width: calc(100% - 16px); max-height: 90%; z-index: 4; }
-.cdetail { left: 8px; top: 8px; width: 320px; max-width: calc(100% - 16px); max-height: calc(100% - 16px); z-index: 6; }
+/* カードの詳細は画面の一番上の層（操作パネルより前）。広い画面では盤面の左上（相手の側の上）に浮かべる */
+.cdetail { position: fixed; left: 20px; top: 52px; width: 340px; max-width: calc(100vw - 40px); max-height: calc(100vh - 72px); z-index: 35; }
 /* スタック: カードと、名前・文・対象 */
 .stack.panel { list-style: none; margin: 0; padding: 6px; --h: 89px; }
 .sitem { display: flex; gap: 8px; align-items: flex-start; padding: 6px; border-bottom: 1px solid var(--line); }
@@ -241,7 +242,8 @@ button svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke
 /* カードの詳細: 画像は小さく左に置き、横に文を流す */
 .detail { padding: 8px 10px; font-size: 12px; }
 .detail img.big { float: left; width: 110px; max-width: 40%; margin: 0 8px 4px 0; border-radius: 6px; }
-.detail .credit { font-size: 10px; clear: left; padding-top: 2px; }
+.detail .credit { font-size: 10px; clear: left; padding-top: 4px; }
+.detail::after { content: ""; display: block; clear: both; }
 .detail .dname { font-weight: 700; font-size: 14px; }
 .detail .otext { white-space: pre-wrap; margin-top: 4px; }
 .detail .onote { font-size: 11px; margin-top: 6px; }
@@ -315,7 +317,7 @@ button svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke
   .layout.withlog { grid-template-columns: minmax(0, 1fr); }
   .logpane { position: fixed; top: 0; right: 0; bottom: 0; width: 88vw; z-index: var(--z-drawer); border-radius: 0; box-shadow: -8px 0 28px rgba(0, 0, 0, .3); }
   .playpanel { left: 6px; right: 6px; bottom: 6px; width: auto; max-height: 34vh; }
-  .cdetail { position: fixed; left: 0; right: 0; top: auto; bottom: 0; width: auto; max-width: none; max-height: 70vh; border-radius: 12px 12px 0 0; z-index: 35; }
+  .cdetail { left: 0; right: 0; top: auto; bottom: 0; width: auto; max-width: none; max-height: 70vh; border-radius: 12px 12px 0 0; }
   .stackbox { width: 260px; }
 }
 /* 画面の高さに収めるときは、操作パネルを盤面の下の段に置く（盤面をパネルの分だけ縮め、手札を隠さない） */

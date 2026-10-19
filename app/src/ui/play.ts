@@ -140,9 +140,11 @@ export class PlayPage {
       board.append(this.floatBox("stack", t("stack.title", { n: view.stack.length }), stackBody(view, ui, hooks, this.names)));
     }
     if (view && view.combat.length) board.append(this.floatBox("combat", t("combat.title"), combatBody(view, ui, hooks)));
+    // カードの詳細は盤面の外（画面の一番上の層）に置く。盤面の中だと、狭い画面の下からのシートが操作パネルに隠れる
+    let detail: HTMLElement | null = null;
     if (this.detail) {
       const d = this.detail;
-      board.append(h("div.float.cdetail", { role: "dialog" },
+      detail = (h("div.float.cdetail", { role: "dialog", "aria-label": t("card.detail") },
         h("div.fhead", null, h("span", null, t("card.detail")),
           h("button", { type: "button", onclick: () => { this.detail = null; this.render(); }, title: t("card.close") }, "×")),
         h("div.fbody", null, detailBody(d, this.images ? cardImage(d.name)?.normal ?? null : null, cardImage(d.name)?.artist ?? null, printedText(d.name)))));
@@ -158,7 +160,7 @@ export class PlayPage {
     const menu = this.menu ? optionMenu(this.menu, (o) => this.choose(o, interaction)) : null;
     this.el.classList.toggle("withpanelmin", this.minimized.has("play"));
 
-    this.el.replaceChildren(header, main, panel, ...(menu ? [menu] : []));
+    this.el.replaceChildren(header, main, panel, ...(detail ? [detail] : []), ...(menu ? [menu] : []));
     const hand = this.el.querySelector<HTMLElement>(".hand");
     if (hand) hand.scrollLeft = scroll;
     const log = this.el.querySelector<HTMLElement>(".log");
