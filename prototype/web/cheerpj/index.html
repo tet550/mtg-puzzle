@@ -27,7 +27,9 @@
     import { start } from "../common/harness.js";
 
     // サーバーのルートは prototype/。CheerpJ では /app/ がサーバーのルートに対応する
-    const JAR = "/app/forge-adapter/target/forge-adapter-all.jar";
+    // ?jar=min-all などで、縮めた jar（forge-adapter-min-*.jar）に切り替える
+    const jarParam = new URLSearchParams(location.search).get("jar");
+    const JAR = `/app/forge-adapter/target/forge-adapter-${jarParam || "all"}.jar`;
     const RES_ZIP = "/app/web/res-mini.zip";
     const RES_DIR = "/files/forge-res";
     let api;
@@ -35,7 +37,13 @@
     const engine = {
       async boot(log) {
         log("cheerpjInit(version 17)");
-        await cheerpjInit({ version: 17, status: "none" });
+        // ?preload=1 なら、事前に記録した読み込み範囲（cheerpj/preload.json）を並列に先読みする（C6）
+        const opts = { version: 17, status: "none" };
+        if (new URLSearchParams(location.search).get("preload")) {
+          opts.preloadResources = await (await fetch("preload.json")).json();
+          log("preloadResources: " + Object.keys(opts.preloadResources).length + " files");
+        }
+        await cheerpjInit(opts);
         log("cheerpjRunLibrary " + JAR);
         const lib = await cheerpjRunLibrary(JAR);
         api = await lib.mtgpuzzle.adapter.WebApi;
@@ -44,8 +52,10 @@
       load: (json) => api.load(json),
       submit: (ids) => api.submit(ids),
       reset: () => api.reset(),
+      state: () => api.state(),
+      heap: () => api.heap(),
     };
-    start(engine, "CheerpJ 4.3 (Java 17)");
+    start(engine, `CheerpJ 4.3 (Java 17) / ${JAR.split("/").pop()}`);
   </script>
 </body>
 </html>

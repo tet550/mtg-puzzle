@@ -12,15 +12,11 @@ import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 /**
  * ブラウザ（JS）から呼ぶための入口。引数・戻り値はすべて JSON 文字列にして、
  * 各 WASM 方式の JS 連携の差を小さくする（V3 の Adapter API の原型）。
  */
 public final class WebApi {
-    private static final ObjectMapper JSON = new ObjectMapper();
     private static ForgeSession session;
 
     private WebApi() { }
@@ -34,6 +30,9 @@ public final class WebApi {
             Path marker = Path.of(extractDir, ".bundle-size");
             String size = String.valueOf(Files.size(Path.of(zipPath)));
             boolean cached = Files.exists(marker) && Files.readString(marker).equals(size);
+            if (!cached) {
+                deleteRecursively(Path.of(extractDir)); // 古いバンドルのファイルが残らないように
+            }
             int files = cached ? 0 : unzip(Path.of(zipPath), Path.of(extractDir));
             if (!cached) {
                 Files.writeString(marker, size);
@@ -43,6 +42,7 @@ public final class WebApi {
             r.put("files", files);
             ForgeRuntime.init(extractDir, false);
             r.put("initMs", ForgeRuntime.getInitMillis());
+            r.put("initPhases", new java.util.TreeMap<>(ForgeRuntime.getInitPhases()));
             Runtime rt = Runtime.getRuntime();
             r.put("heapUsedMB", (rt.totalMemory() - rt.freeMemory()) / (1024 * 1024));
             return r;
@@ -54,17 +54,29 @@ public final class WebApi {
             if (session != null) {
                 session.close();
             }
-            session = ForgeSession.load(JSON.readValue(puzzleJson, PuzzleDefinition.class));
+            session = ForgeSession.load(PuzzleDefinition.fromJson(puzzleJson));
             return step(session.lastStep());
         });
     }
 
     public static String submit(String optionIdsJson) {
-        return run(() -> step(session.submit(JSON.readValue(optionIdsJson, new TypeReference<List<String>>() { }))));
+        return run(() -> step(session.submit(Json.parseStringArray(optionIdsJson))));
     }
 
     public static String reset() {
         return run(() -> step(session.reset()));
+    }
+
+    /** A6: 長時間利用の確認用。GC 後のヒープ使用量と、生きているスレッド数（ゲームスレッドの解放漏れの検出） */
+    public static String heap() {
+        return run(() -> {
+            System.gc();
+            Runtime rt = Runtime.getRuntime();
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("usedMB", (rt.totalMemory() - rt.freeMemory()) / (1024 * 1024));
+            m.put("threads", Thread.activeCount());
+            return m;
+        });
     }
 
     public static String state() {
@@ -73,7 +85,7 @@ public final class WebApi {
 
     private static Map<String, Object> step(ForgeSession.StepResult r) {
         Map<String, Object> m = new LinkedHashMap<>();
-        m.put("status", r.status());
+        m.put("status", r.status().name());
         m.put("reason", r.reason());
         m.put("pending", toMap(r.pending()));
         m.put("events", r.events());
@@ -147,13 +159,20 @@ public final class WebApi {
 
     private static String run(Body body) {
         try {
-            return JSON.writeValueAsString(body.call());
+            return Json.stringify(body.call());
         } catch (Throwable t) {
             t.printStackTrace();
-            try {
-                return JSON.writeValueAsString(Map.of("error", String.valueOf(t)));
-            } catch (Exception e) {
-                return "{\"error\":\"serialization failed\"}";
+            return Json.stringify(Map.of("error", String.valueOf(t)));
+        }
+    }
+
+    private static void deleteRecursively(Path dir) throws IOException {
+        if (!Files.exists(dir)) {
+            return;
+        }
+        try (java.util.stream.Stream<Path> walk = Files.walk(dir)) {
+            for (Path p : walk.sorted(java.util.Comparator.reverseOrder()).toList()) {
+                Files.delete(p);
             }
         }
     }

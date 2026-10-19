@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>V2 CheerpJ Worker</title>
+  <link rel="stylesheet" href="../common/harness.css">
+</head>
+<body>
+  <h1>A1 CheerpJ in Web Worker: <span id="engine"></span></h1>
+  <div class="bar">
+    <select id="puzzle"></select>
+    <button id="load" disabled>読み込む</button>
+    <button id="reset" disabled>リセット</button>
+    <span id="status"></span>
+    <span id="tick" title="メインスレッドが動いているかの目安（requestAnimationFrame）"></span>
+  </div>
+  <div id="decision"></div>
+  <div class="grid">
+    <pre id="state"></pre>
+    <pre id="metrics"></pre>
+  </div>
+  <h2 style="font-size:14px">ログ</h2>
+  <pre id="log"></pre>
+  <script type="module">
+    import { start } from "../common/harness.js";
+
+    const params = new URLSearchParams(location.search);
+    const JAR = `/app/forge-adapter/target/forge-adapter-${params.get("jar") || "min-all"}.jar`;
+    const worker = new Worker("worker.js");
+    let seq = 0;
+    const waiting = new Map();
+    worker.onmessage = (e) => {
+      const { id, result, error } = e.data;
+      const w = waiting.get(id);
+      waiting.delete(id);
+      error ? w.reject(new Error(error)) : w.resolve(result);
+    };
+    const call = (method, args) => new Promise((resolve, reject) => {
+      const id = ++seq;
+      waiting.set(id, { resolve, reject });
+      worker.postMessage({ id, method, args });
+    });
+
+    // メインスレッドが止まっていないことを目で見て確かめるためのカウンター
+    let frames = 0;
+    const tick = () => { frames++; document.getElementById("tick").textContent = `frames ${frames}`; requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
+
+    const engine = {
+      async boot(log) {
+        let preload;
+        if (params.get("preload")) {
+          preload = await (await fetch("../cheerpj/preload.json")).json();
+        }
+        log("worker boot " + JAR);
+        await call("boot", { jar: JAR, preload });
+      },
+      init: () => call("init", { zip: "/app/web/res-mini.zip", dir: "/files/forge-res" }),
+      load: (json) => call("load", { json }),
+      submit: (ids) => call("submit", { ids }),
+      reset: () => call("reset"),
+      state: () => call("state"),
+      heap: () => call("heap"),
+    };
+    start(engine, `CheerpJ 4.3 Worker / ${JAR.split("/").pop()}`);
+  </script>
+</body>
+</html>

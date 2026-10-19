@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CDN Check</title>
+  <style>:root { color-scheme: light dark; } body { font: 14px system-ui; padding: 16px; } pre { white-space: pre-wrap; }</style>
+</head>
+<body>
+  <h1 style="font-size:16px">CheerpJ CDN の到達確認</h1>
+  <pre id="out"></pre>
+  <script>
+    // CheerpJ ランタイムが使う 3 種類の読み込み（fetch / script / iframe）を個別に試す
+    const BASE = "https://cjrtnc.leaningtech.com/4.3/";
+    const result = {};
+    const out = document.getElementById("out");
+    const show = () => { out.textContent = JSON.stringify(result, null, 2); window.__cdn = result; };
+
+    fetch(BASE + "c.html").then((r) => r.text().then((t) => { result.fetch = { status: r.status, bytes: t.length }; show(); }))
+      .catch((e) => { result.fetch = { error: String(e) }; show(); });
+
+    const s = document.createElement("script");
+    s.src = BASE + "loader.js";
+    s.onload = () => { result.script = { ok: true, cheerpjInit: typeof cheerpjInit }; show(); };
+    s.onerror = () => { result.script = { ok: false }; show(); };
+    document.head.appendChild(s);
+
+    // iframe: c.html が読み込まれると親に postMessage が来る想定。来なければ、iframe の中身はエラーページ（origin null）の可能性
+    const f = document.createElement("iframe");
+    f.src = BASE + "c.html";
+    f.style.cssText = "width:1px;height:1px;border:0";
+    const t0 = performance.now();
+    window.addEventListener("message", (e) => {
+      if (e.origin.includes("leaningtech")) { result.iframeMessage = { origin: e.origin, ms: Math.round(performance.now() - t0) }; show(); }
+    });
+    f.onload = () => {
+      let sameOriginAccess;
+      try { sameOriginAccess = f.contentWindow.location.href; } catch (e) { sameOriginAccess = "cross-origin (正常に読み込まれた)"; }
+      result.iframe = { onload: true, ms: Math.round(performance.now() - t0), access: sameOriginAccess };
+      // 送信先 origin を指定して postMessage。中身がエラーページならコンソールに origin 'null' の警告が出る
+      try { f.contentWindow.postMessage("ping", "https://cjrtnc.leaningtech.com"); result.postMessage = "sent"; } catch (e) { result.postMessage = String(e); }
+      show();
+    };
+    document.body.appendChild(f);
+    show();
+  </script>
+</body>
+</html>

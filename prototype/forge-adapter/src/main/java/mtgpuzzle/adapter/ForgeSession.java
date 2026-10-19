@@ -113,6 +113,18 @@ public final class ForgeSession implements AutoCloseable {
         if (optionIds.size() < pending.min() || optionIds.size() > pending.max()) {
             throw new IllegalArgumentException("選択数が範囲外: " + optionIds.size() + " (min=" + pending.min() + ", max=" + pending.max() + ")");
         }
+        // 不正な ID をゲームスレッドに渡すとゲームが止まるので、ここで弾く（選択待ちの状態はそのまま）
+        java.util.Set<String> valid = new java.util.HashSet<>();
+        pending.options().forEach(o -> valid.add(o.id()));
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        for (String id : optionIds) {
+            if (!valid.contains(id)) {
+                throw new IllegalArgumentException("選択肢にない ID: " + id);
+            }
+            if (!seen.add(id)) {
+                throw new IllegalArgumentException("同じ ID が重複しています: " + id);
+            }
+        }
         long t0 = System.nanoTime();
         pending = null;
         channel.answer(optionIds);

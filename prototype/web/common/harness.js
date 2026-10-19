@@ -74,6 +74,15 @@ function render(step) {
 
 let engine;
 
+// メインスレッドの Long Task（50 ms 超）を記録する。Java の処理で UI がかたまっていないかの指標（A1）
+const longTasks = [];
+try {
+  new PerformanceObserver((list) => {
+    for (const e of list.getEntries()) longTasks.push(Math.round(e.duration));
+    metric("longTasks", { count: longTasks.length, maxMs: Math.max(0, ...longTasks), totalMs: longTasks.reduce((a, b) => a + b, 0) });
+  }).observe({ type: "longtask", buffered: true });
+} catch { /* longtask 非対応のブラウザ */ }
+
 async function submit(ids) {
   try {
     render(await timed("lastSubmitMs", () => engine.submit(JSON.stringify(ids))));
@@ -118,6 +127,8 @@ async function load() {
 
 // 自動検証用: ラベルの先頭一致で選択肢を選ぶ。例 await __harness.play("s1-bolt", ["Lightning Bolt", "player:p2", "Pass"])
 window.__harness = {
+  // A5: engine を直接呼ぶ（異常系の確認用）
+  raw: (method, ...args) => engine[method](...args),
   async play(name, picks) {
     $("puzzle").value = name;
     await load();
@@ -128,5 +139,22 @@ window.__harness = {
       await submit(ids);
     }
     return { status: window.__lastStep.status, reason: window.__lastStep.reason, metrics };
+  },
+  // A4: 状態取得（JSON 文字列）を n 回呼んだときの 1 回あたりの時間とサイズ
+  async benchState(n = 20) {
+    const t0 = performance.now();
+    let size = 0;
+    for (let k = 0; k < n; k++) size = (await engine.state()).length;
+    return { perCallMs: Math.round((performance.now() - t0) / n * 10) / 10, jsonBytes: size };
+  },
+  // A6: reset を n 回くり返し、ヒープ使用量の推移を見る
+  async soak(n = 50) {
+    const heaps = [];
+    for (let k = 0; k < n; k++) {
+      const step = JSON.parse(await engine.reset());
+      if (step.error) return { error: step.error, at: k };
+      if (k % 10 === 9) heaps.push(JSON.parse(await engine.heap?.() ?? "null"));
+    }
+    return { heaps, perf: performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) : null };
   },
 };

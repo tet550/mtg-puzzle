@@ -12,8 +12,6 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import mtgpuzzle.adapter.ForgeSession.CardState;
 import mtgpuzzle.adapter.ForgeSession.GameSnapshot;
 import mtgpuzzle.adapter.ForgeSession.Status;
@@ -21,7 +19,6 @@ import mtgpuzzle.adapter.ForgeSession.StepResult;
 
 /** 検証シナリオ（design/verification-plan.md の S1〜S5 と追加分） */
 class ScenarioTest {
-    private static final ObjectMapper JSON = new ObjectMapper();
 
     @BeforeAll
     static void init() {
@@ -33,7 +30,7 @@ class ScenarioTest {
     }
 
     static PuzzleDefinition puzzle(String name) throws Exception {
-        return JSON.readValue(new File(System.getProperty("puzzles.dir", "../puzzles"), name + ".json"), PuzzleDefinition.class);
+        return PuzzleDefinition.fromJson(java.nio.file.Files.readString(new File(System.getProperty("puzzles.dir", "../puzzles"), name + ".json").toPath()));
     }
 
     static void log(String scenario, StepResult r) {
@@ -186,6 +183,20 @@ class ScenarioTest {
             StepResult r = s.submit("pass");
             log("S6", r);
             assertEquals(Status.CLEARED, r.status(), r.reason());
+        }
+    }
+
+    @Test
+    void invalidAnswerKeepsDecisionPending() throws Exception {
+        try (ForgeSession s = ForgeSession.load(puzzle("s1-bolt"))) {
+            Decision d = expect(s, Decision.Kind.PRIORITY);
+            assertThrows(IllegalArgumentException.class, () -> s.submit("zzz"));
+            assertThrows(IllegalArgumentException.class, () -> s.submit("pass", "a0"));
+            // 不正な回答のあとも同じ選択要求が残り、そのまま続けられる
+            assertEquals(d, s.getPendingDecision());
+            s.submit(d.findByLabelPrefix("Lightning Bolt").id());
+            s.submit(expect(s, Decision.Kind.TARGETS).findByLabelPrefix("player:p2").id());
+            assertEquals(Status.CLEARED, s.submit("pass").status());
         }
     }
 

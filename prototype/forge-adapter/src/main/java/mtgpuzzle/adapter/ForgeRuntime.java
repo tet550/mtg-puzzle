@@ -2,6 +2,7 @@ package mtgpuzzle.adapter;
 
 import java.io.File;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,24 +36,37 @@ public final class ForgeRuntime {
             return;
         }
         long start = System.currentTimeMillis();
+        phases.clear();
+        lastMark = start;
         String res = resDir.endsWith(File.separator) ? resDir : resDir + File.separator;
         try {
             // カード生成時に画像キーを計算するため、画像キャッシュのディレクトリ設定が必須（実際には読まない）
-            String noImages = Files.createTempDirectory("forge-noimg").toString() + File.separator;
+            // 一時ディレクトリの作成は CheerpJ では遅い（約 1 秒）ので、res の下に作る
+            String noImages = Files.createDirectories(Path.of(res, "_noimg")).toString() + File.separator;
             ImageKeys.initializeDirs(noImages, new HashMap<>(), noImages, noImages, noImages, noImages, noImages, noImages, noImages);
 
+            mark("imageKeys");
             Lang.createInstance("en-US");
             Localizer.getInstance().initialize("en-US", res + "languages" + File.separator);
+            mark("localizer");
 
+            // 絞り込んだバンドルでは中身が空のディレクトリが zip に入らないので、ここで作っておく
+            for (String dir : new String[] {"cardsfolder", "tokenscripts", "editions"}) {
+                Files.createDirectories(Path.of(res, dir));
+            }
             CardStorageReader cardReader = new CardStorageReader(res + "cardsfolder", null, lazyCards);
             CardStorageReader tokenReader = new CardStorageReader(res + "tokenscripts", null, false);
-            String emptyDir = Files.createTempDirectory("forge-empty").toString();
+            mark("cardReaders");
+            String emptyDir = Files.createDirectories(Path.of(res, "_empty")).toString();
             new StaticData(cardReader, tokenReader, null, null,
                     res + "editions", emptyDir, res + "blockdata", res + "setlookup",
                     "LATEST_ART_ALL_EDITIONS", true, true, false, false);
+            mark("staticData");
 
             AiProfileUtil.loadAllProfiles(res + "ai");
+            mark("aiProfiles");
             loadDynamicGamedata(res);
+            mark("typeLists");
         } catch (Exception e) {
             throw new IllegalStateException("Forge の初期化に失敗しました", e);
         }
@@ -77,6 +91,20 @@ public final class ForgeRuntime {
                 CardUtil.NON_STACKING_LIST.add(s);
             }
         }
+    }
+
+    private static final Map<String, Long> phases = new java.util.LinkedHashMap<>();
+    private static long lastMark;
+
+    private static void mark(String phase) {
+        long now = System.currentTimeMillis();
+        phases.put(phase, now - lastMark);
+        lastMark = now;
+    }
+
+    /** 初期化の内訳（ミリ秒）。ブラウザでの計測用 */
+    public static Map<String, Long> getInitPhases() {
+        return Map.copyOf(phases);
     }
 
     public static long getInitMillis() {
