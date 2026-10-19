@@ -7,6 +7,7 @@ import { verdictText } from "../puzzle/judge";
 import type { PuzzleJson } from "../puzzle/schema";
 import { PuzzleSession, type SessionState } from "../puzzle/session";
 import { combatBody, combatSets, detailBody, renderBoard, stackBody, type BoardHooks, type BoardUi } from "./board";
+import { fitHands, setupFloat } from "./float";
 import { icon, type IconName } from "./icons";
 import { buildInteraction, marksOf, optionLabel, type Interaction } from "./decision";
 import { h } from "./dom";
@@ -145,7 +146,7 @@ export class PlayPage {
     if (this.detail) {
       const d = this.detail;
       detail = (h("div.float.cdetail", { role: "dialog", "aria-label": t("card.detail") },
-        h("div.fhead", null, h("span", null, t("card.detail")),
+        h("div.fhead", null, h("span", null, displayName(d.name)),
           h("button", { type: "button", onclick: () => { this.detail = null; this.render(); }, title: t("card.close") }, "×")),
         h("div.fbody", null, detailBody(d, this.images ? cardImage(d.name)?.normal ?? null : null, cardImage(d.name)?.artist ?? null, printedText(d.name)))));
     }
@@ -161,6 +162,12 @@ export class PlayPage {
     this.el.classList.toggle("withpanelmin", this.minimized.has("play"));
 
     this.el.replaceChildren(header, main, panel, ...(detail ? [detail] : []), ...(menu ? [menu] : []));
+    // 小窓は見出しのドラッグで動かせる（位置は小窓ごとに覚える）。手札は扇に整える
+    for (const [sel, key] of [[".cdetail", "detail"], [".stackbox", "stack"], [".combatbox", "combat"]] as const) {
+      const f = this.el.querySelector<HTMLElement>(sel);
+      if (f) setupFloat(f, key);
+    }
+    fitHands(this.el);
     const hand = this.el.querySelector<HTMLElement>(".hand");
     if (hand) hand.scrollLeft = scroll;
     const log = this.el.querySelector<HTMLElement>(".log");
