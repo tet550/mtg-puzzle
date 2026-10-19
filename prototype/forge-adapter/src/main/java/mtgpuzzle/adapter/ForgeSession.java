@@ -20,13 +20,25 @@ import forge.game.GameState;
 import forge.game.GameType;
 import forge.game.Match;
 import forge.game.card.Card;
+import forge.card.MagicColor;
+import forge.game.GameEntity;
+import forge.game.GameEntityView;
+import forge.game.card.CardView;
+import forge.game.combat.Combat;
 import forge.game.event.GameEvent;
+import forge.game.event.GameEventAttackersDeclared;
+import forge.game.event.GameEventCardChangeZone;
+import forge.game.event.GameEventCardCounters;
+import forge.game.event.GameEventCardDamaged;
+import forge.game.event.GameEventCardTapped;
 import forge.game.event.GameEventGameOutcome;
+import forge.game.event.GameEventPlayerDamaged;
 import forge.game.event.GameEventPlayerLivesChanged;
 import forge.game.event.GameEventSpellAbilityCast;
 import forge.game.event.GameEventSpellResolved;
 import forge.game.event.GameEventTurnBegan;
 import forge.game.event.GameEventTurnPhase;
+import forge.game.spellability.SpellAbilityStackInstance;
 import forge.game.player.IGameEntitiesFactory;
 import forge.game.player.Player;
 import forge.game.player.PlayerController;
@@ -53,15 +65,32 @@ public final class ForgeSession implements AutoCloseable {
 
     public enum Status { IN_PROGRESS, CLEARED, FAILED, ERROR }
 
-    public record StepResult(Status status, String reason, Decision pending, List<String> events, long elapsedMillis) { }
+    /** events はゲームの出来事（{"type": ..., ...}）。カードはインスタンス ID、プレイヤーは問題のプレイヤー ID で表す */
+    public record StepResult(Status status, String reason, Decision pending, List<Map<String, Object>> events, long elapsedMillis) { }
 
-    public record CardState(String instanceId, int forgeId, String name, String zone, String controller,
-                            boolean tapped, boolean sick, Map<String, Integer> counters) { }
+    /** kinds は land / creature / artifact / enchantment / planeswalker / battle / instant / sorcery。P/T はクリーチャーのときだけ */
+    public record CardState(String instanceId, int forgeId, String name, String zone, String owner, String controller,
+                            boolean tapped, boolean sick, Map<String, Integer> counters, List<String> kinds,
+                            String typeLine, String manaCost, Integer power, Integer toughness, Integer basePower,
+                            Integer baseToughness, int damage, boolean token, boolean faceDown, String attachedTo,
+                            String exiledBy, String text) { }
 
-    public record PlayerState(String id, String name, int life, List<CardState> cards) { }
+    /** manaPool は色（W / U / B / R / G / C）ごとの量 */
+    public record PlayerState(String id, String name, int life, int poison, Map<String, Integer> manaPool,
+                              int handCount, int libraryCount, List<CardState> cards) { }
+
+    /** index 0 が一番上。targets はインスタンス ID かプレイヤー ID */
+    public record StackState(int index, String sourceId, String controller, String description, boolean spell,
+                             List<String> targets) { }
+
+    /** defender はプレイヤー ID か、プレインズウォーカー・バトルのインスタンス ID */
+    public record AttackState(String attackerId, String defender, List<String> blockers) { }
+
+    /** 終局したときの結果（winner は勝者のプレイヤー ID。引き分けなら null） */
+    public record Outcome(String winner, boolean draw, String winCondition) { }
 
     public record GameSnapshot(int turn, String phase, String activePlayer, String priorityPlayer, int stackSize,
-                               List<String> stack, List<PlayerState> players) { }
+                               List<StackState> stack, List<AttackState> combat, List<PlayerState> players) { }
 
     private final PuzzleDefinition puzzle;
     private final FallbackLog fallbackLog = new FallbackLog();
@@ -72,7 +101,12 @@ public final class ForgeSession implements AutoCloseable {
     private Decision pending;
     private Status status = Status.IN_PROGRESS;
     private String reason = "";
-    private final List<String> eventBuffer = Collections.synchronizedList(new ArrayList<>());
+    private final List<Map<String, Object>> eventBuffer = Collections.synchronizedList(new ArrayList<>());
+    /** 盤面の復元が終わったか（復元中の出来事はイベントとして返さない） */
+    private volatile boolean setupDone;
+    /** 期限（このターン）を過ぎたので、エンジンを止めた */
+    private boolean halted;
+    private Outcome outcome;
     private volatile int startTurn;
     private volatile boolean deadlineExceeded;
     /** 問題のインスタンス ID → Forge のカード ID */
@@ -138,6 +172,9 @@ public final class ForgeSession implements AutoCloseable {
         reason = "";
         pending = null;
         deadlineExceeded = false;
+        setupDone = false;
+        halted = false;
+        outcome = null;
         eventBuffer.clear();
         instanceToForgeId.clear();
         lastStep = start();
@@ -156,30 +193,121 @@ public final class ForgeSession implements AutoCloseable {
         return Map.copyOf(instanceToForgeId);
     }
 
+    /** 期限を過ぎてエンジンを止めたか */
+    public boolean halted() {
+        return halted;
+    }
+
+    /** 終局していればその結果（していなければ null） */
+    public Outcome outcome() {
+        return outcome;
+    }
+
+    /** 問題を解くプレイヤーの ID */
+    public String viewer() {
+        return puzzle.goal.player;
+    }
+
+    /** Forge のカード ID → 問題のインスタンス ID。問題に無いカード（トークンなど）は "f" + Forge の ID */
+    public String instanceIdOf(int forgeId) {
+        synchronized (instanceToForgeId) {
+            for (Map.Entry<String, Integer> e : instanceToForgeId.entrySet()) {
+                if (e.getValue() == forgeId) {
+                    return e.getKey();
+                }
+            }
+        }
+        return "f" + forgeId;
+    }
+
     /** ゲームスレッドが選択待ちで止まっている（または終了している）間だけ呼ぶこと */
     public GameSnapshot getState() {
         Game g = game;
-        Map<Integer, String> forgeToInstance = new LinkedHashMap<>();
-        instanceToForgeId.forEach((k, v) -> forgeToInstance.put(v, k));
         List<PlayerState> players = new ArrayList<>();
         for (Player p : g.getRegisteredPlayers()) {
             List<CardState> cards = new ArrayList<>();
             for (ZoneType z : ZONES) {
                 for (Card c : p.getCardsIn(z)) {
-                    Map<String, Integer> counters = new LinkedHashMap<>();
-                    c.getCounters().entrySet().forEach(e -> counters.put(e.getElement().toString(), e.getCount()));
-                    cards.add(new CardState(forgeToInstance.get(c.getId()), c.getId(), c.getName(), z.name(),
-                            c.getController().getName(), c.isTapped(), c.isSick(), counters));
+                    cards.add(cardState(c, z));
                 }
             }
-            players.add(new PlayerState(puzzleIdOf(p), p.getName(), p.getLife(), cards));
+            Map<String, Integer> pool = new LinkedHashMap<>();
+            for (Map.Entry<String, Byte> e : MANA_COLORS.entrySet()) {
+                int n = p.getManaPool().getAmountOfColor(e.getValue());
+                if (n > 0) {
+                    pool.put(e.getKey(), n);
+                }
+            }
+            players.add(new PlayerState(puzzleIdOf(p), p.getName(), p.getLife(), p.getPoisonCounters(), pool,
+                    p.getCardsIn(ZoneType.Hand).size(), p.getCardsIn(ZoneType.Library).size(), cards));
         }
-        List<String> stack = new ArrayList<>();
-        g.getStack().forEach(si -> stack.add(si.getStackDescription()));
+        List<StackState> stack = new ArrayList<>();
+        int index = 0;
+        for (SpellAbilityStackInstance si : g.getStack()) {
+            List<String> targets = new ArrayList<>();
+            if (si.getTargetChoices() != null) {
+                si.getTargetChoices().getTargetCards().forEach(c -> targets.add(instanceIdOf(c.getId())));
+                si.getTargetChoices().getTargetPlayers().forEach(pl -> targets.add(pl.getName()));
+            }
+            stack.add(new StackState(index++, instanceIdOf(si.getSourceCard().getId()), si.getActivatingPlayer().getName(),
+                    si.getStackDescription(), si.isSpell(), targets));
+        }
+        List<AttackState> combat = new ArrayList<>();
+        Combat cb = g.getCombat();
+        if (cb != null) {
+            for (Card a : cb.getAttackers()) {
+                List<String> blockers = new ArrayList<>();
+                cb.getBlockers(a).forEach(b -> blockers.add(instanceIdOf(b.getId())));
+                combat.add(new AttackState(instanceIdOf(a.getId()), entityId(cb.getDefenderByAttacker(a)), blockers));
+            }
+        }
         return new GameSnapshot(g.getPhaseHandler().getTurn(), String.valueOf(g.getPhaseHandler().getPhase()),
                 g.getPhaseHandler().getPlayerTurn().getName(),
                 g.getPhaseHandler().getPriorityPlayer() == null ? null : g.getPhaseHandler().getPriorityPlayer().getName(),
-                g.getStack().size(), stack, players);
+                g.getStack().size(), stack, combat, players);
+    }
+
+    private static final Map<String, Byte> MANA_COLORS = new LinkedHashMap<>();
+    static {
+        MANA_COLORS.put("W", MagicColor.WHITE);
+        MANA_COLORS.put("U", MagicColor.BLUE);
+        MANA_COLORS.put("B", MagicColor.BLACK);
+        MANA_COLORS.put("R", MagicColor.RED);
+        MANA_COLORS.put("G", MagicColor.GREEN);
+        MANA_COLORS.put("C", MagicColor.COLORLESS);
+    }
+
+    private CardState cardState(Card c, ZoneType z) {
+        Map<String, Integer> counters = new LinkedHashMap<>();
+        c.getCounters().entrySet().forEach(e -> counters.put(e.getElement().toString(), e.getCount()));
+        List<String> kinds = new ArrayList<>();
+        if (c.isLand()) kinds.add("land");
+        if (c.isCreature()) kinds.add("creature");
+        if (c.isArtifact()) kinds.add("artifact");
+        if (c.isEnchantment()) kinds.add("enchantment");
+        if (c.isPlaneswalker()) kinds.add("planeswalker");
+        if (c.isBattle()) kinds.add("battle");
+        if (c.isInstant()) kinds.add("instant");
+        if (c.isSorcery()) kinds.add("sorcery");
+        boolean creature = c.isCreature();
+        GameEntity attachedTo = c.getEntityAttachedTo();
+        Card exiledWith = z == ZoneType.Exile ? c.getExiledWith() : null;
+        return new CardState(instanceIdOf(c.getId()), c.getId(), c.getName(), z.name(), c.getOwner().getName(),
+                c.getController().getName(), c.isTapped(), c.isSick(), counters, kinds, c.getType().toString(),
+                c.getManaCost() == null ? "" : c.getManaCost().getSimpleString(),
+                creature ? c.getNetPower() : null, creature ? c.getNetToughness() : null,
+                creature ? c.getBasePower() : null, creature ? c.getBaseToughness() : null,
+                c.getDamage(), c.isToken(), c.isFaceDown(),
+                attachedTo == null ? null : entityId(attachedTo),
+                exiledWith == null ? null : instanceIdOf(exiledWith.getId()),
+                c.getOracleText());
+    }
+
+    private String entityId(GameEntity e) {
+        if (e == null) {
+            return null;
+        }
+        return e instanceof Player p ? p.getName() : instanceIdOf(((Card) e).getId());
     }
 
     @Override
@@ -238,7 +366,7 @@ public final class ForgeSession implements AutoCloseable {
                 String name = puzzle.game.players.get(i).id;
                 LobbyPlayer lp = new AdapterLobbyPlayer(name, (pl, self) -> external
                         ? new ExternalPlayerController(pl.getGame(), pl, self, ch, fallbackLog)
-                        : new PassingPlayerController(pl.getGame(), pl, self, fallbackLog));
+                        : new PassingPlayerController(pl.getGame(), pl, self, ch, fallbackLog));
                 RegisteredPlayer rp = new RegisteredPlayer(new Deck()).setPlayer(lp);
                 rp.setStartingHand(0);
                 players.add(rp);
@@ -256,6 +384,7 @@ public final class ForgeSession implements AutoCloseable {
                 state.applyToGame(g); // ゲームスレッド上なので同期実行される
                 startTurn = g.getPhaseHandler().getTurn();
                 mapInstances(g);
+                setupDone = true;
             });
             ch.finished();
         } catch (DecisionChannel.Aborted e) {
@@ -300,17 +429,21 @@ public final class ForgeSession implements AutoCloseable {
             finish(Status.ERROR, "盤面の復元に失敗: " + setupError);
         } else if (s instanceof DecisionChannel.Pending pd) {
             if (deadlineExceeded) {
+                halted = true;
                 finish(Status.FAILED, "期限（このターン中）を過ぎました");
             } else {
                 pending = pd.decision();
             }
+        } else if (s instanceof DecisionChannel.Halted) {
+            halted = true;
+            finish(Status.FAILED, "期限（このターン中）を過ぎました");
         } else if (s instanceof DecisionChannel.Finished) {
             judgeGameOver();
         } else if (s instanceof DecisionChannel.Failed f) {
             finish(Status.ERROR, "エンジン異常: " + f.error());
             f.error().printStackTrace();
         }
-        List<String> ev;
+        List<Map<String, Object>> ev;
         synchronized (eventBuffer) {
             ev = List.copyOf(eventBuffer);
             eventBuffer.clear();
@@ -324,6 +457,9 @@ public final class ForgeSession implements AutoCloseable {
             finish(Status.ERROR, "ゲームが終局せずに停止しました");
             return;
         }
+        String winnerId = g.getOutcome().getWinningLobbyPlayer() == null ? null : g.getOutcome().getWinningLobbyPlayer().getName();
+        outcome = new Outcome(g.getOutcome().isDraw() ? null : winnerId, g.getOutcome().isDraw(),
+                String.valueOf(g.getOutcome().getWinCondition()));
         if (g.getOutcome().isDraw()) {
             finish(Status.FAILED, "引き分け");
             return;
@@ -368,22 +504,97 @@ public final class ForgeSession implements AutoCloseable {
     public final class EventListener {
         @Subscribe
         public void on(GameEvent e) {
+            boolean wasExceeded = deadlineExceeded;
             if (e instanceof GameEventTurnBegan tb) {
                 if (startTurn > 0 && tb.turnNumber() > startTurn) {
                     deadlineExceeded = true;
+                    channel.requestHalt();
                 }
-                eventBuffer.add("turn " + tb.turnNumber() + " (" + tb.turnOwner() + ")");
-            } else if (e instanceof GameEventTurnPhase tp) {
-                eventBuffer.add("phase " + tp.phase());
-            } else if (e instanceof GameEventSpellAbilityCast sc) {
-                eventBuffer.add("cast " + sc.sa());
-            } else if (e instanceof GameEventSpellResolved sr) {
-                eventBuffer.add("resolved " + sr.stackDescription() + (sr.hasFizzled() ? " (fizzled)" : ""));
-            } else if (e instanceof GameEventPlayerLivesChanged lc) {
-                eventBuffer.add("life " + lc.player() + " " + lc.oldLives() + " -> " + lc.newLives());
-            } else if (e instanceof GameEventGameOutcome go) {
-                eventBuffer.add("outcome winner=" + go.winningPlayerName());
             }
+            if (!setupDone || wasExceeded) {
+                return; // 盤面の復元で起きた出来事と、期限を過ぎた後の出来事は返さない
+            }
+            Map<String, Object> m = new LinkedHashMap<>();
+            if (e instanceof GameEventTurnBegan tb) {
+                m.put("type", "turnBegan");
+                m.put("turn", tb.turnNumber());
+                m.put("player", tb.turnOwner().getName());
+            } else if (e instanceof GameEventTurnPhase tp) {
+                m.put("type", "phase");
+                m.put("phase", tp.phase().name());
+                m.put("player", tp.playerTurn().getName());
+            } else if (e instanceof GameEventSpellAbilityCast sc) {
+                m.put("type", "cast");
+                m.put("sourceId", cardId(sc.sa().getHostCard()));
+                m.put("controller", sc.si().getActivatingPlayer() == null ? null : sc.si().getActivatingPlayer().getName());
+                m.put("description", sc.si().getText());
+            } else if (e instanceof GameEventSpellResolved sr) {
+                m.put("type", "resolved");
+                m.put("sourceId", cardId(sr.spell().getHostCard()));
+                m.put("description", sr.stackDescription());
+                m.put("fizzled", sr.hasFizzled());
+            } else if (e instanceof GameEventPlayerLivesChanged lc) {
+                m.put("type", "life");
+                m.put("player", lc.player().getName());
+                m.put("from", lc.oldLives());
+                m.put("to", lc.newLives());
+            } else if (e instanceof GameEventPlayerDamaged pd) {
+                m.put("type", "damage");
+                m.put("sourceId", cardId(pd.source()));
+                m.put("target", pd.target().getName());
+                m.put("amount", pd.amount());
+                m.put("combat", pd.combat());
+            } else if (e instanceof GameEventCardDamaged cd) {
+                m.put("type", "damage");
+                m.put("sourceId", cardId(cd.source()));
+                m.put("target", cardId(cd.card()));
+                m.put("amount", cd.amount());
+                m.put("combat", false);
+            } else if (e instanceof GameEventCardChangeZone cz) {
+                m.put("type", "zoneChange");
+                m.put("cardId", cardId(cz.card()));
+                m.put("from", cz.from() == null ? null : cz.from().zoneType().name());
+                m.put("to", cz.to() == null ? null : cz.to().zoneType().name());
+            } else if (e instanceof GameEventCardTapped ct) {
+                m.put("type", "tapped");
+                m.put("cardId", cardId(ct.card()));
+                m.put("tapped", ct.tapped());
+            } else if (e instanceof GameEventCardCounters cc) {
+                m.put("type", "counters");
+                m.put("cardId", cardId(cc.card()));
+                m.put("counter", String.valueOf(cc.type()));
+                m.put("from", cc.oldValue());
+                m.put("to", cc.newValue());
+            } else if (e instanceof GameEventAttackersDeclared ad) {
+                List<Map<String, Object>> attackers = new ArrayList<>();
+                ad.attackersMap().entries().forEach(en -> {
+                    GameEntityView def = en.getKey();
+                    CardView card = en.getValue();
+                    Map<String, Object> a = new LinkedHashMap<>();
+                    a.put("cardId", cardId(card));
+                    a.put("defender", entityId(def));
+                    attackers.add(a);
+                });
+                m.put("type", "attackersDeclared");
+                m.put("attackers", attackers);
+            } else if (e instanceof GameEventGameOutcome go) {
+                m.put("type", "gameOver");
+                m.put("winner", go.winningPlayerName());
+            } else {
+                return;
+            }
+            eventBuffer.add(m);
+        }
+
+        private String cardId(CardView c) {
+            return c == null ? null : instanceIdOf(c.getId());
+        }
+
+        private String entityId(GameEntityView v) {
+            if (v == null) {
+                return null;
+            }
+            return v instanceof CardView c ? instanceIdOf(c.getId()) : v.getName();
         }
     }
 

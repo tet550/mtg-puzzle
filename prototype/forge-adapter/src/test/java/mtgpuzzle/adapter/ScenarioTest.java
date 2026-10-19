@@ -249,4 +249,84 @@ class ScenarioTest {
             System.out.println("[S8] fallback=" + fb);
         }
     }
+
+    @Test
+    void s9_xSpellAsksForNumber() throws Exception {
+        try (ForgeSession s = ForgeSession.load(puzzle("s9-x-spell"))) {
+            StepResult r = s.submit(expect(s, Decision.Kind.PRIORITY).findByLabelPrefix("Blaze").id());
+            log("S9 cast", r);
+            Decision x = expect(s, Decision.Kind.CHOOSE_NUMBER);
+            r = s.submit(x.findByLabelPrefix("3").id());
+            log("S9 X", r);
+            s.submit(expect(s, Decision.Kind.TARGETS).findByLabelPrefix("player:p2").id());
+            s.submit(expect(s, Decision.Kind.PAY_MANA).findByLabelPrefix("Auto pay").id());
+            r = s.submit("pass");
+            log("S9 resolve", r);
+            assertEquals(Status.CLEARED, r.status(), r.reason());
+            assertTrue(s.fallbackLog().isEmpty(), s.fallbackLog().toString());
+        }
+    }
+
+    @Test
+    void s10_modalSpellAsksForModes() throws Exception {
+        try (ForgeSession s = ForgeSession.load(puzzle("s10-modal"))) {
+            s.submit(expect(s, Decision.Kind.PRIORITY).findByLabelPrefix("Kolaghan's Command").id());
+            Decision modes = expect(s, Decision.Kind.CHOOSE_MODE);
+            assertEquals(2, modes.min());
+            assertEquals(2, modes.max());
+            StepResult r = s.submit(modes.findByLabelPrefix("Destroy target artifact").id(),
+                    modes.findByLabelPrefix("Kolaghan's Command deals 2 damage").id());
+            log("S10 modes", r);
+            // 対象はモードごとに問い合わせる（モードの並び順）
+            s.submit(expect(s, Decision.Kind.TARGETS).findByLabelPrefix("Ornithopter").id());
+            s.submit(expect(s, Decision.Kind.TARGETS).findByLabelPrefix("player:p2").id());
+            s.submit(expect(s, Decision.Kind.PAY_MANA).findByLabelPrefix("Auto pay").id());
+            r = s.submit("pass");
+            log("S10 resolve", r);
+            assertEquals(Status.CLEARED, r.status(), r.reason());
+            assertTrue(s.fallbackLog().isEmpty(), s.fallbackLog().toString());
+        }
+    }
+
+    @Test
+    void viewHasCardDetails() throws Exception {
+        try (ForgeSession s = ForgeSession.load(puzzle("s2-attack"))) {
+            GameSnapshot st = s.getState();
+            CardState giant = st.players().get(0).cards().stream().filter(c -> c.name().equals("Hill Giant")).findFirst().orElseThrow();
+            assertEquals(List.of("creature"), giant.kinds());
+            assertEquals(3, giant.power());
+            assertEquals(3, giant.toughness());
+            assertEquals("{3}{R}", giant.manaCost());
+            assertEquals("p1", giant.owner());
+            assertEquals(0, giant.damage());
+        }
+    }
+
+    @Test
+    void webApiV1HidesOpponentHandAndLibraries() throws Exception {
+        String json = java.nio.file.Files.readString(new File(System.getProperty("puzzles.dir", "../puzzles"), "s10-modal.json").toPath());
+        java.util.Map<String, Object> step = Json.parseObject(WebApi.load(json));
+        @SuppressWarnings("unchecked")
+        java.util.Map<String, Object> engine = (java.util.Map<String, Object>) step.get("engine");
+        assertEquals("AWAITING", engine.get("state"));
+        @SuppressWarnings("unchecked")
+        List<java.util.Map<String, Object>> players = (List<java.util.Map<String, Object>>) ((java.util.Map<String, Object>) step.get("view")).get("players");
+        @SuppressWarnings("unchecked")
+        List<java.util.Map<String, Object>> p2cards = (List<java.util.Map<String, Object>>) players.get(1).get("cards");
+        assertEquals(1, ((Number) players.get(1).get("handCount")).intValue());
+        assertEquals(3, ((Number) players.get(1).get("libraryCount")).intValue());
+        assertTrue(p2cards.stream().noneMatch(c -> c.get("zone").equals("Hand") || c.get("zone").equals("Library")), p2cards.toString());
+        @SuppressWarnings("unchecked")
+        List<java.util.Map<String, Object>> p1cards = (List<java.util.Map<String, Object>>) players.get(0).get("cards");
+        assertTrue(p1cards.stream().anyMatch(c -> c.get("instanceId").equals("c1") && c.get("zone").equals("Hand")));
+        // 選択肢は盤面のカードへの参照を持つ（インスタンス ID）
+        @SuppressWarnings("unchecked")
+        List<java.util.Map<String, Object>> options = (List<java.util.Map<String, Object>>) ((java.util.Map<String, Object>) step.get("pending")).get("options");
+        assertTrue(options.stream().anyMatch(o -> o.get("ref") != null && "c1".equals(((java.util.Map<?, ?>) o.get("ref")).get("cardId"))), options.toString());
+        // エラーは code と message の形
+        java.util.Map<String, Object> err = Json.parseObject(WebApi.submit("[\"zzz\"]"));
+        assertEquals("INVALID_ANSWER", ((java.util.Map<?, ?>) err.get("error")).get("code"));
+        err = Json.parseObject(WebApi.load("{"));
+        assertEquals("INVALID_PUZZLE", ((java.util.Map<?, ?>) err.get("error")).get("code"));
+    }
 }

@@ -13,8 +13,10 @@ import java.util.concurrent.TimeUnit;
  */
 final class DecisionChannel {
 
-    sealed interface Signal permits Pending, Finished, Failed { }
+    sealed interface Signal permits Pending, Finished, Failed, Halted { }
     record Pending(Decision decision) implements Signal { }
+    /** 期限（このターン）を過ぎたので、ゲームスレッドを止めた */
+    record Halted() implements Signal { }
     record Finished() implements Signal { }
     record Failed(Throwable error) implements Signal { }
 
@@ -27,6 +29,7 @@ final class DecisionChannel {
     private final BlockingQueue<List<String>> toGame = new LinkedBlockingQueue<>();
     private final List<List<String>> answerLog = new ArrayList<>();
     private int seq;
+    private volatile boolean haltRequested;
 
     // ---- ゲームスレッド側 ----
 
@@ -38,6 +41,19 @@ final class DecisionChannel {
             answerLog.add(answer);
             return answer;
         } catch (InterruptedException e) {
+            throw new Aborted();
+        }
+    }
+
+    /** 期限を過ぎたら、次にコントローラーが呼ばれた所でゲームを止める（イベントの購読から呼ぶ） */
+    void requestHalt() {
+        haltRequested = true;
+    }
+
+    /** 止める要求があれば、呼び出し側に Halted を送ってゲームスレッドを打ち切る */
+    void checkHalt() {
+        if (haltRequested) {
+            toCaller.add(new Halted());
             throw new Aborted();
         }
     }

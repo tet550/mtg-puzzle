@@ -1,7 +1,7 @@
 // 方式ごとの engine（init / load / submit / reset を持つ）を受け取り、検証用の最小 UI を動かす共通ハーネス。
 // engine の各メソッドは WebApi の JSON 文字列をそのまま返す。
 
-const PUZZLES = ["s1-bolt", "s2-attack", "s3-self-bolt", "s4-etb-trigger", "s6-activated", "s8-sick-attacker"];
+const PUZZLES = ["s1-bolt", "s2-attack", "s3-self-bolt", "s4-etb-trigger", "s6-activated", "s8-sick-attacker", "s9-x-spell", "s10-modal"];
 
 const $ = (id) => document.getElementById(id);
 const metrics = {};
@@ -25,24 +25,25 @@ async function timed(name, fn) {
   const ms = Math.round(performance.now() - t0);
   metric(name, ms);
   const res = JSON.parse(raw);
-  if (res.error) throw new Error(res.error);
+  if (res.error) throw new Error(`${res.error.code}: ${res.error.message}`);
   return res;
 }
 
 function render(step) {
   window.__lastStep = step;
-  $("status").textContent = `${step.status} ${step.reason || ""}`;
-  const st = step.state;
-  const lines = [`turn ${st.turn} ${st.phase} active=${st.activePlayer} priority=${st.priorityPlayer} stack=${st.stackSize}`];
-  for (const s of st.stack) lines.push(`  stack: ${s}`);
+  // Adapter API v1（design/adapter-api.md）。判定は Java 側の照合用の値を出す
+  $("status").textContent = `${step.engine.state} / ${step.javaJudge.status} ${step.javaJudge.reason || ""}`;
+  const st = step.view;
+  const lines = [`turn ${st.turn} ${st.phase} active=${st.activePlayer} priority=${st.priorityPlayer} stack=${st.stack.length}`];
+  for (const s of st.stack) lines.push(`  stack: ${s.description}`);
   for (const p of st.players) {
-    lines.push(`${p.id} life=${p.life}`);
-    for (const c of p.cards.filter((c) => c.zone !== "Library")) {
+    lines.push(`${p.id} life=${p.life} hand=${p.handCount} library=${p.libraryCount}`);
+    for (const c of p.cards) {
       lines.push(`  [${c.zone}] ${c.instanceId ?? "-"} ${c.name}${c.tapped ? " (T)" : ""}${c.sick ? " (sick)" : ""}`);
     }
   }
   $("state").textContent = lines.join("\n");
-  for (const e of step.events) log("event: " + e);
+  for (const e of step.events) log("event: " + JSON.stringify(e));
 
   const box = $("decision");
   box.innerHTML = "";
@@ -138,7 +139,7 @@ window.__harness = {
       const ids = pick === "" ? [] : [d.options.find((o) => o.label.startsWith(pick)).id];
       await submit(ids);
     }
-    return { status: window.__lastStep.status, reason: window.__lastStep.reason, metrics };
+    return { status: window.__lastStep.javaJudge.status, reason: window.__lastStep.javaJudge.reason, metrics };
   },
   // A4: 状態取得（JSON 文字列）を n 回呼んだときの 1 回あたりの時間とサイズ
   async benchState(n = 20) {

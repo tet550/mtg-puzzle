@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,22 +50,39 @@ public final class WebApi {
         });
     }
 
+    /** API と Forge のバージョン。UI は api が想定と違えば読み込みをやめる */
+    public static String version() {
+        return run(() -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("api", API_VERSION);
+            m.put("forge", FORGE_VERSION);
+            return m;
+        });
+    }
+
     public static String load(String puzzleJson) {
         return run(() -> {
             if (session != null) {
                 session.close();
+                session = null;
             }
-            session = ForgeSession.load(PuzzleDefinition.fromJson(puzzleJson));
+            PuzzleDefinition puzzle;
+            try {
+                puzzle = PuzzleDefinition.fromJson(puzzleJson);
+            } catch (IllegalArgumentException | ClassCastException e) {
+                throw new PuzzleValidationException("問題データを読めません: " + e.getMessage());
+            }
+            session = ForgeSession.load(puzzle);
             return step(session.lastStep());
         });
     }
 
     public static String submit(String optionIdsJson) {
-        return run(() -> step(session.submit(Json.parseStringArray(optionIdsJson))));
+        return run(() -> step(loaded().submit(Json.parseStringArray(optionIdsJson))));
     }
 
     public static String reset() {
-        return run(() -> step(session.reset()));
+        return run(() -> step(loaded().reset()));
     }
 
     /** A6: 長時間利用の確認用。GC 後のヒープ使用量と、生きているスレッド数（ゲームスレッドの解放漏れの検出） */
@@ -80,25 +98,74 @@ public final class WebApi {
     }
 
     public static String state() {
-        return run(() -> toMap(session.getState()));
+        return run(() -> view(loaded()));
+    }
+
+    static final int API_VERSION = 1;
+    static final String FORGE_VERSION = "2.0.15";
+
+    private static ForgeSession loaded() {
+        if (session == null) {
+            throw new ApiException("NOT_LOADED", "問題が読み込まれていません");
+        }
+        return session;
+    }
+
+    /** 呼び出し側に返すエラーの種類（design/adapter-api.md） */
+    static final class ApiException extends RuntimeException {
+        final String code;
+
+        ApiException(String code, String message) {
+            super(message);
+            this.code = code;
+        }
     }
 
     private static Map<String, Object> step(ForgeSession.StepResult r) {
+        ForgeSession s = session;
         Map<String, Object> m = new LinkedHashMap<>();
-        m.put("status", r.status().name());
-        m.put("reason", r.reason());
-        m.put("pending", toMap(r.pending()));
+        m.put("engine", engineState(s, r));
+        m.put("pending", toMap(s, r.pending()));
         m.put("events", r.events());
         m.put("elapsedMs", r.elapsedMillis());
-        m.put("state", toMap(session.getState()));
-        m.put("fallback", session.fallbackLog());
+        m.put("view", view(s));
+        m.put("fallback", s.fallbackLog());
+        // Java 側の判定（JVM のテストとの照合用。UI の判定は Puzzle Core が行う）
+        Map<String, Object> judge = new LinkedHashMap<>();
+        judge.put("status", r.status().name());
+        judge.put("reason", r.reason());
+        m.put("javaJudge", judge);
         return m;
     }
 
-    // record は Jackson に任せず明示的に変換する。
+    /** エンジンの状態: AWAITING（選択待ち）/ GAME_OVER（終局）/ HALTED（期限を過ぎて停止）/ ERROR */
+    private static Map<String, Object> engineState(ForgeSession s, ForgeSession.StepResult r) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        if (r.status() == ForgeSession.Status.ERROR) {
+            m.put("state", "ERROR");
+            m.put("message", r.reason());
+        } else if (r.pending() != null) {
+            m.put("state", "AWAITING");
+        } else if (s.outcome() != null) {
+            m.put("state", "GAME_OVER");
+            Map<String, Object> o = new LinkedHashMap<>();
+            o.put("winner", s.outcome().winner());
+            o.put("draw", s.outcome().draw());
+            o.put("winCondition", s.outcome().winCondition());
+            m.put("outcome", o);
+        } else if (s.halted()) {
+            m.put("state", "HALTED");
+        } else {
+            m.put("state", "ERROR");
+            m.put("message", r.reason());
+        }
+        return m;
+    }
+
+    // record は明示的に変換する。
     // CheerpJ（Java 17 プレビュー）では record のリフレクション情報が取れず、{} になってしまうため。
 
-    private static Map<String, Object> toMap(Decision d) {
+    private static Map<String, Object> toMap(ForgeSession s, Decision d) {
         if (d == null) {
             return null;
         }
@@ -108,49 +175,117 @@ public final class WebApi {
         m.put("prompt", d.prompt());
         m.put("min", d.min());
         m.put("max", d.max());
-        List<Map<String, Object>> options = new java.util.ArrayList<>();
+        List<Map<String, Object>> options = new ArrayList<>();
         for (Decision.Option o : d.options()) {
             Map<String, Object> om = new LinkedHashMap<>();
             om.put("id", o.id());
             om.put("label", o.label());
+            om.put("ref", toMap(s, o.ref()));
             options.add(om);
         }
         m.put("options", options);
         return m;
     }
 
-    private static Map<String, Object> toMap(ForgeSession.GameSnapshot st) {
+    private static Map<String, Object> toMap(ForgeSession s, Decision.Ref ref) {
+        if (ref == null) {
+            return null;
+        }
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("type", ref.type());
+        switch (ref.type()) {
+            case "card" -> m.put("cardId", s.instanceIdOf(ref.forgeId()));
+            case "player" -> m.put("player", ref.player());
+            case "ability" -> {
+                m.put("cardId", s.instanceIdOf(ref.forgeId()));
+                m.put("abilityKind", ref.abilityKind());
+            }
+            case "stack" -> m.put("index", ref.stackIndex());
+            default -> m.put("value", ref.special());
+        }
+        return m;
+    }
+
+    /**
+     * UI に返す盤面。ライブラリーはどのプレイヤーも枚数だけ、相手の手札も枚数だけにする
+     * （相手の手札・ライブラリーはパズルで重要でなく、UI でも最小限の表示にするため）。
+     */
+    private static Map<String, Object> view(ForgeSession s) {
+        ForgeSession.GameSnapshot st = s.getState();
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("turn", st.turn());
         m.put("phase", st.phase());
         m.put("activePlayer", st.activePlayer());
         m.put("priorityPlayer", st.priorityPlayer());
-        m.put("stackSize", st.stackSize());
-        m.put("stack", st.stack());
-        List<Map<String, Object>> players = new java.util.ArrayList<>();
+        List<Map<String, Object>> stack = new ArrayList<>();
+        for (ForgeSession.StackState si : st.stack()) {
+            Map<String, Object> sm = new LinkedHashMap<>();
+            sm.put("index", si.index());
+            sm.put("sourceId", si.sourceId());
+            sm.put("controller", si.controller());
+            sm.put("description", si.description());
+            sm.put("spell", si.spell());
+            sm.put("targets", si.targets());
+            stack.add(sm);
+        }
+        m.put("stack", stack);
+        List<Map<String, Object>> combat = new ArrayList<>();
+        for (ForgeSession.AttackState a : st.combat()) {
+            Map<String, Object> am = new LinkedHashMap<>();
+            am.put("attackerId", a.attackerId());
+            am.put("defender", a.defender());
+            am.put("blockers", a.blockers());
+            combat.add(am);
+        }
+        m.put("combat", combat);
+        List<Map<String, Object>> players = new ArrayList<>();
         for (ForgeSession.PlayerState p : st.players()) {
+            boolean viewer = p.id().equals(s.viewer());
             Map<String, Object> pm = new LinkedHashMap<>();
             pm.put("id", p.id());
-            pm.put("name", p.name());
             pm.put("life", p.life());
-            List<Map<String, Object>> cards = new java.util.ArrayList<>();
+            pm.put("poison", p.poison());
+            pm.put("manaPool", p.manaPool());
+            pm.put("handCount", p.handCount());
+            pm.put("libraryCount", p.libraryCount());
+            List<Map<String, Object>> cards = new ArrayList<>();
             for (ForgeSession.CardState c : p.cards()) {
-                Map<String, Object> cm = new LinkedHashMap<>();
-                cm.put("instanceId", c.instanceId());
-                cm.put("forgeId", c.forgeId());
-                cm.put("name", c.name());
-                cm.put("zone", c.zone());
-                cm.put("controller", c.controller());
-                cm.put("tapped", c.tapped());
-                cm.put("sick", c.sick());
-                cm.put("counters", c.counters());
-                cards.add(cm);
+                if (c.zone().equals("Library") || (!viewer && c.zone().equals("Hand"))) {
+                    continue;
+                }
+                cards.add(toMap(c));
             }
             pm.put("cards", cards);
             players.add(pm);
         }
         m.put("players", players);
         return m;
+    }
+
+    private static Map<String, Object> toMap(ForgeSession.CardState c) {
+        Map<String, Object> cm = new LinkedHashMap<>();
+        cm.put("instanceId", c.instanceId());
+        cm.put("name", c.name());
+        cm.put("zone", c.zone());
+        cm.put("owner", c.owner());
+        cm.put("controller", c.controller());
+        cm.put("kinds", c.kinds());
+        cm.put("typeLine", c.typeLine());
+        cm.put("manaCost", c.manaCost());
+        cm.put("text", c.text());
+        cm.put("power", c.power());
+        cm.put("toughness", c.toughness());
+        cm.put("basePower", c.basePower());
+        cm.put("baseToughness", c.baseToughness());
+        cm.put("damage", c.damage());
+        cm.put("tapped", c.tapped());
+        cm.put("sick", c.sick());
+        cm.put("token", c.token());
+        cm.put("faceDown", c.faceDown());
+        cm.put("counters", c.counters());
+        cm.put("attachedTo", c.attachedTo());
+        cm.put("exiledBy", c.exiledBy());
+        return cm;
     }
 
     private interface Body {
@@ -162,8 +297,28 @@ public final class WebApi {
             return Json.stringify(body.call());
         } catch (Throwable t) {
             t.printStackTrace();
-            return Json.stringify(Map.of("error", String.valueOf(t)));
+            Map<String, Object> err = new LinkedHashMap<>();
+            err.put("code", errorCode(t));
+            err.put("message", String.valueOf(t.getMessage() == null ? t : t.getMessage()));
+            return Json.stringify(Map.of("error", err));
         }
+    }
+
+    private static String errorCode(Throwable t) {
+        if (t instanceof ApiException a) {
+            return a.code;
+        }
+        if (t instanceof PuzzleValidationException) {
+            return "INVALID_PUZZLE";
+        }
+        if (t instanceof IllegalStateException && t.getMessage() != null && t.getMessage().startsWith("回答待ちの選択がありません")) {
+            return "NO_PENDING";
+        }
+        if (t instanceof IllegalArgumentException) {
+            // 選択肢にない ID・選択数の範囲外・回答の JSON の解析失敗
+            return "INVALID_ANSWER";
+        }
+        return "INTERNAL";
     }
 
     private static void deleteRecursively(Path dir) throws IOException {

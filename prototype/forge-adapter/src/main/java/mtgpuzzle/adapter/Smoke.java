@@ -16,10 +16,12 @@ public final class Smoke {
 
     private static final List<Case> CASES = List.of(
             new Case("s1-bolt", List.of("Lightning Bolt", "player:p2", "Mountain", "Pass"), "CLEARED"),
-            new Case("s2-attack", List.of("Pass", "Pass", "Hill Giant", "Pass", "Pass", "Pass", "Pass"), "CLEARED"),
+            new Case("s2-attack", List.of("Pass", "Hill Giant", "Pass", "Pass", "Pass", "Pass"), "CLEARED"),
             new Case("s3-self-bolt", List.of("Lightning Bolt", "player:p1", "Auto pay", "Pass"), "FAILED"),
             new Case("s4-etb-trigger", List.of("Flametongue Kavu", "Auto pay", "Pass", "Grizzly Bears", "Pass"), "IN_PROGRESS"),
             new Case("s6-activated", List.of("Prodigal Pyromancer", "player:p2", "Pass"), "CLEARED"),
+            new Case("s9-x-spell", List.of("Blaze", "3", "player:p2", "Auto pay", "Pass"), "CLEARED"),
+            new Case("s10-modal", List.of("Kolaghan's Command", "MODES", "Ornithopter", "player:p2", "Auto pay", "Pass"), "CLEARED"),
             new Case("s8-sick-attacker", List.of("Pass", "Pass", "Pass", "Pass", "Pass", "Pass", "Pass", "Pass", "Pass", "Pass"), "FAILED"));
 
     public static void main(String[] args) throws Exception {
@@ -32,7 +34,7 @@ public final class Smoke {
             System.out.println((ok ? "OK   " : "NG   ") + c.puzzle() + " -> " + status);
         }
         String bad = WebApi.load(Files.readString(Path.of(args[2], "s7-invalid-card.json")));
-        boolean s7 = bad.contains("PuzzleValidationException");
+        boolean s7 = bad.contains("\"INVALID_PUZZLE\"");
         failed += s7 ? 0 : 1;
         System.out.println((s7 ? "OK   " : "NG   ") + "s7-invalid-card -> " + bad);
         System.out.println(failed == 0 ? "ALL OK" : failed + " FAILED");
@@ -47,6 +49,17 @@ public final class Smoke {
             if (d == null) {
                 break;
             }
+            if (pick.equals("MODES")) { // s10: 2 つのモード（破壊とダメージ）を選ぶ
+                List<String> ids = new java.util.ArrayList<>();
+                for (Map<String, Object> o : (List<Map<String, Object>>) d.get("options")) {
+                    String label = o.get("label").toString();
+                    if (label.startsWith("Destroy") || label.contains("deals 2 damage")) {
+                        ids.add(o.get("id").toString());
+                    }
+                }
+                step = Json.parseObject(WebApi.submit(Json.stringify(ids)));
+                continue;
+            }
             String id = null;
             for (Map<String, Object> o : (List<Map<String, Object>>) d.get("options")) {
                 if (o.get("label").toString().startsWith(pick)) {
@@ -59,6 +72,6 @@ public final class Smoke {
             }
             step = Json.parseObject(WebApi.submit(Json.stringify(List.of(id))));
         }
-        return String.valueOf(step.get("status"));
+        return String.valueOf(((Map<String, Object>) step.get("javaJudge")).get("status"));
     }
 }

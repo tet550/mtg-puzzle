@@ -16,12 +16,16 @@ import forge.game.spellability.SpellAbility;
  */
 class PassingPlayerController extends BaseAdapterController {
 
-    PassingPlayerController(Game game, Player p, LobbyPlayer lp, FallbackLog fallbackLog) {
+    private final DecisionChannel channel;
+
+    PassingPlayerController(Game game, Player p, LobbyPlayer lp, DecisionChannel channel, FallbackLog fallbackLog) {
         super(game, p, lp, fallbackLog);
+        this.channel = channel;
     }
 
     @Override
     public List<SpellAbility> chooseSpellAbilityToPlay() {
+        channel.checkHalt();
         return null;
     }
 
