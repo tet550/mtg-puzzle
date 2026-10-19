@@ -29,6 +29,15 @@ class PassingPlayerController extends BaseAdapterController {
         return null;
     }
 
+    /** マナ能力の色（2 色以上を出せる土地など）は、どれを出しても同じなので記録しない */
+    @Override
+    public byte chooseColor(String message, SpellAbility sa, forge.card.ColorSet colors) {
+        if (sa != null && sa.isManaAbility() && !colors.isColorless()) {
+            return colors.iterator().next().getColorMask();
+        }
+        return super.chooseColor(message, sa, colors);
+    }
+
     @Override
     public void declareAttackers(Player attacker, Combat combat) {
         // 攻撃しない

@@ -4,6 +4,7 @@ import java.util.List;
 
 import forge.card.CardType;
 import forge.card.ColorSet;
+import forge.game.GameEntityCounterTable;
 import forge.game.card.Card;
 import forge.game.card.CardCollection;
 import forge.game.card.CardCollectionView;
@@ -159,12 +160,27 @@ final class AdapterCostDecision extends CostDecisionMakerBase {
     @Override
     public PaymentDecision visit(CostTapType cost) {
         String type = cost.getType();
-        if (type.contains("+withTotalPowerGE") || type.contains("sharesCreatureTypeWith")) {
+        if (type.contains("sharesCreatureTypeWith")) {
             return unsupported(cost);
         }
-        CardCollection list = CardLists.filter(valid(player.getCardsIn(ZoneType.Battlefield), type), CardPredicates.CAN_TAP);
+        // 搭乗など「パワーの合計が N 以上になるようにタップする」（forge-gui の HumanCostDecision と同じ手順）
+        int totalPower = -1;
+        if (type.contains("+withTotalPowerGE")) {
+            String n = type.split("withTotalPowerGE")[1];
+            totalPower = Integer.parseInt(n);
+            type = type.replace("+withTotalPowerGE" + n, "");
+        }
+        CardCollection list = CardLists.filter(valid(player.getCardsIn(ZoneType.Battlefield), type),
+                ability.isCrew() ? CardPredicates.CAN_CREW : CardPredicates.CAN_TAP);
         if (!cost.canTapSource) {
             list.remove(source);
+        }
+        if (totalPower >= 0) {
+            if (CardLists.getTotalPower(list, ability) < totalPower) {
+                return null; // 足りるだけのクリーチャーがいない
+            }
+            CardCollectionView chosen = controller.chooseCardsForTotalPower(list, ability, cost, totalPower);
+            return chosen == null || CardLists.getTotalPower(chosen, ability) < totalPower ? null : PaymentDecision.card(chosen);
         }
         return choose(list, cost, cost.getAbilityAmount(ability));
     }
@@ -210,11 +226,40 @@ final class AdapterCostDecision extends CostDecisionMakerBase {
 
     @Override
     public PaymentDecision visit(CostRemoveCounter cost) {
-        if (cost.counter == null || !cost.payCostFromSource() || cost.getAmount().equals("All")) {
-            return unsupported(cost);
+        // forge-gui の HumanCostDecision と同じく、取り除くカウンターの表（counterTable）で返す。
+        // カードだけで返すと、支払いのときに表が無くて止まる（プレインズウォーカーのマイナス能力など）
+        if (cost.counter == null) {
+            return unsupported(cost); // 種類を問わないカウンター（RemoveAnyCounter に近い）
         }
-        int c = cost.getAbilityAmount(ability);
-        return source.getCounters(cost.counter) >= c ? PaymentDecision.card(source, c) : null;
+        boolean all = cost.getAmount().equals("All");
+        int n = all ? 0 : cost.getAbilityAmount(ability);
+        Card from;
+        if (cost.payCostFromSource()) {
+            from = source;
+        } else if (cost.getType().equals("OriginalHost")) {
+            from = ability.getOriginalHost();
+        } else {
+            // 他のカードから取り除く: カウンターが足りるカードを 1 枚選ぶ
+            CardCollection valid = CardLists.filter(valid(player.getCardsIn(cost.zone), cost.getType()),
+                    CardPredicates.hasCounter(cost.counter, Math.max(1, n)));
+            if (valid.isEmpty()) {
+                return null;
+            }
+            from = player.getController().chooseSingleEntityForEffect(valid, null, ability, "Remove counters from: " + cost, false, null, null);
+            if (from == null) {
+                return null;
+            }
+        }
+        int have = from.getCounters(cost.counter);
+        if (all) {
+            n = have;
+        }
+        if (have < n) {
+            return null;
+        }
+        GameEntityCounterTable table = new GameEntityCounterTable();
+        table.put(null, from, cost.counter, n);
+        return PaymentDecision.counters(table);
     }
 
     @Override
@@ -240,7 +285,19 @@ final class AdapterCostDecision extends CostDecisionMakerBase {
     @Override public PaymentDecision visit(CostEnlist cost) { return unsupported(cost); }
     @Override public PaymentDecision visit(CostExileFromStack cost) { return unsupported(cost); }
     @Override public PaymentDecision visit(CostExiledMoveToGrave cost) { return unsupported(cost); }
-    @Override public PaymentDecision visit(CostForage cost) { return unsupported(cost); }
+    /** Forage: 食物を 1 つ生け贄にするか、墓地のカードを 3 枚追放する（forge-gui の HumanCostDecision と同じ手順） */
+    @Override
+    public PaymentDecision visit(CostForage cost) {
+        CardCollection food = CardLists.filter(player.getCardsIn(ZoneType.Battlefield), CardPredicates.isType("Food"),
+                CardPredicates.canBeSacrificedBy(ability, isEffect()));
+        CardCollection exile = CardLists.filter(player.getCardsIn(ZoneType.Graveyard), CardPredicates.canExiledBy(ability, isEffect()));
+        boolean sacrifice = !food.isEmpty() && (exile.size() < 3
+                || player.getController().confirmAction(ability, null, "Forage: sacrifice a Food? (No: exile three cards from your graveyard)", null, null, null));
+        if (sacrifice) {
+            return choose(food, cost, 1);
+        }
+        return exile.size() >= 3 ? choose(exile, cost, 3) : null;
+    }
     @Override public PaymentDecision visit(CostGainControl cost) { return unsupported(cost); }
     @Override public PaymentDecision visit(CostGainLife cost) { return unsupported(cost); }
     @Override public PaymentDecision visit(CostPromiseGift cost) { return unsupported(cost); }

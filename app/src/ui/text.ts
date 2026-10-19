@@ -43,7 +43,10 @@ export function decisionPrompt(d: Decision): string {
     case "ATTACKERS": return t("prompt.ATTACKERS");
     case "CONFIRM": return d.prompt;
     case "PAY_MANA": return t("prompt.PAY_MANA", { cost: d.prompt.replace(/^Pay /, "").replace(/ for .*/, "") });
-    case "CHOOSE_CARDS": return t("prompt.CHOOSE_CARDS", { n: countText(d) });
+    case "CHOOSE_CARDS": {
+      const crew = /^Tap creatures with total power (\d+) or greater/.exec(d.prompt);
+      return crew ? t("prompt.totalPower", { n: crew[1] }) : t("prompt.CHOOSE_CARDS", { n: countText(d) });
+    }
     case "CHOOSE_ENTITY": return t("prompt.CHOOSE_ENTITY", { prompt: d.prompt, n: countText(d) });
     case "CHOOSE_MODE": return t("prompt.CHOOSE_MODE", { n: countText(d) });
     case "CHOOSE_NUMBER": return d.prompt.startsWith("Announce") ? t("prompt.X") : d.prompt;

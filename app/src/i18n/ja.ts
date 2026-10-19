@@ -127,6 +127,7 @@ export const ja = {
   "prompt.ATTACKERS": "攻撃するクリーチャーを選んでください",
   "prompt.PAY_MANA": "マナを支払ってください（{cost}）",
   "prompt.CHOOSE_CARDS": "コストに使うカードを選んでください（{n}）",
+  "prompt.totalPower": "パワーの合計が {n} 以上になるように、タップするクリーチャーを選んでください",
   "prompt.CHOOSE_ENTITY": "{prompt}（{n}）",
   "prompt.CHOOSE_MODE": "モードを選んでください（{n}）",
   "prompt.X": "X の値を選んでください",

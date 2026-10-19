@@ -144,7 +144,10 @@ public final class ForgeSession implements AutoCloseable {
         if (pending == null) {
             throw new IllegalStateException("回答待ちの選択がありません（status=" + status + "）");
         }
-        if (optionIds.size() < pending.min() || optionIds.size() > pending.max()) {
+        // 「取りやめ」だけの回答は、選択数の範囲に関係なく受け付ける（コストのカードを選んでいる途中で唱えるのをやめる）
+        boolean cancelOnly = optionIds.size() == 1 && optionIds.get(0).equals("cancel")
+                && pending.options().stream().anyMatch(o -> o.id().equals("cancel"));
+        if (!cancelOnly && (optionIds.size() < pending.min() || optionIds.size() > pending.max())) {
             throw new IllegalArgumentException("選択数が範囲外: " + optionIds.size() + " (min=" + pending.min() + ", max=" + pending.max() + ")");
         }
         // 不正な ID をゲームスレッドに渡すとゲームが止まるので、ここで弾く（選択待ちの状態はそのまま）

@@ -329,4 +329,61 @@ class ScenarioTest {
         err = Json.parseObject(WebApi.load("{"));
         assertEquals("INVALID_PUZZLE", ((java.util.Map<?, ?>) err.get("error")).get("code"));
     }
+
+    @Test
+    void s11_crewWithTotalPower() throws Exception {
+        try (ForgeSession s = ForgeSession.load(puzzle("s11-crew"))) {
+            StepResult r = s.submit(expect(s, Decision.Kind.PRIORITY).findByLabelPrefix("Smuggler's Copter | Crew").id());
+            log("S11 crew", r);
+            // 搭乗: パワーの合計が 1 以上になるようにタップするクリーチャーを選ぶ
+            Decision tap = expect(s, Decision.Kind.CHOOSE_CARDS);
+            r = s.submit(tap.findByLabelPrefix("Grizzly Bears").id());
+            log("S11 tap", r);
+            assertTrue(card(s.getState(), "b1").tapped(), "灰色熊がタップされている");
+            int guard = 0;
+            while (s.getPendingDecision() != null && s.getPendingDecision().kind() == Decision.Kind.PRIORITY && guard++ < 10) {
+                r = s.submit("pass");
+            }
+            Decision a = expect(s, Decision.Kind.ATTACKERS);
+            r = s.submit(a.findByLabelPrefix("Smuggler's Copter").id());
+            guard = 0;
+            while (s.getPendingDecision() != null && guard++ < 10) {
+                Decision d = s.getPendingDecision();
+                r = d.kind() == Decision.Kind.CONFIRM ? s.submit("no") : s.submit("pass");
+            }
+            log("S11 end", r);
+            assertEquals(Status.CLEARED, r.status(), r.reason());
+            assertTrue(s.fallbackLog().isEmpty(), s.fallbackLog().toString());
+        }
+    }
+
+    @Test
+    void s12_planeswalkerMinusAbility() throws Exception {
+        try (ForgeSession s = ForgeSession.load(puzzle("s12-pw-minus"))) {
+            // 忠誠カウンターを取り除くコスト（-2）。以前は counterTable が無くてゲームが止まっていた
+            StepResult r = s.submit(expect(s, Decision.Kind.PRIORITY).findByLabelPrefix("Ajani Vengeant | -2").id());
+            log("S12 activate", r);
+            r = s.submit(expect(s, Decision.Kind.TARGETS).findByLabelPrefix("player:p2").id());
+            assertEquals(1, card(s.getState(), "w1").counters().getOrDefault("LOYALTY", 0));
+            r = s.submit("pass");
+            log("S12 resolve", r);
+            assertEquals(Status.CLEARED, r.status(), r.reason());
+            assertTrue(s.fallbackLog().isEmpty(), s.fallbackLog().toString());
+        }
+    }
+
+    @Test
+    void cancelCostChoiceRollsBack() throws Exception {
+        try (ForgeSession s = ForgeSession.load(puzzle("s11-crew"))) {
+            s.submit(expect(s, Decision.Kind.PRIORITY).findByLabelPrefix("Smuggler's Copter | Crew").id());
+            Decision tap = expect(s, Decision.Kind.CHOOSE_CARDS);
+            StepResult r = s.submit("cancel");
+            log("cancel crew", r);
+            // 取りやめると起動する前に戻る（灰色熊はアンタップのまま、スタックは空）
+            assertFalse(card(s.getState(), "b1").tapped());
+            assertEquals(0, s.getState().stackSize());
+            assertEquals(Decision.Kind.PRIORITY, s.getPendingDecision().kind());
+            assertNotNull(tap);
+        }
+    }
 }

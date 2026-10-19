@@ -93,6 +93,27 @@ abstract class PlayerControllerSupport extends PlayerController {
         return map;
     }
 
+    /**
+     * パワーの合計が need 以上になるようにタップするクリーチャーを選ぶ（搭乗など）。
+     * 既定はパワーの大きい順に、足りるまで選ぶ。外部コントローラーは UI に問い合わせる
+     */
+    protected forge.game.card.CardCollectionView chooseCardsForTotalPower(forge.game.card.CardCollectionView candidates, SpellAbility sa,
+            forge.game.cost.CostPartWithList cost, int need) {
+        List<Card> sorted = new ArrayList<>();
+        candidates.forEach(sorted::add);
+        sorted.sort((a, b) -> Integer.compare(b.getNetPower(), a.getNetPower()));
+        forge.game.card.CardCollection out = new forge.game.card.CardCollection();
+        int sum = 0;
+        for (Card c : sorted) {
+            if (sum >= need) {
+                break;
+            }
+            out.add(c);
+            sum += c.getNetPower();
+        }
+        return out;
+    }
+
     /** マナ源を選ぶ。既定は先頭（自動支払い）。外部コントローラーは UI に問い合わせる */
     protected ManaPayer.Source chooseManaSource(SpellAbility saPaidFor, String remaining, List<ManaPayer.Source> sources) {
         return sources.get(0);

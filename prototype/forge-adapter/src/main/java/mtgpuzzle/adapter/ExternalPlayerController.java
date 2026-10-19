@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.Set;
 
 import forge.LobbyPlayer;
+import forge.card.ColorSet;
+import forge.card.MagicColor;
 import forge.game.Game;
 import forge.game.GameEntity;
 import forge.game.GameObject;
@@ -16,11 +18,14 @@ import forge.game.card.CardCollection;
 import forge.game.card.CardCollectionView;
 import forge.game.combat.Combat;
 import forge.game.combat.CombatUtil;
+import forge.game.cost.CostPart;
 import forge.game.cost.CostPartWithList;
 import forge.game.phase.PhaseType;
 import forge.game.player.DelayedReveal;
 import forge.game.player.PlayerActionConfirmMode;
 import forge.game.player.Player;
+import forge.game.replacement.ReplacementEffect;
+import forge.game.staticability.StaticAbility;
 import forge.game.spellability.AbilitySub;
 import forge.game.spellability.SpellAbility;
 import forge.game.trigger.WrappedAbility;
@@ -96,11 +101,24 @@ class ExternalPlayerController extends BaseAdapterController {
 
     /** 候補（カード・プレイヤー）から選ばせ、選ばれた候補を返す */
     private <T extends GameObject> List<T> chooseObjects(Decision.Kind kind, String prompt, List<T> candidates, int min, int max) {
+        return chooseObjects(kind, prompt, candidates, min, max, false);
+    }
+
+    /** cancellable なら「取りやめ」も出し、選ばれたら null を返す（コストの支払いを取りやめ、唱える前に戻す） */
+    private <T extends GameObject> List<T> chooseObjects(Decision.Kind kind, String prompt, List<T> candidates, int min, int max,
+            boolean cancellable) {
         List<Decision.Option> options = new ArrayList<>();
         for (T o : candidates) {
             options.add(option(o));
         }
+        if (cancellable) {
+            options.add(special("cancel", "Cancel"));
+        }
+        // 「取りやめ」は選択数に数えない（ForgeSession が「取りやめ」だけの回答を範囲外でも受け付ける）
         List<String> answer = channel.ask(kind, prompt, options, min, Math.min(max, candidates.size()));
+        if (answer.contains("cancel")) {
+            return null;
+        }
         List<T> out = new ArrayList<>();
         for (String id : answer) {
             out.add(candidates.get(indexOf(options, id)));
@@ -239,6 +257,58 @@ class ExternalPlayerController extends BaseAdapterController {
         return out;
     }
 
+    // ---------- 色・コストの順 ----------
+
+    /**
+     * 色を選ぶ。マナ能力から呼ばれたとき（2 色以上を出せる土地など）は、ManaPayer が候補を「支払いに使える色」に
+     * 絞ってから呼ばれるので、どれを出しても支払える。先頭を返し、未対応の選択として記録しない。
+     * それ以外（「色を 1 つ選ぶ」効果）はプレイヤーに問い合わせる
+     */
+    @Override
+    public byte chooseColor(String message, SpellAbility sa, ColorSet colors) {
+        if (colors.isColorless()) {
+            return 0;
+        }
+        List<Byte> options = new ArrayList<>();
+        colors.iterator().forEachRemaining(c -> options.add(c.getColorMask()));
+        if (options.size() == 1 || (sa != null && sa.isManaAbility())) {
+            return options.get(0);
+        }
+        List<Decision.Option> opts = new ArrayList<>();
+        for (int i = 0; i < options.size(); i++) {
+            opts.add(new Decision.Option("k" + i, MagicColor.toLongString(options.get(i))));
+        }
+        String id = channel.ask(Decision.Kind.CHOOSE_MODE, message, opts, 1, 1).get(0);
+        return options.get(Integer.parseInt(id.substring(1)));
+    }
+
+    /** 同時に当てはまる置換効果・常在型能力のうち、どれを先に適用するか */
+    @Override
+    public ReplacementEffect chooseSingleReplacementEffect(List<ReplacementEffect> possible) {
+        return possible.size() == 1 ? possible.get(0) : possible.get(chooseIndex("Choose which replacement effect applies first", possible));
+    }
+
+    @Override
+    public StaticAbility chooseSingleStaticAbility(List<StaticAbility> possible) {
+        return possible.size() == 1 ? possible.get(0) : possible.get(chooseIndex("Choose which effect applies first", possible));
+    }
+
+    private int chooseIndex(String prompt, List<?> items) {
+        List<Decision.Option> opts = new ArrayList<>();
+        for (int i = 0; i < items.size(); i++) {
+            Object it = items.get(i);
+            String host = it instanceof forge.game.CardTraitBase t && t.getHostCard() != null ? t.getHostCard().getName() + ": " : "";
+            opts.add(new Decision.Option("k" + i, host + it));
+        }
+        return Integer.parseInt(channel.ask(Decision.Kind.CHOOSE_MODE, prompt, opts, 1, 1).get(0).substring(1));
+    }
+
+    /** コストを払う順（マナと、タップ・生け贄などの順）。並びのままでよい（人間用の画面でも既定の順で払う） */
+    @Override
+    public List<CostPart> orderCosts(List<CostPart> costs) {
+        return costs;
+    }
+
     // ---------- 数 ----------
 
     @Override
@@ -326,12 +396,22 @@ class ExternalPlayerController extends BaseAdapterController {
         return sources.get(Integer.parseInt(id.substring(1)));
     }
 
+    /** 搭乗など: 候補から 1 体以上を選ばせる。パワーの合計が足りなければ支払いを取りやめる（呼び出し側が確かめる） */
+    @Override
+    protected CardCollectionView chooseCardsForTotalPower(CardCollectionView candidates, SpellAbility sa, CostPartWithList cost, int need) {
+        List<Card> list = new ArrayList<>();
+        candidates.forEach(list::add);
+        List<Card> chosen = chooseObjects(Decision.Kind.CHOOSE_CARDS,
+                "Tap creatures with total power " + need + " or greater (" + sa.getHostCard().getName() + ")", list, 1, list.size(), true);
+        return chosen == null ? null : new CardCollection(chosen);
+    }
+
     @Override
     public CardCollectionView chooseCardsForCost(CardCollectionView optionList, SpellAbility sa, CostPartWithList cpl,
             int amount, boolean isOptional, String prompt) {
         List<Card> candidates = new ArrayList<>();
         optionList.forEach(candidates::add);
-        return new CardCollection(chooseObjects(Decision.Kind.CHOOSE_CARDS, "Pay cost: " + prompt, candidates,
-                isOptional ? 0 : amount, amount));
+        List<Card> chosen = chooseObjects(Decision.Kind.CHOOSE_CARDS, "Pay cost: " + prompt, candidates, isOptional ? 0 : amount, amount, true);
+        return chosen == null ? null : new CardCollection(chosen);
     }
 }

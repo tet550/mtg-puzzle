@@ -122,6 +122,7 @@ export const en: Messages = {
   "prompt.ATTACKERS": "Choose creatures to attack with",
   "prompt.PAY_MANA": "Pay mana ({cost})",
   "prompt.CHOOSE_CARDS": "Choose cards to pay the cost ({n})",
+  "prompt.totalPower": "Choose creatures to tap with total power {n} or greater",
   "prompt.CHOOSE_ENTITY": "{prompt} ({n})",
   "prompt.CHOOSE_MODE": "Choose modes ({n})",
   "prompt.X": "Choose the value of X",
