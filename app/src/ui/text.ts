@@ -2,6 +2,7 @@
 
 import type { Decision, GameEvent, Phase } from "../engine/protocol";
 import { t, type MessageKey } from "../i18n";
+import { displayName } from "./images";
 
 export function phaseName(p: Phase): string {
   return t(`phase.${p}` as MessageKey);
@@ -49,7 +50,12 @@ export function decisionPrompt(d: Decision): string {
     }
     case "CHOOSE_ENTITY": return t("prompt.CHOOSE_ENTITY", { prompt: d.prompt, n: countText(d) });
     case "CHOOSE_MODE": return t("prompt.CHOOSE_MODE", { n: countText(d) });
-    case "CHOOSE_NUMBER": return d.prompt.startsWith("Announce") ? t("prompt.X") : d.prompt;
+    case "CHOOSE_NUMBER": {
+      if (d.prompt.startsWith("Announce")) return t("prompt.X");
+      const dmg = /^Assign combat damage from (.+) to (.+) \(lethal (\d+), (\d+) left\)$/.exec(d.prompt);
+      if (dmg) return t("prompt.assignDamage", { from: displayName(dmg[1]), to: displayName(dmg[2]), lethal: dmg[3], left: dmg[4] });
+      return d.prompt;
+    }
   }
 }
 

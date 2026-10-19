@@ -68,10 +68,24 @@ abstract class PlayerControllerSupport extends PlayerController {
         player.getGame().getStack().add(next);
     }
 
+    /**
+     * 戦闘ダメージの割り振りに、選ぶ余地があるか（forge-gui の PlayerControllerHuman と同じ判定）。
+     * ブロッカーが 2 体以上か、トランプルで防御側にも割り振れるときだけ選ぶ余地がある
+     */
+    protected static boolean damageAssignmentIsChoice(Card attacker, CardCollectionView blockers, GameEntity defender) {
+        return blockers.size() > 1 || (attacker.hasKeyword(forge.game.keyword.Keyword.TRAMPLE) && defender != null && !blockers.isEmpty());
+    }
+
+    /** 選ぶ余地が無い割り振り: ブロッカー（いなければ防御側）にすべて */
+    protected static Map<Card, Integer> trivialDamageAssignment(CardCollectionView blockers, int damageDealt) {
+        Map<Card, Integer> map = new HashMap<>();
+        map.put(blockers.isEmpty() ? null : blockers.getFirst(), damageDealt);
+        return map;
+    }
+
     /** 戦闘ダメージの割り振り: ブロッカーに順に致死量を割り振り、残りを防御側へ（トランプル時） */
     protected Map<Card, Integer> defaultDamageAssignment(Card attacker, CardCollectionView blockers, CardCollectionView remaining,
             int damageDealt, GameEntity defender, boolean overrideOrder) {
-        fallback("assignCombatDamage");
         Map<Card, Integer> map = new HashMap<>();
         int left = damageDealt;
         for (Card b : blockers) {

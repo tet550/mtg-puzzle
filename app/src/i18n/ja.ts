@@ -130,6 +130,7 @@ export const ja = {
   "prompt.totalPower": "パワーの合計が {n} 以上になるように、タップするクリーチャーを選んでください",
   "prompt.CHOOSE_ENTITY": "{prompt}（{n}）",
   "prompt.CHOOSE_MODE": "モードを選んでください（{n}）",
+  "prompt.assignDamage": "{from} の戦闘ダメージのうち、{to} に与える点数を選んでください（致死ダメージ {lethal}、残り {left}）",
   "prompt.X": "X の値を選んでください",
   "count.exact": "{n} 個",
   "count.range": "{min}〜{max} 個",

@@ -96,4 +96,13 @@ describe("PuzzleSession", () => {
     await s.answer(["pass"]);
     expect(engine.calls).toEqual(["load"]);
   });
+
+  it("未対応の選択の知らせは、問題を解くプレイヤーの分だけ（重ねて出さない）", async () => {
+    const engine = fakeEngine([step({ fallback: ["p2: chooseCardsToDiscardFrom", "p1: assignCombatDamage", "p1: assignCombatDamage"] })]);
+    const s = new PuzzleSession(engine);
+    await s.open(puzzle);
+    expect(s.state.notice).toContain("p1: assignCombatDamage");
+    expect(s.state.notice).not.toContain("p2:");
+    expect(s.state.notice!.match(/assignCombatDamage/g)).toHaveLength(1);
+  });
 });

@@ -125,6 +125,7 @@ export const en: Messages = {
   "prompt.totalPower": "Choose creatures to tap with total power {n} or greater",
   "prompt.CHOOSE_ENTITY": "{prompt} ({n})",
   "prompt.CHOOSE_MODE": "Choose modes ({n})",
+  "prompt.assignDamage": "Choose how much of {from}'s combat damage to assign to {to} (lethal {lethal}, {left} left)",
   "prompt.X": "Choose the value of X",
   "count.exact": "{n}",
   "count.range": "{min}–{max}",

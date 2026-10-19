@@ -16,6 +16,7 @@ import forge.game.GameObject;
 import forge.game.card.Card;
 import forge.game.card.CardCollection;
 import forge.game.card.CardCollectionView;
+import forge.game.card.CounterType;
 import forge.game.combat.Combat;
 import forge.game.combat.CombatUtil;
 import forge.game.cost.CostPart;
@@ -29,6 +30,7 @@ import forge.game.staticability.StaticAbility;
 import forge.game.spellability.AbilitySub;
 import forge.game.spellability.SpellAbility;
 import forge.game.trigger.WrappedAbility;
+import forge.game.zone.ZoneType;
 import forge.util.collect.FCollectionView;
 
 /**
@@ -301,6 +303,141 @@ class ExternalPlayerController extends BaseAdapterController {
             opts.add(new Decision.Option("k" + i, host + it));
         }
         return Integer.parseInt(channel.ask(Decision.Kind.CHOOSE_MODE, prompt, opts, 1, 1).get(0).substring(1));
+    }
+
+    /**
+     * 戦闘ダメージの割り振り。選ぶ余地が無いとき（ブロッカーが 1 体以下でトランプルでない）はそのまま。
+     * トランプルでブロッカーが 1 体なら、致死量をブロッカーに、残りを防御側に割り振る（パズルではふつう最善）。
+     * ブロッカーが 2 体以上のときは、決まった順に致死量を割り振り、未対応の選択として記録する
+     */
+    @Override
+    public Map<Card, Integer> assignCombatDamage(Card attacker, CardCollectionView blockers, CardCollectionView remaining,
+            int damageDealt, GameEntity defender, boolean overrideOrder) {
+        if (!damageAssignmentIsChoice(attacker, blockers, defender)) {
+            return trivialDamageAssignment(blockers, damageDealt);
+        }
+        if (blockers.size() == 1) {
+            return defaultDamageAssignment(attacker, blockers, remaining, damageDealt, defender, overrideOrder);
+        }
+        // ブロッカーが 2 体以上: ブロッカーごとに何点与えるかを順に聞く。トランプルなら、各ブロッカーに致死ダメージを
+        // 与えた残りを防御側に通せる（致死ダメージ未満しか与えないなら、残りは最後のブロッカーへ）
+        boolean trample = attacker.hasKeyword(forge.game.keyword.Keyword.TRAMPLE) && defender != null;
+        Map<Card, Integer> map = new java.util.HashMap<>();
+        int left = damageDealt;
+        List<Card> list = new ArrayList<>();
+        blockers.forEach(list::add);
+        boolean allLethal = true;
+        for (int i = 0; i < list.size(); i++) {
+            Card b = list.get(i);
+            boolean last = i == list.size() - 1;
+            int lethal = Math.max(0, b.getLethalDamage());
+            if (left == 0) {
+                break;
+            }
+            if (last && !trample) {
+                map.merge(b, left, Integer::sum);
+                left = 0;
+                break;
+            }
+            int v = chooseNumberIn("Assign combat damage from " + attacker.getName() + " to " + b.getName()
+                    + " (lethal " + lethal + ", " + left + " left)", 0, left);
+            if (v > 0) {
+                map.put(b, v);
+            }
+            allLethal &= v >= lethal;
+            left -= v;
+        }
+        if (left > 0) {
+            if (trample && allLethal) {
+                map.put(null, left); // 防御側のプレイヤー／プレインズウォーカーへ
+            } else {
+                map.merge(list.get(list.size() - 1), left, Integer::sum);
+            }
+        }
+        return map;
+    }
+
+    /** 同時に同じ領域へ移るカードの順（墓地に置く順など）。並びのままでよい */
+    @Override
+    public CardCollectionView orderMoveToZoneList(CardCollectionView cards, ZoneType destinationZone, SpellAbility source) {
+        return cards;
+    }
+
+    /** 効果で領域を移すカードを 1 枚選ぶ（墓地・追放・ライブラリーから手札へ、など） */
+    @Override
+    public Card chooseSingleCardForZoneChange(ZoneType destination, List<ZoneType> origin, SpellAbility sa, CardCollection fetchList,
+            DelayedReveal delayedReveal, String selectPrompt, boolean isOptional, Player decider) {
+        if (fetchList.isEmpty()) {
+            return null;
+        }
+        if (fetchList.size() == 1 && !isOptional) {
+            return fetchList.getFirst();
+        }
+        List<Card> candidates = new ArrayList<>();
+        fetchList.forEach(candidates::add);
+        List<Card> chosen = chooseObjects(Decision.Kind.CHOOSE_ENTITY,
+                selectPrompt == null || selectPrompt.isBlank() ? "Choose a card to move to " + destination : selectPrompt,
+                candidates, isOptional ? 0 : 1, 1);
+        return chosen.isEmpty() ? null : chosen.get(0);
+    }
+
+    // ---------- 効果での選択（生け贄・捨てる・二択・カウンターの種類・プロテクション） ----------
+
+    @Override
+    public CardCollectionView choosePermanentsToSacrifice(SpellAbility sa, int min, int max, CardCollectionView validTargets, String message) {
+        List<Card> candidates = new ArrayList<>();
+        validTargets.forEach(candidates::add);
+        if (candidates.size() <= min) {
+            return new CardCollection(candidates); // 選ぶ余地が無い
+        }
+        return new CardCollection(chooseObjects(Decision.Kind.CHOOSE_ENTITY,
+                message == null || message.isBlank() ? "Choose permanents to sacrifice" : message, candidates, min, max));
+    }
+
+    /** クリンナップで手札の上限まで捨てる */
+    @Override
+    public CardCollectionView chooseCardsToDiscardToMaximumHandSize(int numDiscard) {
+        List<Card> hand = new ArrayList<>();
+        player.getCardsIn(ZoneType.Hand).forEach(hand::add);
+        if (hand.size() <= numDiscard) {
+            return new CardCollection(hand);
+        }
+        return new CardCollection(chooseObjects(Decision.Kind.CHOOSE_ENTITY, "Discard " + numDiscard + " card(s) to your maximum hand size",
+                hand, numDiscard, numDiscard));
+    }
+
+    /** 二択（表か裏か、タップかアンタップか、など） */
+    @Override
+    public boolean chooseBinary(SpellAbility sa, String question, BinaryChoiceType kindOfChoice, Boolean defaultChoice) {
+        String[] labels = switch (kindOfChoice) {
+            case HeadsOrTails -> new String[]{"Heads", "Tails"};
+            case TapOrUntap -> new String[]{"Tap", "Untap"};
+            case PlayOrDraw -> new String[]{"Play", "Draw"};
+            case OddsOrEvens -> new String[]{"Odds", "Evens"};
+            case UntapOrLeaveTapped -> new String[]{"Untap", "Leave tapped"};
+            case LeftOrRight -> new String[]{"Left", "Right"};
+            case AddOrRemove -> new String[]{"Add", "Remove"};
+            case IncreaseOrDecrease -> new String[]{"Increase", "Decrease"};
+        };
+        String id = channel.ask(Decision.Kind.CHOOSE_MODE, question,
+                List.of(new Decision.Option("k0", labels[0]), new Decision.Option("k1", labels[1])), 1, 1).get(0);
+        return id.equals("k0");
+    }
+
+    @Override
+    public CounterType chooseCounterType(List<CounterType> options, SpellAbility sa, String prompt, Map<String, Object> params) {
+        if (options.size() == 1) {
+            return options.get(0);
+        }
+        return options.get(chooseIndex(prompt == null || prompt.isBlank() ? "Choose a counter type" : prompt, options));
+    }
+
+    @Override
+    public String chooseProtectionType(SpellAbility sa, List<String> choices) {
+        if (choices.size() == 1) {
+            return choices.get(0);
+        }
+        return choices.get(chooseIndex("Choose a protection", choices));
     }
 
     /** コストを払う順（マナと、タップ・生け贄などの順）。並びのままでよい（人間用の画面でも既定の順で払う） */

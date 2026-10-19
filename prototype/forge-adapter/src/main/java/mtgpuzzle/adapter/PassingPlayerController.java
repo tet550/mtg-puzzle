@@ -42,6 +42,37 @@ class PassingPlayerController extends BaseAdapterController {
         return super.chooseColor(message, sa, colors);
     }
 
+    /** 相手の戦闘ダメージの割り振り: 選ぶ余地が無ければそのまま、あれば致死量を順に（どちらも記録しない） */
+    @Override
+    public java.util.Map<forge.game.card.Card, Integer> assignCombatDamage(forge.game.card.Card attacker, forge.game.card.CardCollectionView blockers,
+            forge.game.card.CardCollectionView remaining, int damageDealt, forge.game.GameEntity defender, boolean overrideOrder) {
+        if (!damageAssignmentIsChoice(attacker, blockers, defender)) {
+            return trivialDamageAssignment(blockers, damageDealt);
+        }
+        return defaultDamageAssignment(attacker, blockers, remaining, damageDealt, defender, overrideOrder);
+    }
+
+    /**
+     * 相手が生け贄にするパーマネントを選ぶ（「対象のプレイヤーはクリーチャーを 1 体生け贄に捧げる」など）。
+     * 相手に有利なように、価値の低いものから選ぶ: トークン → マナ総量の小さいもの → パワーの小さいもの
+     */
+    @Override
+    public forge.game.card.CardCollectionView choosePermanentsToSacrifice(SpellAbility sa, int min, int max,
+            forge.game.card.CardCollectionView validTargets, String message) {
+        java.util.List<forge.game.card.Card> list = new java.util.ArrayList<>();
+        validTargets.forEach(list::add);
+        list.sort(java.util.Comparator.comparing((forge.game.card.Card c) -> !c.isToken())
+                .thenComparingInt(forge.game.card.Card::getCMC).thenComparingInt(forge.game.card.Card::getNetPower));
+        return new forge.game.card.CardCollection(list.subList(0, Math.min(min, list.size())));
+    }
+
+    /** 同時に同じ領域へ移るカードの順。並びのままでよい */
+    @Override
+    public forge.game.card.CardCollectionView orderMoveToZoneList(forge.game.card.CardCollectionView cards, forge.game.zone.ZoneType destinationZone,
+            SpellAbility source) {
+        return cards;
+    }
+
     @Override
     public void declareAttackers(Player attacker, Combat combat) {
         // 攻撃しない

@@ -132,9 +132,18 @@ export class PuzzleSession {
       startTurn,
       history,
       errors: phase === "error" ? [verdict.result === "ERROR" ? verdict.message : t("status.stalled")] : [],
-      notice: step.fallback.length ? t("status.fallback", { list: step.fallback.join(", ") }) : null,
+      notice: noticeOf(step.fallback, goal.player),
     });
   }
+}
+
+/**
+ * 既定の答えを使った選択のうち、問題を解くプレイヤーのものだけを知らせる。
+ * 相手の強制的な選択は「問題で定めた方針」（既定は先頭）で答える仕様なので知らせない（要件 4.3）
+ */
+function noticeOf(fallback: string[], player: string): string | null {
+  const mine = [...new Set(fallback.filter((f) => f.startsWith(`${player}:`)))];
+  return mine.length ? t("status.fallback", { list: mine.join(", ") }) : null;
 }
 
 function message(e: unknown): string {
