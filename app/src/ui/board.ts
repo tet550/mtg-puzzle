@@ -1,13 +1,16 @@
 // 盤面の描画。見せ方は mtgtable（mtg-playtest の GUI）に合わせる（design/phase1-plan.md の D9・M5）。
-// - 上に相手の側、下に自分の側。間に戦闘の欄、スタックは浮かぶ小窓
+// - 上に相手の側、下に自分の側。戦闘・スタック・カードの詳細は盤面の上に浮かぶ小窓（play.ts）
+// - 見出しは 1 行: アバター・LIFE・優先権（挙げた手）・フェイズのアイコン（今のフェイズにステップ名）
+// - 左の列に束（ライブラリー・墓地・追放。名前はカードの上に重ねる）、右に戦場・土地・手札
 // - 戦場の土地以外は種類ごとに左から、土地は別の行で名前ごとの束（タップ状態はまとめて 1 束）
 // - 相手の手札・土地・ライブラリー・墓地・追放は枚数や要約だけ。選択の候補になったときだけ開いて見せる
 
 import type { CardKind, CardView, GameView, ManaColor, PlayerView } from "../engine/protocol";
 import { h, onTapOrHold } from "./dom";
 import { t, type MessageKey } from "../i18n";
+import { avatarUrl, icon } from "./icons";
 import { displayName } from "./images";
-import { PHASE_STRIP, passLabel } from "./text";
+import { PHASE_STRIP, passLabel, phaseName } from "./text";
 
 export type Mark = "cand" | "chosen";
 
@@ -32,6 +35,16 @@ export interface BoardUi {
   flash: Set<string>;
   /** カード画像の URL（画像を出さない設定か、画像が無ければ null） */
   art: (name: string) => string | null;
+  /** 攻撃している・ブロックしているカード（カードの上に札を出す） */
+  attacking: Set<string>;
+  blocking: Set<string>;
+}
+
+export function combatSets(view: GameView): { attacking: Set<string>; blocking: Set<string> } {
+  return {
+    attacking: new Set(view.combat.map((a) => a.attackerId)),
+    blocking: new Set(view.combat.flatMap((a) => a.blockers)),
+  };
 }
 
 const KIND_ORDER: CardKind[] = ["creature", "artifact", "enchantment", "planeswalker", "battle"];
@@ -42,7 +55,6 @@ export function renderBoard(view: GameView, ui: BoardUi, hooks: BoardHooks): HTM
   const opp = view.players.find((p) => p !== me) ?? view.players[1];
   return h("section.board", null,
     opponentSide(view, opp, ui, hooks),
-    combatBox(view, ui, hooks),
     mySide(view, me, ui, hooks),
   );
 }
@@ -53,10 +65,17 @@ function playerHead(view: GameView, p: PlayerView, ui: BoardUi, hooks: BoardHook
   const mark = ui.marks.get(p.id);
   const head = h("div.phead" + (mark ? `.${mark}` : ""), { "data-player": p.id });
   head.addEventListener("click", () => hooks.player(p.id));
+  const who = mine ? t("player.you") : t("player.opponent");
+  // 名前は出さずにアイコンで示す（名前は Tip）。あなたは旅の少年、相手（自動でパスする）は石のゴーレム
+  const avatar = h("span.avatar" + (mine ? ".me" : ""), { title: who, "aria-label": who },
+    h("img", { src: avatarUrl(mine ? "human" : "ai"), alt: "" }));
   const life = h("span.life" + (p.life <= 0 ? ".dead" : p.life <= 5 ? ".low" : ""), { title: t("player.life") },
-    h("span.lbl", null, "LIFE"), h("span.lnum", null, p.life));
-  head.append(h("span.who", null, mine ? t("player.you") : t("player.opponent")), life);
-  head.append(h("span.prio" + (view.priorityPlayer === p.id ? "" : ".off"), { title: t("player.priority") }, "◆"));
+    h("span.llbl", null, "LIFE"), h("span.lnum", null, p.life));
+  head.append(avatar, life);
+  // 優先権: ライフの右の決まった欄に挙げた手（持っていない側も欄は取っておく）
+  const prio = h("span.prio" + (view.priorityPlayer === p.id ? "" : ".off"), { title: t("player.priority"), "aria-label": t("player.priority") });
+  prio.append(icon("priority"));
+  head.append(prio);
   if (view.activePlayer === p.id) head.append(phaseStrip(view, ui));
   const extra = h("span.pextra");
   for (const c of MANA_ORDER) {
@@ -72,10 +91,14 @@ function phaseStrip(view: GameView, ui: BoardUi): HTMLElement {
   const strip = h("span.phases", { title: t("phase.turnTitle", { turn: view.turn }) });
   for (const g of PHASE_STRIP) {
     const cur = g.phases.includes(view.phase);
-    strip.append(h("span.ph" + (cur ? ".cur" : ""), null, t(g.key)));
+    const ph = h("span.ph" + (cur ? ".cur" : "") + (g.icon === "ending" ? ".fill" : ""), { title: t(g.key) });
+    ph.append(icon(g.icon));
+    if (cur) ph.append(h("span.pstep", null, phaseName(view.phase)));
+    strip.append(ph);
   }
-  if (view.turn === ui.startTurn) strip.append(h("span.chip.deadline", { title: t("phase.deadline.title") }, t("phase.deadline")));
-  return strip;
+  const box = h("span.phasebox", null, strip);
+  if (view.turn === ui.startTurn) box.append(h("span.chip.deadline", { title: t("phase.deadline.title") }, t("phase.deadline")));
+  return box;
 }
 
 // ---------------------------------------------------------------- 相手の側（最小限）
@@ -137,7 +160,8 @@ function mySide(view: GameView, p: PlayerView, ui: BoardUi, hooks: BoardHooks): 
     h("div.row.bfrow", null, kindGroups(others, p, ui, hooks)),
     h("div.row.bfrow.lands", null, landGroups(lands, ui, hooks)),
   );
-  const handRow = h("div.hand.fan", { "data-zone": "hand" }, hand.map((c) => cardTile(c, ui, hooks, ".inhand")));
+  // 手札は土地に少し重ね、欄の下の端で切る（mtgtable と同じ。押すと浮かせて全体を見せる）
+  const handRow = h("div.handbox", null, h("div.hand.fan", { "data-zone": "hand" }, hand.map((c) => cardTile(c, ui, hooks, ".inhand"))));
   side.append(h("div.sidegrid", null, piles, h("div.sidemain", null, field, handRow)));
   if ((ui.open.has("my-graveyard") || gy.some((c) => ui.marks.has(c.instanceId))) && gy.length) side.append(opened(t("opened.myGraveyard"), gy, ui, hooks));
   if ((ui.open.has("my-exile") || ex.some((c) => ui.marks.has(c.instanceId))) && ex.length) side.append(opened(t("opened.myExile"), ex, ui, hooks));
@@ -152,7 +176,7 @@ function pile(label: string, count: number, top: CardView | null, open: boolean,
   return h("div.pile" + (count ? "" : ".empty") + (open ? ".open" : ""), {
     onclick: onclick && count ? (ev: Event) => { ev.stopPropagation(); onclick(); } : null,
     title: t("pile.title", { label, n: count }),
-  }, h("div.pstack", null, face, h("span.chip.strong.pcount", null, count)), h("div.plabel", null, label));
+  }, h("div.pstack", null, h("div.plabel", null, label), face, h("span.chip.strong.pcount", null, count)));
 }
 
 function opened(title: string, cards: CardView[], ui: BoardUi, hooks: BoardHooks): HTMLElement {
@@ -217,21 +241,42 @@ function landGroups(lands: CardView[], ui: BoardUi, hooks: BoardHooks): HTMLElem
   });
 }
 
-// ---------------------------------------------------------------- 戦闘の欄
+// ---------------------------------------------------------------- 戦闘・スタックの小窓の中身
 
-function combatBox(view: GameView, ui: BoardUi, hooks: BoardHooks): HTMLElement | null {
-  if (!view.combat.length) return null;
+/** 戦闘: 攻撃クリーチャーごとに、カード → 攻撃先 → ブロックしているカードを縦に並べる（mtgtable の cbcol） */
+export function combatBody(view: GameView, ui: BoardUi, hooks: BoardHooks): HTMLElement {
   const byId = new Map(view.players.flatMap((p) => p.cards).map((c) => [c.instanceId, c]));
-  return h("div.combatbox", null, h("h3", null, t("combat.title")),
-    h("div.combat", null, view.combat.map((a) => {
-      const att = byId.get(a.attackerId);
-      return h("div.attack", null,
-        att ? cardTile(att, ui, hooks, ".small") : a.attackerId,
-        h("span.arrow", null, "→"),
-        h("span.chip", null, view.players.some((p) => p.id === a.defender) ? (a.defender === ui.viewer ? t("player.you") : t("player.opponent")) : displayName(byId.get(a.defender)?.name ?? a.defender)),
-        a.blockers.length ? h("span.muted", null, t("combat.blockedBy"), a.blockers.map((b) => displayName(byId.get(b)?.name ?? b)).join(t("log.sep"))) : null,
-      );
-    })));
+  const target = (id: string) => view.players.some((p) => p.id === id)
+    ? (id === ui.viewer ? t("player.you") : t("player.opponent")) : displayName(byId.get(id)?.name ?? id);
+  return h("div.combat", null, view.combat.map((a) => {
+    const att = byId.get(a.attackerId);
+    const blockers = a.blockers.map((b) => byId.get(b)).filter((c): c is CardView => !!c);
+    return h("div.cbcol", null,
+      att ? cardTile(att, ui, hooks, ".incombat") : null,
+      h("div.cbto", null, h("span.arw", null, "↓"), target(a.defender)),
+      blockers.length ? h("div.cbrow", null, blockers.map((b) => cardTile(b, ui, hooks, ".incombat")))
+        : h("div.cbblk", null, t("combat.noBlock")));
+  }));
+}
+
+/** スタック: 上から順に、呪文はそのカード、能力は発生源のカードを小さく出し、横に名前・文・対象を並べる */
+export function stackBody(view: GameView, ui: BoardUi, hooks: BoardHooks, names: Map<string, string>): HTMLElement {
+  const byId = new Map(view.players.flatMap((p) => p.cards).map((c) => [c.instanceId, c]));
+  const onStack = new Set(view.stack.map((it) => it.sourceId));
+  // 唱えている途中（対象・支払いを選んでいる間）の呪文も、まだスタックに載っていない項目として出す
+  const casting = view.players.flatMap((p) => p.cards).filter((c) => c.zone === "Stack" && !onStack.has(c.instanceId));
+  const item = (c: CardView | undefined, name: string, text: string, top: string, targets: string[], cls: string) =>
+    h("li.sitem" + cls + (c && ui.marks.has(c.instanceId) ? ".cand" : ""), null,
+      c ? cardTile(c, ui, hooks, ".instack" + (c.zone === "Stack" ? "" : ".src")) : null,
+      h("div.sbody", null,
+        h("div.shead", null, h("span.chip", null, top), h("span.sname", null, displayName(name))),
+        h("div.stext", null, text),
+        targets.length ? h("div.stargets.muted", null, "→ ", targets.map((x) =>
+          view.players.some((p) => p.id === x) ? (x === ui.viewer ? t("player.you") : t("player.opponent")) : displayName(byId.get(x)?.name ?? names.get(x) ?? x)).join(t("log.sep"))) : null));
+  return h("ol.stack.panel", null,
+    casting.map((c) => item(c, c.name, t("stack.casting"), "…", [], ".casting")),
+    view.stack.map((it) => item(byId.get(it.sourceId), names.get(it.sourceId) ?? "?",
+      it.description.replace(/\s*\(\d+\)/g, ""), it.index === 0 ? t("stack.top") : String(it.index + 1), it.targets, "")));
 }
 
 // ---------------------------------------------------------------- カード
@@ -244,6 +289,8 @@ export function cardTile(c: CardView, ui: BoardUi, hooks: BoardHooks, extra: str
     + (ui.flash.has(c.instanceId) ? ".flash" : "");
   const d = h(cls as "div", { "data-id": c.instanceId, title: `${displayName(c.name)}${c.tapped ? t("card.tapped") : ""}` });
   const flags: string[] = [];
+  if (ui.attacking.has(c.instanceId)) flags.push(t("card.attacking"));
+  if (ui.blocking.has(c.instanceId)) flags.push(t("card.blocking"));
   if (c.token) flags.push(t("card.token"));
   if (c.sick && c.kinds.includes("creature") && c.zone === "Battlefield") flags.push(t("card.sick"));
   if (c.controller !== c.owner) flags.push(t("card.owner", { owner: c.owner }));
@@ -257,7 +304,7 @@ export function cardTile(c: CardView, ui: BoardUi, hooks: BoardHooks, extra: str
     // 画像のカード: 絵の上にエンジンが持っている情報（状態・カウンター・P/T）を重ねる（mtgtable の art と同じ）
     const img = h("img.art", { src: url, alt: displayName(c.name), loading: "lazy" });
     const box = h("div.artbox", null, img,
-      flags.length ? h("div.flags", null, flags.map((f) => h("span.chip.strong", null, f))) : null,
+      flags.length ? h("div.flags", null, flags.map((f) => h("span.chip.strong" + (f === t("card.attacking") ? ".atk" : f === t("card.blocking") ? ".blk" : ""), null, f))) : null,
       chips.length ? h("div.over", null, chips) : null,
       pt);
     img.addEventListener("error", () => { box.classList.add("noimg"); img.remove(); box.prepend(h("div.alt", null, displayName(c.name))); });

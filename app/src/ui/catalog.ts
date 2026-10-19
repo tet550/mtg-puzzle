@@ -19,6 +19,7 @@ export function renderCatalog(entries: CatalogEntry[], open: (id: string) => voi
     h("footer.credits.muted", null, [
       t("credits.engine"),
       t("credits.images"),
+      t("credits.ui"),
       t("credits.fcp"),
     ].map((line) => h("div", null, line))));
 }

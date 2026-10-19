@@ -1,12 +1,13 @@
 // パズルを遊ぶ画面。PuzzleSession の状態を描き、盤面と操作の欄からの入力を回答にして送る。
 
 import type { EngineStatus, ForgeEngine } from "../engine/client";
-import type { CardView, GameEvent, GameView, Option, StackItem } from "../engine/protocol";
+import type { CardView, GameEvent, GameView, Option } from "../engine/protocol";
 import { markCleared } from "../puzzle/catalog";
 import { verdictText } from "../puzzle/judge";
 import type { PuzzleJson } from "../puzzle/schema";
 import { PuzzleSession, type SessionState } from "../puzzle/session";
-import { detailBody, renderBoard, type BoardHooks, type BoardUi } from "./board";
+import { combatBody, combatSets, detailBody, renderBoard, stackBody, type BoardHooks, type BoardUi } from "./board";
+import { icon, type IconName } from "./icons";
 import { buildInteraction, marksOf, optionLabel, type Interaction } from "./decision";
 import { h } from "./dom";
 import { cardImage, displayName, imagesEnabled, printedText, setImagesEnabled } from "./images";
@@ -32,6 +33,8 @@ export class PlayPage {
   private flashTimer = 0;
   private lastHistoryLength = 0;
   private images = imagesEnabled();
+  /** 畳んでいる小窓（"stack" / "combat" / "play"）。選択要求が変わると開き直す（操作パネルは除く） */
+  private minimized = new Set<string>();
 
   constructor(engine: ForgeEngine, private readonly puzzleId: string, private readonly onBack: () => void) {
     this.el = h("div.play");
@@ -76,6 +79,8 @@ export class PlayPage {
       this.decisionSeq = s.step?.pending?.seq ?? -1;
       this.selected.clear();
       this.menu = null;
+      this.minimized.delete("stack");
+      this.minimized.delete("combat");
     }
     // 新しい出来事で変わったカードを短く光らせる（イベントの再生の最小限）
     if (s.history.length < this.lastHistoryLength) this.lastHistoryLength = 0;
@@ -103,6 +108,7 @@ export class PlayPage {
       startTurn: s.startTurn || view?.turn || 1,
       flash: this.flash,
       art: (name) => (this.images ? cardImage(name)?.normal ?? null : null),
+      ...(view ? combatSets(view) : { attacking: new Set<string>(), blocking: new Set<string>() }),
     };
     const hooks: BoardHooks = {
       card: (c) => this.onCard(c, interaction),
@@ -128,34 +134,60 @@ export class PlayPage {
       langSwitch(),
     );
 
+    // 盤面の上に浮かぶ小窓（mtgtable と同じ）: スタックは右上、戦闘は右の中ほど、カードの詳細は左上
     const board = view ? renderBoard(view, ui, hooks) : h("section.board");
-    // スタックは相手の側と自分の側の間に置く（盤面の見出しに重ねない）
-    const stack = view ? stackBox(view, this.names, ui.marks) : null;
-    if (stack) board.insertBefore(stack, board.children[1] ?? null);
+    if (view && (view.stack.length || view.players.some((p) => p.cards.some((c) => c.zone === "Stack")))) {
+      board.append(this.floatBox("stack", t("stack.title", { n: view.stack.length }), stackBody(view, ui, hooks, this.names)));
+    }
+    if (view && view.combat.length) board.append(this.floatBox("combat", t("combat.title"), combatBody(view, ui, hooks)));
+    if (this.detail) {
+      const d = this.detail;
+      board.append(h("div.float.cdetail", { role: "dialog" },
+        h("div.fhead", null, h("span", null, t("card.detail")),
+          h("button", { type: "button", onclick: () => { this.detail = null; this.render(); }, title: t("card.close") }, "×")),
+        h("div.fbody", null, detailBody(d, this.images ? cardImage(d.name)?.normal ?? null : null, cardImage(d.name)?.artist ?? null, printedText(d.name)))));
+    }
     const main = h("main.layout" + (this.logOpen ? ".withlog" : ""), null,
-      h("div.boardwrap", null, board, s.puzzle?.description ? h("p.pdesc.muted", null, s.puzzle.description) : null),
-      this.logOpen ? h("aside.logpane", null, h("div.lphead", null, "Log",
-        h("button", { type: "button", onclick: () => { this.logOpen = false; this.render(); } }, "×")),
+      board,
+      this.logOpen ? h("aside.logpane", null, h("div.lphead", null, h("span", null, "Log"),
+        h("button", { type: "button", onclick: () => { this.logOpen = false; this.render(); }, title: t("card.close") }, "×")),
         logList(s.history, this.names)) : null,
     );
 
-    const panel = this.actionPanel(s, interaction);
-    const detail = this.detail ? h("div.float.cdetail", { role: "dialog" },
-      h("div.fhead", null, t("card.detail"), h("button", { type: "button", onclick: () => { this.detail = null; this.render(); }, title: t("card.close") }, "×")),
-      detailBody(this.detail, this.images ? cardImage(this.detail.name)?.normal ?? null : null,
-        cardImage(this.detail.name)?.artist ?? null, printedText(this.detail.name))) : null;
+    const panel = this.playPanel(s, interaction);
     const menu = this.menu ? optionMenu(this.menu, (o) => this.choose(o, interaction)) : null;
+    this.el.classList.toggle("withpanelmin", this.minimized.has("play"));
 
-    this.el.replaceChildren(header, main, panel, ...(detail ? [detail] : []), ...(menu ? [menu] : []));
+    this.el.replaceChildren(header, main, panel, ...(menu ? [menu] : []));
     const hand = this.el.querySelector<HTMLElement>(".hand");
     if (hand) hand.scrollLeft = scroll;
     const log = this.el.querySelector<HTMLElement>(".log");
     if (log && stickLog) log.scrollTop = log.scrollHeight;
   }
 
-  /** 画面の下に固定した操作の欄 */
+  /** 盤面の上に浮かぶ小窓（見出しの「–」で畳む） */
+  private floatBox(key: string, title: string, body: HTMLElement): HTMLElement {
+    const min = this.minimized.has(key);
+    return h(`div.float.${key}box` + (min ? ".min" : ""), null,
+      h("div.fhead", null, h("span", null, title),
+        h("button", { type: "button", title: t("panel.min"), "aria-expanded": String(!min),
+          onclick: () => { min ? this.minimized.delete(key) : this.minimized.add(key); this.render(); } }, min ? "+" : "–")),
+      h("div.fbody", null, body));
+  }
+
+  /** 操作パネル（mtgtable の「p1 として操作」）。広い画面では右下に浮かせ、狭い画面では下に固定する */
+  private playPanel(s: SessionState, i: Interaction | null): HTMLElement {
+    const min = this.minimized.has("play");
+    return h("div.float.playpanel" + (min ? ".min" : ""), { "data-phase": s.phase },
+      h("div.fhead", null, h("span", null, t("panel.play")),
+        h("button", { type: "button", title: t("panel.min"), "aria-expanded": String(!min),
+          onclick: () => { min ? this.minimized.delete("play") : this.minimized.add("play"); this.render(); } }, min ? "+" : "–")),
+      this.actionPanel(s, i));
+  }
+
+  /** 操作パネルの中身（いま求められている選択） */
   private actionPanel(s: SessionState, i: Interaction | null): HTMLElement {
-    const bar = h("div.actions", { "data-phase": s.phase });
+    const bar = h("div.fbody.actions", { "data-phase": s.phase });
     switch (s.phase) {
       case "idle":
       case "loading":
@@ -187,6 +219,7 @@ export class PlayPage {
         break;
     }
     if (s.notice) bar.prepend(h("div.notice", null, s.notice));
+    if (s.puzzle?.description) bar.prepend(h("details.pdesc", null, h("summary", null, s.puzzle.title), h("div.muted", null, s.puzzle.description)));
     return bar;
   }
 
@@ -214,9 +247,10 @@ export class PlayPage {
     for (const o of i.specials) {
       const value = o.ref?.type === "special" ? o.ref.value : "";
       const text = value === "pass" ? passLabel(view.phase, view.stack.length) : optionLabel(o);
+      const ic: IconName | null = value === "pass" ? passIcon(view.phase, view.stack.length) : null;
       btns.append(h("button.big" + (value === "pass" || value === "yes" ? ".on" : ""), {
         type: "button", "data-special": value, onclick: () => this.send([o.id]),
-      }, text));
+      }, ic ? icon(ic) : null, text));
     }
     bar.append(btns);
   }
@@ -271,25 +305,18 @@ export class PlayPage {
 
 // ---------------------------------------------------------------- 部品
 
+/** パスのボタンのアイコン（mtgtable の操作パネルと同じ: 解決・次へ・ターン終了） */
+function passIcon(phase: GameView["phase"], stackSize: number): IconName {
+  if (stackSize > 0) return "pass";
+  return phase === "END_OF_TURN" ? "endTurn" : "next";
+}
+
 function engineBadge(s: EngineStatus): HTMLElement {
   return h(`span.engine.${s}`, { title: t("engine.title") }, statusText(s));
 }
 
 function statusText(s: EngineStatus): string {
   return t(`engine.${s}` as MessageKey);
-}
-
-/** スタック。唱えている途中（対象・支払いを選んでいる間）の呪文も、まだスタックに載っていない項目として出す */
-function stackBox(view: GameView, names: Map<string, string>, marks: Map<string, string>): HTMLElement | null {
-  const stack: StackItem[] = view.stack;
-  const onStack = new Set(stack.map((it) => it.sourceId));
-  const casting = view.players.flatMap((p) => p.cards).filter((c) => c.zone === "Stack" && !onStack.has(c.instanceId));
-  if (!stack.length && !casting.length) return null;
-  return h("div.stackbox", null, h("h3", null, t("stack.title", { n: stack.length })),
-    h("ol.stack", null,
-      casting.map((c) => h("li.casting", null, h("strong", null, displayName(c.name)), h("div.muted", null, t("stack.casting")))),
-      stack.map((it) => h("li" + (marks.has(it.sourceId) ? ".cand" : ""), null,
-        h("strong", null, displayName(names.get(it.sourceId) ?? "?")), h("div.muted", null, it.description.replace(/\s*\(\d+\)/g, ""))))));
 }
 
 function logList(history: GameEvent[], names: Map<string, string>): HTMLElement {

@@ -8,12 +8,12 @@ export function phaseName(p: Phase): string {
 }
 
 /** フェイズの帯に出す区切り（mtgtable の phaseStrip と同じく、フェイズごとにまとめる） */
-export const PHASE_STRIP: { key: MessageKey; phases: Phase[] }[] = [
-  { key: "strip.beginning", phases: ["UNTAP", "UPKEEP", "DRAW"] },
-  { key: "strip.main1", phases: ["MAIN1"] },
-  { key: "strip.combat", phases: ["COMBAT_BEGIN", "COMBAT_DECLARE_ATTACKERS", "COMBAT_DECLARE_BLOCKERS", "COMBAT_FIRST_STRIKE_DAMAGE", "COMBAT_DAMAGE", "COMBAT_END"] },
-  { key: "strip.main2", phases: ["MAIN2"] },
-  { key: "strip.end", phases: ["END_OF_TURN", "CLEANUP"] },
+export const PHASE_STRIP: { key: MessageKey; icon: "beginning" | "main1" | "combat" | "main2" | "ending"; phases: Phase[] }[] = [
+  { key: "strip.beginning", icon: "beginning", phases: ["UNTAP", "UPKEEP", "DRAW"] },
+  { key: "strip.main1", icon: "main1", phases: ["MAIN1"] },
+  { key: "strip.combat", icon: "combat", phases: ["COMBAT_BEGIN", "COMBAT_DECLARE_ATTACKERS", "COMBAT_DECLARE_BLOCKERS", "COMBAT_FIRST_STRIKE_DAMAGE", "COMBAT_DAMAGE", "COMBAT_END"] },
+  { key: "strip.main2", icon: "main2", phases: ["MAIN2"] },
+  { key: "strip.end", icon: "ending", phases: ["END_OF_TURN", "CLEANUP"] },
 ];
 
 export function zoneName(z: string | null): string {
