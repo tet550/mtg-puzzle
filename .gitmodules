@@ -1,0 +1,4 @@
+[submodule "prototype/forge"]
+	path = prototype/forge
+	url = https://github.com/Card-Forge/forge.git
+	shallow = true

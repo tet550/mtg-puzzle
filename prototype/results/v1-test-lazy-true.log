@@ -1,0 +1,67 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ----------------------< mtgpuzzle:forge-adapter >-----------------------
+[INFO] Building forge-adapter 0.1.0-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.4.0:resources (default-resources) @ forge-adapter ---
+[INFO] skip non existing resourceDirectory C:\Users\tiwaki\Documents\mtg-puzzle\prototype\forge-adapter\src\main\resources
+[INFO] 
+[INFO] --- compiler:3.15.0:compile (default-compile) @ forge-adapter ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 9 source files with javac [debug release 17] to target\classes
+[INFO] 
+[INFO] --- resources:3.4.0:testResources (default-testResources) @ forge-adapter ---
+[INFO] skip non existing resourceDirectory C:\Users\tiwaki\Documents\mtg-puzzle\prototype\forge-adapter\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.15.0:testCompile (default-testCompile) @ forge-adapter ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 1 source file with javac [debug release 17] to target\test-classes
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ forge-adapter ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running mtgpuzzle.adapter.ScenarioTest
+Language 'en-US' loaded successfully.
+(ThreadUtil first call): Running with priority 5
+Lazy card database: indexed 35240 card names from 33980 files in 2964 ms
+Upcoming set Star Trek (TRK) dated in the future. All `upcoming` cards will be added to this set with unknown rarity.
+Upcoming set Star Trek (TRK) dated in the future. All `upcoming` cards will be added to this set with unknown rarity.
+Read cards: 854 files in 0 ms (8 parts) using thread pool
+[metric] init(lazy=true) ms=4852 heapUsedMB=54
+[S8] FAILED 期限（このターン中）を過ぎました (7ms) pending=null events=[phase CLEANUP, turn 2 (p2), phase UNTAP, phase UPKEEP]
+[S8] fallback=[]
+[S3b] FAILED 敗北 (winner=p2) (74ms) pending=null events=[life p1 3 -> 0, resolved Lightning Bolt (1) - Lightning Bolt (1) deals 3 damage to p1., outcome winner=p2]
+[S6] CLEARED 勝利 (AllOpponentsLost) (53ms) pending=null events=[life p2 1 -> 0, resolved Prodigal Pyromancer (4) - Prodigal Pyromancer (4) deals 1 damage to p2., outcome winner=p1]
+[S3 pass-only] FAILED 期限（このターン中）を過ぎました (5ms) pending=null events=[phase CLEANUP, turn 2 (p2), phase UNTAP, phase UPKEEP]
+[S7] 存在しないカード: No Such Card
+[S1 load] IN_PROGRESS  (24ms) pending=PRIORITY [Option[id=pass, label=Pass priority], Option[id=a0, label=Lightning Bolt | Lightning Bolt deals 3 damage to any target.]] events=[turn 1 (p1), phase UNTAP, phase MAIN1, life p1 20 -> 5, life p2 20 -> 3]
+[S1 cast] IN_PROGRESS  (2ms) pending=TARGETS [Option[id=p0, label=player:p1], Option[id=p1, label=player:p2]] events=[]
+[S1 target] IN_PROGRESS  (3ms) pending=PRIORITY [Option[id=pass, label=Pass priority]] events=[cast Lightning Bolt deals 3 damage to any target.]
+[S1 resolve] CLEARED 勝利 (AllOpponentsLost) (59ms) pending=null events=[life p2 3 -> 0, resolved Lightning Bolt (1) - Lightning Bolt (1) deals 3 damage to p2., outcome winner=p1]
+[S1] fallback=[]
+[S4 resolve creature] IN_PROGRESS  (29ms) pending=TARGETS [Option[id=c1, label=Flametongue Kavu (Battlefield, p1)], Option[id=c12, label=Grizzly Bears (Battlefield, p2)]] events=[resolved Flametongue Kavu - Creature 4 / 2]
+[S4 trigger target] IN_PROGRESS  (2ms) pending=PRIORITY [Option[id=pass, label=Pass priority]] events=[cast When Flametongue Kavu enters, it deals 4 damage to target creature. [Zone Changer: Flametongue Kavu (1)]]
+[S4 resolve trigger] IN_PROGRESS  (13ms) pending=PRIORITY [Option[id=pass, label=Pass priority]] events=[resolved When Flametongue Kavu enters, it deals 4 damage to target creature. (Targeting: [[Grizzly Bears (12)]]) [Zone Changer: Flametongue Kavu (1)]]
+[S4] fallback=[]
+[metric] reset ms=22
+[S5 reset] IN_PROGRESS  (22ms) pending=PRIORITY [Option[id=pass, label=Pass priority], Option[id=a0, label=Lightning Bolt | Lightning Bolt deals 3 damage to any target.]] events=[turn 1 (p1), phase UNTAP, phase MAIN1, life p1 20 -> 5, life p2 20 -> 3]
+[S2 to combat] IN_PROGRESS  (1ms) pending=ATTACKERS [Option[id=c4, label=Hill Giant]] events=[phase COMBAT_DECLARE_ATTACKERS]
+[S2 attack] IN_PROGRESS  (10ms) pending=PRIORITY [Option[id=pass, label=Pass priority]] events=[]
+[S2 end] CLEARED 勝利 (AllOpponentsLost) (48ms) pending=null events=[phase COMBAT_FIRST_STRIKE_DAMAGE, phase COMBAT_DAMAGE, life p2 3 -> 0, outcome winner=p1]
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 7.457 s -- in mtgpuzzle.adapter.ScenarioTest
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  11.711 s
+[INFO] Finished at: 2026-10-19T17:34:42+09:00
+[INFO] ------------------------------------------------------------------------

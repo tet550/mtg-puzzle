@@ -1,0 +1,23 @@
+forge:forge-game:jar:2.0.15
++- forge:forge-core:jar:2.0.15:compile
+|  +- com.google.guava:guava:jar:33.3.1-android:compile
+|  |  +- com.google.guava:failureaccess:jar:1.0.2:compile
+|  |  +- com.google.guava:listenablefuture:jar:9999.0-empty-to-avoid-conflict-with-guava:compile
+|  |  +- com.google.code.findbugs:jsr305:jar:3.0.2:compile
+|  |  +- org.checkerframework:checker-qual:jar:3.43.0:compile
+|  |  +- com.google.errorprone:error_prone_annotations:jar:2.28.0:compile
+|  |  \- com.google.j2objc:j2objc-annotations:jar:3.0.0:compile
+|  +- org.apache.commons:commons-lang3:jar:3.18.0:compile
+|  +- org.apache.commons:commons-text:jar:1.12.0:compile
+|  +- com.apptasticsoftware:rssreader:jar:3.8.2:compile
+|  +- org.tinylog:slf4j-tinylog:jar:2.7.0:compile
+|  |  \- org.tinylog:tinylog-api:jar:2.7.0:compile
+|  \- org.tinylog:tinylog-impl:jar:2.7.0:compile
++- org.testng:testng:jar:7.10.2:test
+|  +- org.slf4j:slf4j-api:jar:2.0.16:compile
+|  +- com.beust:jcommander:jar:1.82:test
+|  \- org.webjars:jquery:jar:3.7.1:test
++- io.sentry:sentry:jar:8.21.1:compile
+\- org.jgrapht:jgrapht-core:jar:1.5.2:compile
+   +- org.jheaps:jheaps:jar:0.14:compile
+   \- org.apfloat:apfloat:jar:1.10.1:compile
