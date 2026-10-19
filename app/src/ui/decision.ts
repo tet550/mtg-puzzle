@@ -1,7 +1,9 @@
 // 選択要求（Decision）を、盤面で押せるもの（候補）と操作の欄のボタンに振り分ける。
 
 import type { Decision, GameView, Option } from "../engine/protocol";
+import { t } from "../i18n";
 import type { Mark } from "./board";
+import { displayName } from "./images";
 
 export interface Interaction {
   decision: Decision;
@@ -52,15 +54,15 @@ export function optionLabel(o: Option): string {
   const r = o.ref;
   if (r?.type === "ability") {
     const desc = o.label.includes(" | ") ? o.label.slice(o.label.indexOf(" | ") + 3).trim() : o.label;
-    if (r.abilityKind === "land") return "土地として出す";
-    if (r.abilityKind === "spell") return `唱える${shorten(desc) ? `: ${shorten(desc)}` : ""}`;
-    return `起動: ${shorten(desc)}`;
+    if (r.abilityKind === "land") return t("opt.land");
+    if (r.abilityKind === "spell") return shorten(desc) ? t("opt.castWith", { desc: shorten(desc) }) : t("opt.cast");
+    return t("opt.activate", { desc: shorten(desc) });
   }
   if (r?.type === "special") {
-    return { pass: "パス", auto: "自動で支払う", cancel: "取りやめ", yes: "はい", no: "いいえ" }[r.value];
+    return t(`opt.${r.value}`);
   }
-  if (r?.type === "player") return r.player === "p1" ? "あなた" : "相手";
-  return o.label.replace(/\s*\((Battlefield|Hand|Graveyard|Exile|Stack|Library), p\d\)$/, "");
+  if (r?.type === "player") return r.player === "p1" ? t("player.you") : t("player.opponent");
+  return displayName(o.label.replace(/\s*\((Battlefield|Hand|Graveyard|Exile|Stack|Library), p\d\)$/, ""));
 }
 
 function shorten(s: string): string {

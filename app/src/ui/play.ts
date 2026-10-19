@@ -9,8 +9,10 @@ import { PuzzleSession, type SessionState } from "../puzzle/session";
 import { detailBody, renderBoard, type BoardHooks, type BoardUi } from "./board";
 import { buildInteraction, marksOf, optionLabel, type Interaction } from "./decision";
 import { h } from "./dom";
-import { cardImage, imagesEnabled, setImagesEnabled } from "./images";
-import { decisionPrompt, eventText, passLabel, PHASE_NAMES } from "./text";
+import { cardImage, displayName, imagesEnabled, printedText, setImagesEnabled } from "./images";
+import { t, type MessageKey } from "../i18n";
+import { langSwitch } from "./lang";
+import { decisionPrompt, eventText, passLabel, phaseName } from "./text";
 
 const VIEWER = "p1";
 
@@ -41,6 +43,11 @@ export class PlayPage {
 
   async load(data: unknown) {
     await this.session.open(data);
+  }
+
+  /** 言語を切り替えたときなどに描き直す */
+  refresh() {
+    this.render();
   }
 
   /** 自動テスト用: 今の状態（進行・選択待ち・判定） */
@@ -108,16 +115,17 @@ export class PlayPage {
     const stickLog = !logScroll || logScroll.scrollTop + logScroll.clientHeight >= logScroll.scrollHeight - 8;
 
     const header = h("header.bar", null,
-      h("button.back", { type: "button", onclick: () => this.onBack(), title: "問題の一覧へ" }, "← 一覧"),
+      h("button.back", { type: "button", onclick: () => this.onBack(), title: t("header.back.title") }, t("header.back")),
       h("strong.ptitle", null, s.puzzle?.title ?? "…"),
-      h("span.chip.goal", { title: "勝利条件" }, "このターン中に勝利"),
-      view ? h("span.turn", null, `${view.turn} ターン目・${PHASE_NAMES[view.phase] ?? view.phase}`) : null,
+      h("span.chip.goal", { title: t("header.goal.title") }, t("header.goal")),
+      view ? h("span.turn", null, t("header.turn", { turn: view.turn, phase: phaseName(view.phase) })) : null,
       h("span.spacer"),
       engineBadge(this.engineStatus),
-      h("button", { type: "button", onclick: () => void this.session.reset(), disabled: !s.puzzle || s.phase === "loading" || s.phase === "busy", title: "初期盤面からやり直す" }, "リセット"),
-      h("button" + (this.images ? ".on" : ""), { type: "button", "aria-pressed": String(this.images), title: "カードの画像を出す・出さない",
-        onclick: () => { this.images = !this.images; setImagesEnabled(this.images); this.render(); } }, "画像"),
-      h("button" + (this.logOpen ? ".on" : ""), { type: "button", onclick: () => { this.logOpen = !this.logOpen; this.render(); }, title: "Log を開く・閉じる（L キー）" }, "Log"),
+      h("button", { type: "button", onclick: () => void this.session.reset(), disabled: !s.puzzle || s.phase === "loading" || s.phase === "busy", title: t("header.reset.title") }, t("header.reset")),
+      h("button" + (this.images ? ".on" : ""), { type: "button", "aria-pressed": String(this.images), title: t("header.images.title"),
+        onclick: () => { this.images = !this.images; setImagesEnabled(this.images); this.render(); } }, t("header.images")),
+      h("button" + (this.logOpen ? ".on" : ""), { type: "button", onclick: () => { this.logOpen = !this.logOpen; this.render(); }, title: t("header.log.title") }, "Log"),
+      langSwitch(),
     );
 
     const board = view ? renderBoard(view, ui, hooks) : h("section.board");
@@ -133,9 +141,9 @@ export class PlayPage {
 
     const panel = this.actionPanel(s, interaction);
     const detail = this.detail ? h("div.float.cdetail", { role: "dialog" },
-      h("div.fhead", null, "カード", h("button", { type: "button", onclick: () => { this.detail = null; this.render(); }, title: "閉じる" }, "×")),
+      h("div.fhead", null, t("card.detail"), h("button", { type: "button", onclick: () => { this.detail = null; this.render(); }, title: t("card.close") }, "×")),
       detailBody(this.detail, this.images ? cardImage(this.detail.name)?.normal ?? null : null,
-        cardImage(this.detail.name)?.artist ?? null)) : null;
+        cardImage(this.detail.name)?.artist ?? null, printedText(this.detail.name))) : null;
     const menu = this.menu ? optionMenu(this.menu, (o) => this.choose(o, interaction)) : null;
 
     this.el.replaceChildren(header, main, panel, ...(detail ? [detail] : []), ...(menu ? [menu] : []));
@@ -151,28 +159,28 @@ export class PlayPage {
     switch (s.phase) {
       case "idle":
       case "loading":
-        bar.append(h("div.prompt", null, h("span.spin"), this.engineStatus === "ready" ? "問題を読み込んでいます…" : `エンジンを準備しています…（${statusText(this.engineStatus)}）`));
+        bar.append(h("div.prompt", null, h("span.spin"), this.engineStatus === "ready" ? t("status.loading") : t("status.preparing", { status: statusText(this.engineStatus) })));
         break;
       case "busy":
-        bar.append(h("div.prompt", null, h("span.spin"), "処理中…"));
+        bar.append(h("div.prompt", null, h("span.spin"), t("status.busy")));
         break;
       case "finished": {
         const cleared = s.verdict.result === "CLEARED";
         bar.classList.add(cleared ? "cleared" : "failed");
         bar.append(h("div.result", null, verdictText(s.verdict)),
           h("div.btns", null,
-            h("button.on.big", { type: "button", onclick: () => void this.session.reset() }, "もう一度"),
-            h("button.big", { type: "button", onclick: () => this.onBack() }, "問題の一覧へ")));
+            h("button.on.big", { type: "button", onclick: () => void this.session.reset() }, t("action.again")),
+            h("button.big", { type: "button", onclick: () => this.onBack() }, t("action.toCatalog"))));
         break;
       }
       case "error":
         bar.classList.add("error");
-        bar.append(h("div.result", null, "問題を続けられません"),
+        bar.append(h("div.result", null, t("status.cannotContinue")),
           h("ul.errors", null, s.errors.map((e) => h("li", null, e))),
           h("div.btns", null,
-            s.puzzle ? h("button.on.big", { type: "button", onclick: () => void this.session.reset() }, "リセット") : null,
-            h("button.big", { type: "button", onclick: () => location.reload() }, "再読み込み"),
-            h("button.big", { type: "button", onclick: () => this.onBack() }, "問題の一覧へ")));
+            s.puzzle ? h("button.on.big", { type: "button", onclick: () => void this.session.reset() }, t("action.reset")) : null,
+            h("button.big", { type: "button", onclick: () => location.reload() }, t("action.reload")),
+            h("button.big", { type: "button", onclick: () => this.onBack() }, t("action.toCatalog"))));
         break;
       case "playing":
         if (i) this.decisionBar(bar, s, i);
@@ -199,9 +207,9 @@ export class PlayPage {
     if (!i.single && d.kind !== "PRIORITY") {
       const n = this.selected.size;
       const ok = n >= d.min && n <= d.max;
-      const label = d.kind === "ATTACKERS" ? (n ? `${n} 体で攻撃する` : "攻撃しない") : `決定（${n}）`;
+      const label = d.kind === "ATTACKERS" ? (n ? t("action.attackN", { n }) : t("action.noAttack")) : t("action.confirm", { n });
       btns.append(h("button.on.big", { type: "button", disabled: !ok, onclick: () => this.send([...this.selected]) }, label));
-      if (n) btns.append(h("button", { type: "button", onclick: () => { this.selected.clear(); this.render(); } }, "選び直す"));
+      if (n) btns.append(h("button", { type: "button", onclick: () => { this.selected.clear(); this.render(); } }, t("action.clear")));
     }
     for (const o of i.specials) {
       const value = o.ref?.type === "special" ? o.ref.value : "";
@@ -264,11 +272,11 @@ export class PlayPage {
 // ---------------------------------------------------------------- 部品
 
 function engineBadge(s: EngineStatus): HTMLElement {
-  return h(`span.engine.${s}`, { title: "エンジン（Forge）の状態" }, statusText(s));
+  return h(`span.engine.${s}`, { title: t("engine.title") }, statusText(s));
 }
 
 function statusText(s: EngineStatus): string {
-  return { idle: "待機", booting: "起動中", initializing: "初期化中", ready: "準備完了", failed: "異常" }[s];
+  return t(`engine.${s}` as MessageKey);
 }
 
 /** スタック。唱えている途中（対象・支払いを選んでいる間）の呪文も、まだスタックに載っていない項目として出す */
@@ -277,16 +285,16 @@ function stackBox(view: GameView, names: Map<string, string>, marks: Map<string,
   const onStack = new Set(stack.map((it) => it.sourceId));
   const casting = view.players.flatMap((p) => p.cards).filter((c) => c.zone === "Stack" && !onStack.has(c.instanceId));
   if (!stack.length && !casting.length) return null;
-  return h("div.stackbox", null, h("h3", null, `スタック（${stack.length}）`),
+  return h("div.stackbox", null, h("h3", null, t("stack.title", { n: stack.length })),
     h("ol.stack", null,
-      casting.map((c) => h("li.casting", null, h("strong", null, c.name), h("div.muted", null, "唱えている途中"))),
+      casting.map((c) => h("li.casting", null, h("strong", null, displayName(c.name)), h("div.muted", null, t("stack.casting")))),
       stack.map((it) => h("li" + (marks.has(it.sourceId) ? ".cand" : ""), null,
-        h("strong", null, names.get(it.sourceId) ?? "?"), h("div.muted", null, it.description.replace(/\s*\(\d+\)/g, ""))))));
+        h("strong", null, displayName(names.get(it.sourceId) ?? "?")), h("div.muted", null, it.description.replace(/\s*\(\d+\)/g, ""))))));
 }
 
 function logList(history: GameEvent[], names: Map<string, string>): HTMLElement {
-  const lines = history.map((e) => eventText(e, (id) => names.get(id) ?? id, VIEWER)).filter((t): t is string => !!t);
-  return h("div.log", null, lines.length ? lines.map((t) => h("div.ev" + (t.startsWith("──") ? ".turnline" : ""), null, t)) : h("div.muted", null, "まだ何も起きていません"));
+  const lines = history.map((e) => eventText(e, (id) => displayName(names.get(id) ?? id), VIEWER)).filter((t): t is string => !!t);
+  return h("div.log", null, lines.length ? lines.map((l) => h("div.ev" + (l.startsWith("──") ? ".turnline" : ""), null, l)) : h("div.muted", null, t("log.empty")));
 }
 
 function optionMenu(m: { x: number; y: number; options: Option[] }, choose: (o: Option) => void): HTMLElement {

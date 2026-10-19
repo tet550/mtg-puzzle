@@ -1,6 +1,7 @@
 // パズルの進行状態。エンジンへの呼び出しとクリア判定をまとめ、UI に状態の変化を知らせる。
 
 import type { GameEvent, StepResult } from "../engine/protocol";
+import { t } from "../i18n";
 import { judge, type Verdict } from "./judge";
 import { validatePuzzle, type PuzzleJson } from "./schema";
 
@@ -130,8 +131,8 @@ export class PuzzleSession {
       verdict,
       startTurn,
       history,
-      errors: phase === "error" ? [verdict.result === "ERROR" ? verdict.message : "エンジンが選択を求めずに止まりました"] : [],
-      notice: step.fallback.length ? `この問題には未対応の選択が含まれています（${step.fallback.join(", ")}）` : null,
+      errors: phase === "error" ? [verdict.result === "ERROR" ? verdict.message : t("status.stalled")] : [],
+      notice: step.fallback.length ? t("status.fallback", { list: step.fallback.join(", ") }) : null,
     });
   }
 }

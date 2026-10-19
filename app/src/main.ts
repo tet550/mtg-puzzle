@@ -5,6 +5,7 @@ import { loadCatalog, loadPuzzle } from "./puzzle/catalog";
 import { renderCatalog } from "./ui/catalog";
 import { h } from "./ui/dom";
 import { loadCardImages } from "./ui/images";
+import { onLangChange } from "./i18n";
 import { PlayPage } from "./ui/play";
 
 // ?timeout=<秒> でエンジンの 1 回の呼び出しの待ち時間を変える（調査用）
@@ -39,6 +40,11 @@ async function route() {
 }
 
 window.addEventListener("hashchange", () => void route());
+// 言語を切り替えたら描き直す（遊んでいる問題はそのまま。一覧は作り直す）
+onLangChange(() => {
+  if (page) page.refresh();
+  else void route();
+});
 // 画像の URL の一覧（小さい JSON）を読んでから描く。読めなければ文字のカードになる
 void loadCardImages().then(route);
 

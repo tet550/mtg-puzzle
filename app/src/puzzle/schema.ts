@@ -2,6 +2,8 @@
 // Forge の内部構造には依存させない。エンジン側でも検証する（存在しないカードなど）が、
 // 形の誤りはエンジンを起動する前にここで弾く。
 
+import { t } from "../i18n";
+
 export const SCHEMA_VERSION = 1;
 /** このアプリが同梱しているエンジンの Forge のバージョン */
 export const ENGINE_VERSION = "2.0.15";
@@ -55,66 +57,66 @@ export type ValidationResult = { ok: true; puzzle: PuzzleJson } | { ok: false; e
 export function validatePuzzle(data: unknown): ValidationResult {
   const errors: string[] = [];
   const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
-  if (!isObj(data)) return { ok: false, errors: ["問題データが JSON のオブジェクトではありません"] };
+  if (!isObj(data)) return { ok: false, errors: [t("schema.notObject")] };
 
   if (data.schemaVersion !== SCHEMA_VERSION) {
-    errors.push(`この問題の形式（schemaVersion ${String(data.schemaVersion)}）には対応していません`);
+    errors.push(t("schema.version", { v: String(data.schemaVersion) }));
     return { ok: false, errors };
   }
   const engine = data.engine;
   if (!isObj(engine) || engine.type !== "forge") {
-    errors.push("engine.type が forge ではありません");
+    errors.push(t("schema.engineType"));
   } else if (engine.version !== ENGINE_VERSION) {
-    errors.push(`この問題は Forge ${String(engine.version)} 用です（このサイトは ${ENGINE_VERSION}）`);
+    errors.push(t("schema.engineVersion", { v: String(engine.version), site: ENGINE_VERSION }));
   }
-  if (typeof data.title !== "string" || !data.title) errors.push("title がありません");
+  if (typeof data.title !== "string" || !data.title) errors.push(t("schema.title"));
 
   const game = data.game;
   if (!isObj(game)) {
-    errors.push("game がありません");
+    errors.push(t("schema.game"));
     return { ok: false, errors };
   }
   const players = Array.isArray(game.players) ? game.players : [];
-  if (players.length !== 2) errors.push("プレイヤーは 2 人である必要があります");
+  if (players.length !== 2) errors.push(t("schema.players"));
   const playerIds = new Set<string>();
   const instanceIds = new Set<string>();
   players.forEach((p, i) => {
     if (!isObj(p) || typeof p.id !== "string" || !p.id) {
-      errors.push(`players[${i}] の id がありません`);
+      errors.push(t("schema.playerId", { i }));
       return;
     }
-    if (playerIds.has(p.id)) errors.push(`プレイヤーの id が重複しています: ${p.id}`);
+    if (playerIds.has(p.id)) errors.push(t("schema.playerDup", { id: p.id }));
     playerIds.add(p.id);
     if (p.life !== undefined && (typeof p.life !== "number" || !Number.isInteger(p.life))) {
-      errors.push(`${p.id} のライフが整数ではありません`);
+      errors.push(t("schema.life", { id: p.id }));
     }
     for (const zone of ZONES) {
       const cards = p[zone];
       if (cards === undefined) continue;
       if (!Array.isArray(cards)) {
-        errors.push(`${p.id}.${zone} が配列ではありません`);
+        errors.push(t("schema.zoneArray", { zone: `${p.id}.${zone}` }));
         continue;
       }
       cards.forEach((c, j) => {
         if (!isObj(c) || typeof c.id !== "string" || typeof c.cardId !== "string" || !c.cardId) {
-          errors.push(`${p.id}.${zone}[${j}] に id か cardId がありません`);
+          errors.push(t("schema.card", { where: `${p.id}.${zone}[${j}]` }));
           return;
         }
-        if (instanceIds.has(c.id)) errors.push(`カードの id が重複しています: ${c.id}`);
+        if (instanceIds.has(c.id)) errors.push(t("schema.cardDup", { id: c.id }));
         instanceIds.add(c.id);
       });
     }
   });
   if (typeof game.activePlayer !== "string" || !playerIds.has(game.activePlayer)) {
-    errors.push("activePlayer がプレイヤーの id と一致しません");
+    errors.push(t("schema.active"));
   }
-  if (typeof game.phase !== "string") errors.push("phase がありません");
+  if (typeof game.phase !== "string") errors.push(t("schema.phase"));
 
   const goal = data.goal;
   if (!isObj(goal) || goal.type !== "win" || goal.deadline !== "current_turn") {
-    errors.push("対応していない勝利条件です（このターン中に勝利、のみ対応）");
+    errors.push(t("schema.goal"));
   } else if (typeof goal.player !== "string" || !playerIds.has(goal.player)) {
-    errors.push("goal.player がプレイヤーの id と一致しません");
+    errors.push(t("schema.goalPlayer"));
   }
 
   return errors.length ? { ok: false, errors } : { ok: true, puzzle: data as unknown as PuzzleJson };

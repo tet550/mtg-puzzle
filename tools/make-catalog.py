@@ -42,7 +42,8 @@ def main():
             "id": name,
             "title": puzzle.get("title", name),
             "description": puzzle.get("description", ""),
-            "source": f"Forge のパズル（{source['file']}）" if source.get("type") == "forge-pzl" else None,
+            # 画面では「Forge のパズル（ファイル名）」と出す（文は画面の言語で app 側が作る）
+            "sourceFile": source["file"] if source.get("type") == "forge-pzl" else None,
         })
     (OUT / "index.json").write_text(json.dumps(index, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(f"{len(index)} puzzles -> {OUT}")

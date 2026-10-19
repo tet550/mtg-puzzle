@@ -17,7 +17,7 @@ export function h(tagAndClasses: string, attrs?: Attrs | null, ...children: (Chi
         el.addEventListener(k.slice(2), v as EventListener);
       } else if (k === "class") {
         el.className = [el.className, String(v)].filter(Boolean).join(" ");
-      } else if (k.startsWith("data-") || k.startsWith("aria-") || k === "role" || k === "title" || k === "type" || k === "disabled") {
+      } else if (k.startsWith("data-") || k.startsWith("aria-") || k === "role" || k === "title" || k === "type" || k === "disabled" || k === "lang") {
         el.setAttribute(k, v === true ? "" : String(v));
       } else {
         (el as unknown as Record<string, unknown>)[k] = v;

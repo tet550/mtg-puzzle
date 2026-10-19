@@ -5,6 +5,7 @@
 // - エンジンが異常終了したらクリアにしない（エラー）
 
 import type { EngineState, GameEvent } from "../engine/protocol";
+import { t } from "../i18n";
 import type { PuzzleGoal } from "./schema";
 
 export type Verdict =
@@ -51,12 +52,12 @@ function outcome(goal: PuzzleGoal, winner: string | null, draw: boolean): Verdic
 export function verdictText(v: Verdict): string {
   switch (v.result) {
     case "IN_PROGRESS":
-      return "プレイ中";
+      return t("verdict.playing");
     case "CLEARED":
-      return "クリア！";
+      return t("verdict.cleared");
     case "FAILED":
-      return { deadline: "失敗: このターン中に勝てませんでした", lost: "失敗: 負けてしまいました", draw: "失敗: 引き分けになりました" }[v.reason];
+      return t(`verdict.${v.reason}`);
     case "ERROR":
-      return `エンジンの異常: ${v.message}`;
+      return t("verdict.error", { message: v.message });
   }
 }

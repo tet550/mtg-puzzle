@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { setLang } from "../i18n";
+
+setLang("ja"); // 文を確かめるテストは日本語で
 import { validatePuzzle } from "./schema";
 
 const valid = () => ({

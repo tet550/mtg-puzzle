@@ -47,6 +47,11 @@ button.big { padding: 8px 16px; font-size: 14px; font-weight: 600; min-height: 4
 .engine.failed::before { color: var(--warn); }
 .engine { font-size: 12px; color: var(--muted); }
 
+/* 言語の切り替え（日本語・English） */
+.lang { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.lang button { border: 0; border-radius: 0; padding: 3px 8px; }
+.lang button + button { border-left: 1px solid var(--line); }
+
 /* ---- 一覧 ---- */
 .list { max-width: 760px; margin: 0 auto; padding: 16px; }
 .lead { margin: 4px 0 14px; }
@@ -231,6 +236,9 @@ button.big { padding: 8px 16px; font-size: 14px; font-weight: 600; min-height: 4
   .bar .goal { flex: none; }
   .bar button { flex: none; padding: 3px 7px; }
   .plabel { font-size: 10px; white-space: nowrap; }
+  /* スマホでは、今の言語のボタンを隠して、切り替え先だけを出す */
+  .lang button.on { display: none; }
+  .lang button + button { border-left: 0; }
   .layout { padding: 8px 8px 180px; }
   .sidegrid { grid-template-columns: 56px minmax(0, 1fr); gap: 8px; }
   .pile { width: 52px; }

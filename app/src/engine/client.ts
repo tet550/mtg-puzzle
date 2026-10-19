@@ -13,6 +13,7 @@ import {
   type WorkerRequest,
   type WorkerResponse,
 } from "./protocol";
+import { t, type MessageKey } from "../i18n";
 
 export type EngineStatus = "idle" | "booting" | "initializing" | "ready" | "failed";
 
@@ -102,7 +103,7 @@ export class ForgeEngine {
     this.setStatus("booting");
     this.worker = new Worker(this.opts.workerUrl);
     this.worker.onmessage = (e: MessageEvent<WorkerResponse>) => this.onMessage(e.data);
-    this.worker.onerror = (e) => this.failAll(new EngineError("WORKER", e.message || "Worker のエラー"));
+    this.worker.onerror = (e) => this.failAll(new EngineError("WORKER", e.message || t("error.worker")));
     let preload: unknown;
     try {
       const res = await fetch(this.opts.preloadUrl);
@@ -115,7 +116,7 @@ export class ForgeEngine {
     this.setStatus("initializing");
     const version = parse<VersionInfo>(await this.raw("version", {}, this.opts.callTimeoutMs));
     if (version.api !== API_VERSION) {
-      throw new EngineError("VERSION", `エンジンの API のバージョンが違います（${version.api}、必要なのは ${API_VERSION}）`);
+      throw new EngineError("VERSION", t("error.version", { got: version.api, want: API_VERSION }));
     }
     const init = parse<InitResult>(await this.raw("init", { zip: this.opts.resZip, dir: this.opts.resDir }, this.opts.bootTimeoutMs));
     this.metrics.initMs = init.initMs;
@@ -144,7 +145,7 @@ export class ForgeEngine {
     this.worker?.terminate();
     this.worker = null;
     this.starting = null;
-    this.failAll(new EngineError("WORKER", "エンジンを停止しました"));
+    this.failAll(new EngineError("WORKER", t("error.stopped")));
     this.setStatus("idle");
   }
 
@@ -164,12 +165,12 @@ export class ForgeEngine {
 
   private raw(method: WorkerMethod, args: Record<string, unknown>, timeoutMs: number): Promise<string> {
     const worker = this.worker;
-    if (!worker) return Promise.reject(new EngineError("WORKER", "エンジンが起動していません"));
+    if (!worker) return Promise.reject(new EngineError("WORKER", t("error.notStarted")));
     return new Promise<string>((resolve, reject) => {
       const id = ++this.seq;
       const timer = window.setTimeout(() => {
         this.waiting.delete(id);
-        reject(new EngineError("TIMEOUT", `エンジンが応答しません（${method}、${Math.round(timeoutMs / 1000)} 秒）`));
+        reject(new EngineError("TIMEOUT", t("error.timeout", { method, sec: Math.round(timeoutMs / 1000) })));
         // ゲームスレッドが止まっている可能性があるので、Worker ごと作り直す必要がある
         this.setStatus("failed", "timeout");
       }, timeoutMs);
@@ -202,11 +203,12 @@ function parse<T>(raw: string): T {
   try {
     v = JSON.parse(raw);
   } catch {
-    throw new EngineError("WORKER", `エンジンの応答を読めません: ${raw.slice(0, 200)}`);
+    throw new EngineError("WORKER", t("error.response", { raw: raw.slice(0, 200) }));
   }
   if (v && typeof v === "object" && "error" in v) {
     const { code, message } = (v as ApiError).error;
-    throw new EngineError(code, message);
+    // Java の文は開発者向け（日本語）なので、種類ごとの説明を画面の言語で前に付ける
+    throw new EngineError(code, t(`error.${code}` as MessageKey, { message }));
   }
   return v as T;
 }

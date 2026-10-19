@@ -81,7 +81,7 @@ for (const entry of catalog) {
     }
     const end = await waitFor(page, (x) => x.phase === "finished", "結果");
     expect(end.verdict.result).toBe("CLEARED");
-    await expect(page.locator(".actions .result")).toHaveText("クリア！");
+    await expect(page.locator(".actions .result")).toHaveText(/^(クリア！|Cleared!)$/);
   });
 }
 

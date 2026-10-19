@@ -1,88 +1,81 @@
-// 画面に出す日本語（フェイズ・出来事・選択要求の説明）。
+// 画面に出す文（フェイズ・出来事・選択要求の説明）。文そのものは i18n の辞書にある。
 
 import type { Decision, GameEvent, Phase } from "../engine/protocol";
+import { t, type MessageKey } from "../i18n";
 
-export const PHASE_NAMES: Record<Phase, string> = {
-  UNTAP: "アンタップ",
-  UPKEEP: "アップキープ",
-  DRAW: "ドロー",
-  MAIN1: "メイン 1",
-  COMBAT_BEGIN: "戦闘開始",
-  COMBAT_DECLARE_ATTACKERS: "攻撃宣言",
-  COMBAT_DECLARE_BLOCKERS: "ブロック宣言",
-  COMBAT_FIRST_STRIKE_DAMAGE: "先制ダメージ",
-  COMBAT_DAMAGE: "戦闘ダメージ",
-  COMBAT_END: "戦闘終了",
-  MAIN2: "メイン 2",
-  END_OF_TURN: "終了",
-  CLEANUP: "クリンナップ",
-};
+export function phaseName(p: Phase): string {
+  return t(`phase.${p}` as MessageKey);
+}
 
 /** フェイズの帯に出す区切り（mtgtable の phaseStrip と同じく、フェイズごとにまとめる） */
-export const PHASE_STRIP: { label: string; phases: Phase[] }[] = [
-  { label: "開始", phases: ["UNTAP", "UPKEEP", "DRAW"] },
-  { label: "メイン 1", phases: ["MAIN1"] },
-  { label: "戦闘", phases: ["COMBAT_BEGIN", "COMBAT_DECLARE_ATTACKERS", "COMBAT_DECLARE_BLOCKERS", "COMBAT_FIRST_STRIKE_DAMAGE", "COMBAT_DAMAGE", "COMBAT_END"] },
-  { label: "メイン 2", phases: ["MAIN2"] },
-  { label: "終了", phases: ["END_OF_TURN", "CLEANUP"] },
+export const PHASE_STRIP: { key: MessageKey; phases: Phase[] }[] = [
+  { key: "strip.beginning", phases: ["UNTAP", "UPKEEP", "DRAW"] },
+  { key: "strip.main1", phases: ["MAIN1"] },
+  { key: "strip.combat", phases: ["COMBAT_BEGIN", "COMBAT_DECLARE_ATTACKERS", "COMBAT_DECLARE_BLOCKERS", "COMBAT_FIRST_STRIKE_DAMAGE", "COMBAT_DAMAGE", "COMBAT_END"] },
+  { key: "strip.main2", phases: ["MAIN2"] },
+  { key: "strip.end", phases: ["END_OF_TURN", "CLEANUP"] },
 ];
 
-export const ZONE_NAMES: Record<string, string> = {
-  Hand: "手札", Battlefield: "戦場", Graveyard: "墓地", Exile: "追放", Library: "ライブラリー", Stack: "スタック", Command: "統率",
-};
+export function zoneName(z: string | null): string {
+  if (!z) return "-";
+  const key = `zone.${z}` as MessageKey;
+  const s = t(key);
+  return s === key ? z : s;
+}
 
 /** 優先権をパスしたときに進む先（パスのボタンに書く） */
 export function passLabel(phase: Phase, stackSize: number): string {
-  if (stackSize > 0) return "解決する";
+  if (stackSize > 0) return t("pass.resolve");
   switch (phase) {
-    case "MAIN1": return "戦闘へ";
+    case "MAIN1": return t("pass.toCombat");
     case "COMBAT_DECLARE_ATTACKERS":
-    case "COMBAT_DECLARE_BLOCKERS": return "ダメージへ";
-    case "MAIN2": return "終了ステップへ";
-    case "END_OF_TURN": return "ターンを終える";
-    default: return "パス";
+    case "COMBAT_DECLARE_BLOCKERS": return t("pass.toDamage");
+    case "MAIN2": return t("pass.toEnd");
+    case "END_OF_TURN": return t("pass.endTurn");
+    default: return t("pass.default");
   }
 }
 
 export function decisionPrompt(d: Decision): string {
   switch (d.kind) {
-    case "PRIORITY": return "行動を選んでください（カードを押す）";
-    case "TARGETS": return d.max > 1 ? `対象を ${d.min === d.max ? d.min : `${d.min}〜${d.max}`} 個選んでください` : "対象を選んでください";
-    case "ATTACKERS": return "攻撃するクリーチャーを選んでください";
+    case "PRIORITY": return t("prompt.PRIORITY");
+    case "TARGETS": return d.max > 1 ? t("prompt.TARGETS.n", { n: countText(d) }) : t("prompt.TARGETS");
+    case "ATTACKERS": return t("prompt.ATTACKERS");
     case "CONFIRM": return d.prompt;
-    case "PAY_MANA": return `マナを支払ってください（${d.prompt.replace(/^Pay /, "").replace(/ for .*/, "")}）`;
-    case "CHOOSE_CARDS": return `コストに使うカードを選んでください（${countText(d)}）`;
-    case "CHOOSE_ENTITY": return `${d.prompt}（${countText(d)}）`;
-    case "CHOOSE_MODE": return `モードを選んでください（${countText(d)}）`;
-    case "CHOOSE_NUMBER": return d.prompt.startsWith("Announce") ? "X の値を選んでください" : d.prompt;
+    case "PAY_MANA": return t("prompt.PAY_MANA", { cost: d.prompt.replace(/^Pay /, "").replace(/ for .*/, "") });
+    case "CHOOSE_CARDS": return t("prompt.CHOOSE_CARDS", { n: countText(d) });
+    case "CHOOSE_ENTITY": return t("prompt.CHOOSE_ENTITY", { prompt: d.prompt, n: countText(d) });
+    case "CHOOSE_MODE": return t("prompt.CHOOSE_MODE", { n: countText(d) });
+    case "CHOOSE_NUMBER": return d.prompt.startsWith("Announce") ? t("prompt.X") : d.prompt;
   }
 }
 
 function countText(d: Decision): string {
-  return d.min === d.max ? `${d.min} 個` : `${d.min}〜${d.max} 個`;
+  return d.min === d.max ? t("count.exact", { n: d.min }) : t("count.range", { min: d.min, max: d.max });
 }
 
 export function playerName(id: string, viewer: string): string {
-  return id === viewer ? "あなた" : "相手";
+  return id === viewer ? t("player.you") : t("player.opponent");
 }
 
-/** 出来事を Log の 1 行にする。表示しない出来事は null */
+/** 出来事を Log の 1 行にする。表示しない出来事は null。name はインスタンス ID → 表示名 */
 export function eventText(e: GameEvent, name: (id: string) => string, viewer: string): string | null {
-  const who = (p: string) => (p === viewer || p === "p1" || p === "p2" ? playerName(p, viewer) : `<${name(p)}>`);
+  const card = (id: string | null) => (id ? `<${name(id)}>` : "?");
+  const who = (p: string) => (p === "p1" || p === "p2" || p === viewer ? playerName(p, viewer) : card(p));
   switch (e.type) {
-    case "turnBegan": return `── ${e.turn} ターン目（${playerName(e.player, viewer)}） ──`;
+    case "turnBegan": return t("log.turn", { turn: e.turn, player: playerName(e.player, viewer) });
     case "phase": return null;
-    case "cast": return `<${name(e.sourceId)}> を唱えた／起動した`;
-    case "resolved": return `<${name(e.sourceId)}> が解決した${e.fizzled ? "（対象が無く打ち消された）" : ""}`;
-    case "life": return `${playerName(e.player, viewer)}のライフ ${e.from} → ${e.to}`;
-    case "damage": return `${e.sourceId ? `<${name(e.sourceId)}>` : "?"} が ${who(e.target)} に ${e.amount} 点${e.combat ? "（戦闘）" : ""}`;
+    case "cast": return t("log.cast", { card: card(e.sourceId) });
+    case "resolved": return t(e.fizzled ? "log.fizzled" : "log.resolved", { card: card(e.sourceId) });
+    case "life": return t("log.life", { player: playerName(e.player, viewer), from: e.from, to: e.to });
+    case "damage": return t(e.combat ? "log.damageCombat" : "log.damage", { source: card(e.sourceId), target: who(e.target), n: e.amount });
     case "zoneChange":
-      if (e.from === "Library" && e.to === "Hand") return `カードを 1 枚引いた`;
-      return `<${name(e.cardId)}>: ${ZONE_NAMES[e.from ?? ""] ?? e.from ?? "-"} → ${ZONE_NAMES[e.to ?? ""] ?? e.to ?? "-"}`;
+      if (e.from === "Library" && e.to === "Hand") return t("log.draw");
+      return t("log.move", { card: card(e.cardId), from: zoneName(e.from), to: zoneName(e.to) });
     case "tapped": return null;
-    case "counters": return `<${name(e.cardId)}> の ${e.counter} カウンター ${e.from} → ${e.to}`;
+    case "counters": return t("log.counters", { card: card(e.cardId), counter: e.counter, from: e.from, to: e.to });
     case "attackersDeclared":
-      return e.attackers.length ? `攻撃: ${e.attackers.map((a) => `<${name(a.cardId)}>`).join("、")}` : null;
-    case "gameOver": return e.winner ? `ゲーム終了（勝者: ${playerName(e.winner, viewer)}）` : "ゲーム終了（引き分け）";
+      return e.attackers.length ? t("log.attack", { list: e.attackers.map((a) => card(a.cardId)).join(t("log.sep")) }) : null;
+    case "gameOver": return e.winner ? t("log.gameOver", { player: playerName(e.winner, viewer) }) : t("log.gameOverDraw");
   }
 }

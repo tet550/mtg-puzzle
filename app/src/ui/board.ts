@@ -5,6 +5,8 @@
 
 import type { CardKind, CardView, GameView, ManaColor, PlayerView } from "../engine/protocol";
 import { h, onTapOrHold } from "./dom";
+import { t, type MessageKey } from "../i18n";
+import { displayName } from "./images";
 import { PHASE_STRIP, passLabel } from "./text";
 
 export type Mark = "cand" | "chosen";
@@ -51,28 +53,28 @@ function playerHead(view: GameView, p: PlayerView, ui: BoardUi, hooks: BoardHook
   const mark = ui.marks.get(p.id);
   const head = h("div.phead" + (mark ? `.${mark}` : ""), { "data-player": p.id });
   head.addEventListener("click", () => hooks.player(p.id));
-  const life = h("span.life" + (p.life <= 0 ? ".dead" : p.life <= 5 ? ".low" : ""), { title: "ライフ" },
+  const life = h("span.life" + (p.life <= 0 ? ".dead" : p.life <= 5 ? ".low" : ""), { title: t("player.life") },
     h("span.lbl", null, "LIFE"), h("span.lnum", null, p.life));
-  head.append(h("span.who", null, mine ? "あなた" : "相手"), life);
-  head.append(h("span.prio" + (view.priorityPlayer === p.id ? "" : ".off"), { title: "優先権" }, "◆"));
+  head.append(h("span.who", null, mine ? t("player.you") : t("player.opponent")), life);
+  head.append(h("span.prio" + (view.priorityPlayer === p.id ? "" : ".off"), { title: t("player.priority") }, "◆"));
   if (view.activePlayer === p.id) head.append(phaseStrip(view, ui));
   const extra = h("span.pextra");
   for (const c of MANA_ORDER) {
     const n = p.manaPool[c];
     if (n) extra.append(h(`span.chip.mana.m${c}`, null, `{${c}} ×${n}`));
   }
-  if (p.poison) extra.append(h("span.chip", null, `毒 ${p.poison}`));
+  if (p.poison) extra.append(h("span.chip", null, t("player.poison", { n: p.poison })));
   head.append(extra);
   return head;
 }
 
 function phaseStrip(view: GameView, ui: BoardUi): HTMLElement {
-  const strip = h("span.phases", { title: `${view.turn} ターン目` });
+  const strip = h("span.phases", { title: t("phase.turnTitle", { turn: view.turn }) });
   for (const g of PHASE_STRIP) {
     const cur = g.phases.includes(view.phase);
-    strip.append(h("span.ph" + (cur ? ".cur" : ""), null, g.label));
+    strip.append(h("span.ph" + (cur ? ".cur" : ""), null, t(g.key)));
   }
-  if (view.turn === ui.startTurn) strip.append(h("span.chip.deadline", { title: "このターン中に勝てばクリア" }, "このターン中"));
+  if (view.turn === ui.startTurn) strip.append(h("span.chip.deadline", { title: t("phase.deadline.title") }, t("phase.deadline")));
   return strip;
 }
 
@@ -92,18 +94,18 @@ function opponentSide(view: GameView, p: PlayerView, ui: BoardUi, hooks: BoardHo
 
   const untapped = lands.filter((c) => !c.tapped).length;
   const summary = h("div.osum", null,
-    summaryChip(`土地 ${lands.length}（アンタップ ${untapped}）`, "lands", isOpen("lands", lands), lands.length > 0, hooks),
-    h("span.chip", { title: "相手の手札" }, `手札 ${p.handCount}`),
-    h("span.chip", { title: "相手のライブラリー" }, `ライブラリー ${p.libraryCount}`),
-    summaryChip(`墓地 ${gy.length}`, "graveyard", isOpen("graveyard", gy), gy.length > 0, hooks),
-    summaryChip(`追放 ${ex.length}`, "exile", isOpen("exile", ex), ex.length > 0, hooks),
+    summaryChip(t("opp.lands", { n: lands.length, untapped }), "lands", isOpen("lands", lands), lands.length > 0, hooks),
+    h("span.chip", { title: t("opp.hand.title") }, t("opp.hand", { n: p.handCount })),
+    h("span.chip", { title: t("opp.library.title") }, t("opp.library", { n: p.libraryCount })),
+    summaryChip(t("opp.graveyard", { n: gy.length }), "graveyard", isOpen("graveyard", gy), gy.length > 0, hooks),
+    summaryChip(t("opp.exile", { n: ex.length }), "exile", isOpen("exile", ex), ex.length > 0, hooks),
   );
   side.append(summary);
   // 土地以外のパーマネントは自分の側と同じ大きさ（ブロッカー・対象・除去の対象になるため）
   if (others.length) side.append(h("div.row.bfrow", null, kindGroups(others, p, ui, hooks)));
   if (isOpen("lands", lands) && lands.length) side.append(h("div.row.bfrow.lands", null, landGroups(lands, ui, hooks)));
-  if (isOpen("graveyard", gy) && gy.length) side.append(opened("相手の墓地", gy, ui, hooks));
-  if (isOpen("exile", ex) && ex.length) side.append(opened("相手の追放", ex, ui, hooks));
+  if (isOpen("graveyard", gy) && gy.length) side.append(opened(t("opened.oppGraveyard"), gy, ui, hooks));
+  if (isOpen("exile", ex) && ex.length) side.append(opened(t("opened.oppExile"), ex, ui, hooks));
   return side;
 }
 
@@ -127,9 +129,9 @@ function mySide(view: GameView, p: PlayerView, ui: BoardUi, hooks: BoardHooks): 
   const hand = p.cards.filter((c) => c.zone === "Hand");
 
   const piles = h("div.piles", null,
-    pile("ライブラリー", p.libraryCount, null, false, null, ui),
-    pile("墓地", gy.length, gy[gy.length - 1] ?? null, ui.open.has("my-graveyard") || gy.some((c) => ui.marks.has(c.instanceId)), () => hooks.toggle("my-graveyard"), ui),
-    ex.length ? pile("追放", ex.length, ex[ex.length - 1], ui.open.has("my-exile") || ex.some((c) => ui.marks.has(c.instanceId)), () => hooks.toggle("my-exile"), ui) : null,
+    pile(t("pile.library"), p.libraryCount, null, false, null, ui),
+    pile(t("pile.graveyard"), gy.length, gy[gy.length - 1] ?? null, ui.open.has("my-graveyard") || gy.some((c) => ui.marks.has(c.instanceId)), () => hooks.toggle("my-graveyard"), ui),
+    ex.length ? pile(t("pile.exile"), ex.length, ex[ex.length - 1], ui.open.has("my-exile") || ex.some((c) => ui.marks.has(c.instanceId)), () => hooks.toggle("my-exile"), ui) : null,
   );
   const field = h("div.field", null,
     h("div.row.bfrow", null, kindGroups(others, p, ui, hooks)),
@@ -137,24 +139,24 @@ function mySide(view: GameView, p: PlayerView, ui: BoardUi, hooks: BoardHooks): 
   );
   const handRow = h("div.hand.fan", { "data-zone": "hand" }, hand.map((c) => cardTile(c, ui, hooks, ".inhand")));
   side.append(h("div.sidegrid", null, piles, h("div.sidemain", null, field, handRow)));
-  if ((ui.open.has("my-graveyard") || gy.some((c) => ui.marks.has(c.instanceId))) && gy.length) side.append(opened("あなたの墓地", gy, ui, hooks));
-  if ((ui.open.has("my-exile") || ex.some((c) => ui.marks.has(c.instanceId))) && ex.length) side.append(opened("あなたの追放", ex, ui, hooks));
+  if ((ui.open.has("my-graveyard") || gy.some((c) => ui.marks.has(c.instanceId))) && gy.length) side.append(opened(t("opened.myGraveyard"), gy, ui, hooks));
+  if ((ui.open.has("my-exile") || ex.some((c) => ui.marks.has(c.instanceId))) && ex.length) side.append(opened(t("opened.myExile"), ex, ui, hooks));
   return side;
 }
 
 function pile(label: string, count: number, top: CardView | null, open: boolean, onclick: (() => void) | null, ui: BoardUi): HTMLElement {
   const url = top ? ui.art(top.name) : null;
   const face = top
-    ? h("div.face", null, url ? h("img", { src: url, alt: top.name, loading: "lazy" }) : h("div.ftext", null, top.name))
+    ? h("div.face", null, url ? h("img", { src: url, alt: displayName(top.name), loading: "lazy" }) : h("div.ftext", null, displayName(top.name)))
     : count ? h("div.face.back") : null;
   return h("div.pile" + (count ? "" : ".empty") + (open ? ".open" : ""), {
     onclick: onclick && count ? (ev: Event) => { ev.stopPropagation(); onclick(); } : null,
-    title: `${label} ${count} 枚`,
+    title: t("pile.title", { label, n: count }),
   }, h("div.pstack", null, face, h("span.chip.strong.pcount", null, count)), h("div.plabel", null, label));
 }
 
 function opened(title: string, cards: CardView[], ui: BoardUi, hooks: BoardHooks): HTMLElement {
-  return h("div.zone.opened", null, h("h3", null, `${title}（${cards.length}）`),
+  return h("div.zone.opened", null, h("h3", null, t("opened.count", { title, n: cards.length })),
     h("div.row", null, cards.map((c) => cardTile(c, ui, hooks, ""))));
 }
 
@@ -220,14 +222,14 @@ function landGroups(lands: CardView[], ui: BoardUi, hooks: BoardHooks): HTMLElem
 function combatBox(view: GameView, ui: BoardUi, hooks: BoardHooks): HTMLElement | null {
   if (!view.combat.length) return null;
   const byId = new Map(view.players.flatMap((p) => p.cards).map((c) => [c.instanceId, c]));
-  return h("div.combatbox", null, h("h3", null, "戦闘"),
+  return h("div.combatbox", null, h("h3", null, t("combat.title")),
     h("div.combat", null, view.combat.map((a) => {
       const att = byId.get(a.attackerId);
       return h("div.attack", null,
         att ? cardTile(att, ui, hooks, ".small") : a.attackerId,
         h("span.arrow", null, "→"),
-        h("span.chip", null, view.players.some((p) => p.id === a.defender) ? (a.defender === ui.viewer ? "あなた" : "相手") : byId.get(a.defender)?.name ?? a.defender),
-        a.blockers.length ? h("span.muted", null, "ブロック: ", a.blockers.map((b) => byId.get(b)?.name ?? b).join("、")) : null,
+        h("span.chip", null, view.players.some((p) => p.id === a.defender) ? (a.defender === ui.viewer ? t("player.you") : t("player.opponent")) : displayName(byId.get(a.defender)?.name ?? a.defender)),
+        a.blockers.length ? h("span.muted", null, t("combat.blockedBy"), a.blockers.map((b) => displayName(byId.get(b)?.name ?? b)).join(t("log.sep"))) : null,
       );
     })));
 }
@@ -240,30 +242,30 @@ export function cardTile(c: CardView, ui: BoardUi, hooks: BoardHooks, extra: str
   const url = small || c.faceDown ? null : ui.art(c.name);
   const cls = "div.card" + extra + (url ? ".withart" : "") + (c.tapped ? ".tapped" : "") + (mark ? `.${mark}` : "")
     + (ui.flash.has(c.instanceId) ? ".flash" : "");
-  const d = h(cls as "div", { "data-id": c.instanceId, title: `${c.name}${c.tapped ? "（タップ）" : ""}` });
+  const d = h(cls as "div", { "data-id": c.instanceId, title: `${displayName(c.name)}${c.tapped ? t("card.tapped") : ""}` });
   const flags: string[] = [];
-  if (c.token) flags.push("トークン");
-  if (c.sick && c.kinds.includes("creature") && c.zone === "Battlefield") flags.push("召喚酔い");
-  if (c.controller !== c.owner) flags.push(`持ち主 ${c.owner}`);
+  if (c.token) flags.push(t("card.token"));
+  if (c.sick && c.kinds.includes("creature") && c.zone === "Battlefield") flags.push(t("card.sick"));
+  if (c.controller !== c.owner) flags.push(t("card.owner", { owner: c.owner }));
   const chips: HTMLElement[] = Object.entries(c.counters).map(([k, n]) => h("span.chip.strong", null, `${counterName(k)} ×${n}`));
-  if (c.damage) chips.push(h("span.chip.strong.dmg", null, `ダメージ ${c.damage}`));
+  if (c.damage) chips.push(h("span.chip.strong.dmg", null, t("card.damage", { n: c.damage })));
   const pt = c.power !== null && c.toughness !== null
     ? h("span.pt" + (c.power !== c.basePower || c.toughness !== c.baseToughness ? ".mod" : ""), null, `${c.power}/${c.toughness}`)
     : null;
 
   if (url) {
     // 画像のカード: 絵の上にエンジンが持っている情報（状態・カウンター・P/T）を重ねる（mtgtable の art と同じ）
-    const img = h("img.art", { src: url, alt: c.name, loading: "lazy" });
+    const img = h("img.art", { src: url, alt: displayName(c.name), loading: "lazy" });
     const box = h("div.artbox", null, img,
       flags.length ? h("div.flags", null, flags.map((f) => h("span.chip.strong", null, f))) : null,
       chips.length ? h("div.over", null, chips) : null,
       pt);
-    img.addEventListener("error", () => { box.classList.add("noimg"); img.remove(); box.prepend(h("div.alt", null, c.name)); });
+    img.addEventListener("error", () => { box.classList.add("noimg"); img.remove(); box.prepend(h("div.alt", null, displayName(c.name))); });
     d.append(box);
-    if (!extra.includes("under")) d.append(h("div.nm", null, c.name));
+    if (!extra.includes("under")) d.append(h("div.nm", null, displayName(c.name)));
   } else {
     const cost = c.manaCost && c.manaCost !== "no cost" ? h("span.cost", null, c.manaCost) : null;
-    d.append(h("div.top", null, h("div.nm", null, c.name), cost));
+    d.append(h("div.top", null, h("div.nm", null, displayName(c.name)), cost));
     if (!small && !extra.includes("under")) d.append(h("div.tl", null, c.typeLine));
     if (flags.length) d.append(h("div.flags", null, flags.join(" · ")));
     if (chips.length) d.append(h("div.over", null, chips));
@@ -274,23 +276,30 @@ export function cardTile(c: CardView, ui: BoardUi, hooks: BoardHooks, extra: str
 }
 
 function counterName(k: string): string {
-  const m: Record<string, string> = { P1P1: "+1/+1", M1M1: "-1/-1", LOYALTY: "忠誠", DEFENSE: "守備", POISON: "毒" };
-  return m[k] ?? k.toLowerCase();
+  const key = `counter.${k}` as MessageKey;
+  const s = t(key);
+  return s === key ? k.toLowerCase() : s;
 }
 
-export function detailBody(c: CardView, art: string | null, artist: string | null): HTMLElement {
-  const lines = [
-    art ? h("img.big", { src: art, alt: c.name }) : null,
+/** カード詳細。日本語の画面で日本語の文があれば、それを出し、英語のオラクル（判定に使う文）は開けるようにする */
+export function detailBody(c: CardView, art: string | null, artist: string | null, printed: string | null): HTMLElement {
+  const oracle = c.text ? c.text.replace(/\\n/g, "\n") : t("card.noText"); // Forge は改行を "\n" の 2 文字で持つ
+  const changed = c.power !== c.basePower || c.toughness !== c.baseToughness;
+  const state = [c.tapped && t("card.tappedState"), c.sick && c.kinds.includes("creature") && t("card.sick"), c.token && t("card.token"),
+    c.damage && t("card.damage", { n: c.damage })].filter(Boolean).join(" · ");
+  return h("div.detail", null,
+    art ? h("img.big", { src: art, alt: displayName(c.name) }) : null,
     art && artist ? h("div.muted.credit", null, `Illustrated by ${artist}`) : null,
-    h("div.dname", null, c.name, c.manaCost && c.manaCost !== "no cost" ? h("span.cost", null, " ", c.manaCost) : null),
+    h("div.dname", null, displayName(c.name), c.manaCost && c.manaCost !== "no cost" ? h("span.cost", null, " ", c.manaCost) : null),
+    displayName(c.name) !== c.name ? h("div.muted", null, c.name) : null,
     h("div.tl", null, c.typeLine),
-    c.power !== null ? h("div", null, `P/T ${c.power}/${c.toughness}` + (c.power !== c.basePower || c.toughness !== c.baseToughness ? `（元は ${c.basePower}/${c.baseToughness}）` : "")) : null,
-    // Forge のルール文は改行を "\n" の 2 文字で持っている
-    h("div.otext", null, c.text ? c.text.replace(/\\n/g, "\n") : "（ルール文なし）"),
-    h("div.muted", null, [c.tapped && "タップ状態", c.sick && c.kinds.includes("creature") && "召喚酔い", c.token && "トークン",
-      c.damage && `ダメージ ${c.damage}`].filter(Boolean).join(" · ")),
-  ];
-  return h("div.detail", null, lines);
+    c.power !== null ? h("div", null, `P/T ${c.power}/${c.toughness}` + (changed ? t("card.base", { p: c.basePower ?? "", t: c.baseToughness ?? "" }) : "")) : null,
+    printed
+      ? [h("div.otext", null, printed), h("div.muted.onote", null, t("card.printedNote")),
+        h("details.oracle-en", null, h("summary", null, t("card.oracleEn")), h("div.otext", null, oracle))]
+      : h("div.otext", null, oracle),
+    state ? h("div.muted", null, state) : null,
+  );
 }
 
 export { passLabel };

@@ -1,17 +1,21 @@
 #!/usr/bin/env python3
-"""同梱の問題で使うカードの画像 URL を Scryfall から引き、app/public/cards.json にまとめる。
+"""同梱の問題で使うカードの画像 URL と日本語版（名前・印刷された文・画像）を Scryfall から引き、
+app/public/cards.json にまとめる。
 
 使い方: card-images.py
   app/public/puzzles/*.json（解答手順と一覧を除く）に出てくるカード名を集め、
-  Scryfall の /cards/collection（1 回に 75 枚まで）で引く。
+  Scryfall の /cards/collection（1 回に 75 枚まで）で英語版を引き、
+  日本語版は /cards/search（lang:ja）でカードごとに引く（日本語版の無いカードは英語のまま）。
   ブラウザは cards.json の URL（cards.scryfall.io の画像 CDN）から直接読む。サイトにサーバーは無い。
 
 Scryfall の API のお願い（https://scryfall.com/docs/api）に従い、User-Agent と Accept を付け、
-呼び出しの間を 100 ms 空ける。画像の利用条件（Wizards of the Coast の Fan Content Policy）は design/ の V7 を参照。
+呼び出しの間を空ける（検索は 500 ms）。429 が返ったら待ってやり直す。画像の利用条件（Wizards of the Coast の Fan Content Policy）は design/ の V7 を参照。
 """
 import json
 import sys
 import time
+import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -43,15 +47,51 @@ def images(card):
     return {"normal": uris.get("normal"), "small": uris.get("small"), "artist": card.get("artist")}
 
 
+def get(url, data=None):
+    for attempt in range(6):
+        req = urllib.request.Request(url, data=data, headers=HEADERS)
+        try:
+            with urllib.request.urlopen(req, timeout=30) as res:
+                return json.load(res)
+        except urllib.error.HTTPError as e:
+            if e.code == 404:  # 見つからない（日本語版が無い）
+                return None
+            if e.code == 429:  # 呼びすぎ。言われた時間（無ければ少しずつ長く）待ってやり直す
+                time.sleep(float(e.headers.get("Retry-After") or 5 * 2 ** attempt))
+                continue
+            raise
+    raise RuntimeError(f"Scryfall が応答しません: {url}")
+
+
+def plain(card):
+    """通常の版か（プロモ・フルアート・枠の特殊効果・絵違いの版は後回しにする）"""
+    return not (card.get("promo") or card.get("full_art") or card.get("frame_effects") or card.get("border_color") == "borderless")
+
+
+def japanese(name):
+    """日本語版のうち、通常の版で最新のもの（無ければ特殊な版。日本語版が無ければ None）"""
+    q = urllib.parse.quote(f'!"{name}" lang:ja')
+    data = get(f"https://api.scryfall.com/cards/search?q={q}&unique=prints&order=released&dir=desc")
+    time.sleep(0.5)  # 検索の API は呼び出しの間隔を広めにとる
+    cards = [c for c in (data or {}).get("data", [])
+             if c.get("printed_name") or (c.get("card_faces") or [{}])[0].get("printed_name")]
+    cards.sort(key=lambda c: not plain(c))  # 安定ソート: 通常の版を先に（それぞれの中では新しい順のまま）
+    for card in cards:
+        face = (card.get("card_faces") or [card])[0]
+        img = images(card) or {}
+        return {"name": card.get("printed_name") or face.get("printed_name"), "normal": img.get("normal"),
+                "small": img.get("small"), "artist": img.get("artist"),
+                "text": card.get("printed_text") or face.get("printed_text")}
+    return None
+
+
 def main():
     names = card_names()
     out, missing = {}, []
     for i in range(0, len(names), 75):
         chunk = names[i:i + 75]
         body = json.dumps({"identifiers": [{"name": n} for n in chunk]}).encode()
-        req = urllib.request.Request("https://api.scryfall.com/cards/collection", data=body, headers=HEADERS)
-        with urllib.request.urlopen(req, timeout=30) as res:
-            data = json.load(res)
+        data = get("https://api.scryfall.com/cards/collection", body)
         found = {}
         for card in data.get("data", []):
             img = images(card)
@@ -65,6 +105,13 @@ def main():
             else:
                 missing.append(n)
         time.sleep(0.1)
+    ja = 0
+    for n, img in out.items():
+        j = japanese(n)
+        if j:
+            img["ja"] = {k: v for k, v in j.items() if v}
+            ja += 1
+    print(f"japanese: {ja} / {len(out)}")
     OUT.write_text(json.dumps(out, indent=1, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
     print(f"{len(out)} cards -> {OUT}" + (f"; not found: {missing}" if missing else ""))
     return 1 if missing else 0

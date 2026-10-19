@@ -1,26 +1,61 @@
 {
  "Adrestia": {
   "artist": "Mintautas Šukys",
+  "ja": {
+   "artist": "Mintautas Šukys",
+   "name": "アドレスティア号",
+   "normal": "https://cards.scryfall.io/normal/front/a/a/aa37b3e7-f291-463b-ad2d-e1957e23589e.jpg?1782790202",
+   "small": "https://cards.scryfall.io/small/front/a/a/aa37b3e7-f291-463b-ad2d-e1957e23589e.jpg?1782790202",
+   "text": "島渡り\nアドレスティア号が攻撃するたび、このターンに暗殺者がこれに搭乗していた場合、カード１枚を引く。ターン終了時まで、アドレスティア号は他のタイプに加えて暗殺者になる。\n搭乗１"
+  },
   "normal": "https://cards.scryfall.io/normal/front/b/3/b3d878fc-cc21-407f-b3cc-95bf2d717a80.jpg?1783910967",
   "small": "https://cards.scryfall.io/small/front/b/3/b3d878fc-cc21-407f-b3cc-95bf2d717a80.jpg?1783910967"
  },
  "Aerial Responder": {
   "artist": "Raoul Vitale",
+  "ja": {
+   "artist": "Raoul Vitale",
+   "name": "空中対応員",
+   "normal": "https://cards.scryfall.io/normal/front/d/2/d21bce3a-1241-4468-9ce5-1e7604259e9e.jpg?1782909686",
+   "small": "https://cards.scryfall.io/small/front/d/2/d21bce3a-1241-4468-9ce5-1e7604259e9e.jpg?1782909686",
+   "text": "飛行、警戒、絆魂"
+  },
   "normal": "https://cards.scryfall.io/normal/front/8/8/8833065e-5022-4f48-b2fd-6fe5647c0a07.jpg?1783931207",
   "small": "https://cards.scryfall.io/small/front/8/8/8833065e-5022-4f48-b2fd-6fe5647c0a07.jpg?1783931207"
  },
  "Apple of Eden, Isu Relic": {
   "artist": "L J Koh",
+  "ja": {
+   "artist": "L J Koh",
+   "name": "イスの秘宝、エデンの林檎",
+   "normal": "https://cards.scryfall.io/normal/front/c/c/ccf3a7e3-e6ed-4d0a-883b-c52d88b5106c.jpg?1782790199",
+   "small": "https://cards.scryfall.io/small/front/c/c/ccf3a7e3-e6ed-4d0a-883b-c52d88b5106c.jpg?1782790199",
+   "text": "{T}, ４点のライフを支払う, これを生け贄に捧げる：対戦相手１人を対象とする。そのプレイヤーの手札を見、それらのカードを裏向きで追放する。このターン、あなたはそれらのカードをプレイしてもよく、それらを唱えるために任意のタイプのマナを支払ってもよい。ターン終了時まで、これによりあなたが土地１つをプレイしたり呪文１つを唱えたりするたび、それのオーナーはカード１枚を引く。次の終了ステップの開始時に、それらの追放されているカードをオーナーの手札に戻す。起動はソーサリーとしてのみ行う。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/1/7/17dd0b7f-bd26-4a46-a7a1-bc65138d54ed.jpg?1783910966",
   "small": "https://cards.scryfall.io/small/front/1/7/17dd0b7f-bd26-4a46-a7a1-bc65138d54ed.jpg?1783910966"
  },
  "Audacity": {
   "artist": "Rudy Siswanto",
+  "ja": {
+   "artist": "Rudy Siswanto",
+   "name": "無鉄砲",
+   "normal": "https://cards.scryfall.io/normal/front/b/f/bf178fc4-5d1b-401c-b89f-9a5efb01fc6f.jpg?1782779203",
+   "small": "https://cards.scryfall.io/small/front/b/f/bf178fc4-5d1b-401c-b89f-9a5efb01fc6f.jpg?1782779203",
+   "text": "エンチャント（クリーチャー）\nエンチャントしているクリーチャーは＋２/＋０の修整を受けトランプルを持つ。（それは余剰の戦闘ダメージを、それが攻撃しているプレイヤーかプレインズウォーカーに与えることができる。）\n無鉄砲が戦場から墓地に置かれたとき、カード１枚を引く。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/4/0/40b0813a-38cf-4a07-81d6-91d24af8b549.jpg?1783920050",
   "small": "https://cards.scryfall.io/small/front/4/0/40b0813a-38cf-4a07-81d6-91d24af8b549.jpg?1783920050"
  },
  "Azorius Knight-Arbiter": {
   "artist": "Even Amundsen",
+  "ja": {
+   "artist": "Even Amundsen",
+   "name": "アゾリウスの騎士判事",
+   "normal": "https://cards.scryfall.io/normal/front/8/b/8b0a4400-0305-42e4-bb2c-f5e1cd027799.jpg?1782923890",
+   "small": "https://cards.scryfall.io/small/front/8/b/8b0a4400-0305-42e4-bb2c-f5e1cd027799.jpg?1782923890",
+   "text": "警戒\nアゾリウスの騎士判事はブロックされない。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/6/0/60befc28-2ab8-4b59-a33f-0328c5d2f995.jpg?1783933659",
   "small": "https://cards.scryfall.io/small/front/6/0/60befc28-2ab8-4b59-a33f-0328c5d2f995.jpg?1783933659"
  },
@@ -31,211 +66,497 @@
  },
  "Biomancer's Familiar": {
   "artist": "Izzy",
+  "ja": {
+   "artist": "Izzy",
+   "name": "生術師の使い魔",
+   "normal": "https://cards.scryfall.io/normal/front/2/4/243b0acd-8292-43a4-ad49-61d1f4fdca90.jpg?1782923860",
+   "small": "https://cards.scryfall.io/small/front/2/4/243b0acd-8292-43a4-ad49-61d1f4fdca90.jpg?1782923860",
+   "text": "あなたがコントロールしているクリーチャーの起動型能力を起動するためのコストは{2}少なくなる。この効果は、能力の起動コストのマナの点数を１点未満に減らせない。\n{T}：クリーチャー１体を対象とする。このターン、それが次に順応を行うなら、それはその上に＋１/＋１カウンターが置かれていないかのように順応を行う。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/d/3/d38c9891-36d1-4565-9c4a-1cd9dbf8c048.jpg?1783933657",
   "small": "https://cards.scryfall.io/small/front/d/3/d38c9891-36d1-4565-9c4a-1cd9dbf8c048.jpg?1783933657"
  },
  "Blaze": {
   "artist": "Alex Horley-Orlandelli",
+  "ja": {
+   "artist": "Alex Horley-Orlandelli",
+   "name": "猛火",
+   "normal": "https://cards.scryfall.io/normal/front/6/2/62d7200f-0066-49be-91b4-ead97696f7f6.jpg?1782835052",
+   "small": "https://cards.scryfall.io/small/front/6/2/62d7200f-0066-49be-91b4-ead97696f7f6.jpg?1782835052",
+   "text": "クリーチャーやプレインズウォーカーやプレイヤーのうち１つを対象とする。猛火はそれにＸ点のダメージを与える。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/b/1/b16d0422-61ea-4039-b1c1-e590ace9156e.jpg?1783934816",
   "small": "https://cards.scryfall.io/small/front/b/1/b16d0422-61ea-4039-b1c1-e590ace9156e.jpg?1783934816"
  },
  "Bonded Horncrest": {
   "artist": "Jesper Ejsing",
+  "ja": {
+   "artist": "Jesper Ejsing",
+   "name": "結束した角冠",
+   "normal": "https://cards.scryfall.io/normal/front/c/3/c32c42a0-5901-4e88-b20e-8f266c4881b3.jpg?1782937499",
+   "small": "https://cards.scryfall.io/small/front/c/3/c32c42a0-5901-4e88-b20e-8f266c4881b3.jpg?1782937499",
+   "text": "結束した角冠は単独では攻撃したりブロックしたりできない。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/a/5/a50ad54a-73f8-4b97-b890-2be9a178bc42.jpg?1783935749",
   "small": "https://cards.scryfall.io/small/front/a/5/a50ad54a-73f8-4b97-b890-2be9a178bc42.jpg?1783935749"
  },
  "Brambleguard Veteran": {
   "artist": "Jakob Eirich",
+  "ja": {
+   "artist": "Jakob Eirich",
+   "name": "茨守りの古参兵",
+   "normal": "https://cards.scryfall.io/normal/front/3/4/34e53478-41e9-48aa-a988-fedb53be41cb.jpg?1782789259",
+   "small": "https://cards.scryfall.io/small/front/3/4/34e53478-41e9-48aa-a988-fedb53be41cb.jpg?1782789259",
+   "text": "あなたが積算４を達成するたび、ターン終了時まで、あなたがコントロールしているすべてのアライグマは＋１/＋１の修整を受け警戒を得る。（１ターンの間に呪文を唱えるための４点目のマナを支払うと、積算４を達成する。）"
+  },
   "normal": "https://cards.scryfall.io/normal/front/b/a/bac9f6f8-6797-4580-9fc4-9a825872e017.jpg?1783910811",
   "small": "https://cards.scryfall.io/small/front/b/a/bac9f6f8-6797-4580-9fc4-9a825872e017.jpg?1783910811"
  },
  "Camellia, the Seedmiser": {
   "artist": "Steve Prescott",
+  "ja": {
+   "artist": "M I N A T O",
+   "name": "種選奴、カメリア",
+   "normal": "https://cards.scryfall.io/normal/front/1/0/10ac01ca-ab88-4591-97e0-54e38f9c3aa9.jpg?1782788578",
+   "small": "https://cards.scryfall.io/small/front/1/0/10ac01ca-ab88-4591-97e0-54e38f9c3aa9.jpg?1782788578",
+   "text": "威迫\nあなたがコントロールしていてこれでないすべてのリスは威迫を持つ。\nあなたが１つ以上の食物を生け贄に捧げるたび、緑の１/１のリス・クリーチャー・トークン１体を生成する。\n{2}, 給餌する：あなたがコントロールしていてこれでない各リスの上にそれぞれ＋１/＋１カウンター１個を置く。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/2/c/2c16eaec-924c-42f6-9fea-07edd7ed93b9.jpg?1783910799",
   "small": "https://cards.scryfall.io/small/front/2/c/2c16eaec-924c-42f6-9fea-07edd7ed93b9.jpg?1783910799"
  },
  "Canyon Slough": {
   "artist": "Arthur Yuan",
+  "ja": {
+   "artist": "Arthur Yuan",
+   "name": "泥濘の峡谷",
+   "normal": "https://cards.scryfall.io/normal/front/0/1/0119cbc1-3125-4975-82ee-40f848422f63.jpg?1785274333",
+   "small": "https://cards.scryfall.io/small/front/0/1/0119cbc1-3125-4975-82ee-40f848422f63.jpg?1785274333",
+   "text": "この土地はタップ状態で戦場に出る。\nサイクリング{2}"
+  },
   "normal": "https://cards.scryfall.io/normal/front/5/8/587cc3ba-75c2-46a0-bd44-6f953fe1eb01.jpg?1783903208",
   "small": "https://cards.scryfall.io/small/front/5/8/587cc3ba-75c2-46a0-bd44-6f953fe1eb01.jpg?1783903208"
  },
  "Celestial Enforcer": {
   "artist": "Bastien L. Deharme",
+  "ja": {
+   "artist": "Bastien L. Deharme",
+   "name": "天界の処罰者",
+   "normal": "https://cards.scryfall.io/normal/front/6/7/676fb80e-30e6-4994-9ebf-982d2d62f994.jpg?1782781027",
+   "small": "https://cards.scryfall.io/small/front/6/7/676fb80e-30e6-4994-9ebf-982d2d62f994.jpg?1782781027",
+   "text": "{1}{W}, {T}：クリーチャー１体を対象とする。それをタップする。あなたが飛行を持つクリーチャーをコントロールしていなければ起動できない。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/4/6/46666fba-d4a7-4687-8747-a42e4c6d853e.jpg?1783930745",
   "small": "https://cards.scryfall.io/small/front/4/6/46666fba-d4a7-4687-8747-a42e4c6d853e.jpg?1783930745"
  },
  "Corpseberry Cultivator": {
   "artist": "Izzy",
+  "ja": {
+   "artist": "Izzy",
+   "name": "屍苺の耕作者",
+   "normal": "https://cards.scryfall.io/normal/front/4/a/4a1a9dcd-4be7-4524-be20-38844ce035f4.jpg?1782789062",
+   "small": "https://cards.scryfall.io/small/front/4/a/4a1a9dcd-4be7-4524-be20-38844ce035f4.jpg?1782789062",
+   "text": "あなたのターンの戦闘の開始時に、給餌してもよい。（あなたの墓地にあるカード３枚を追放するか食物１つを生け贄に捧げる。）\nあなたが給餌するたび、屍苺の耕作者の上に＋１/＋１カウンター１個を置く。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/c/9/c911a759-ed7b-452b-88a3-663478357610.jpg?1783910798",
   "small": "https://cards.scryfall.io/small/front/c/9/c911a759-ed7b-452b-88a3-663478357610.jpg?1783910798"
  },
  "Descendant of Kiyomaro": {
   "artist": "Christopher Rush",
+  "ja": {
+   "artist": "Christopher Rush",
+   "name": "清麻呂の末裔",
+   "normal": "https://cards.scryfall.io/normal/front/1/1/117a064c-dbc0-4872-9f47-a0b1f1694867.jpg?1783022639",
+   "small": "https://cards.scryfall.io/small/front/1/1/117a064c-dbc0-4872-9f47-a0b1f1694867.jpg?1783022639",
+   "text": "あなたの手札のカードの枚数が各対戦相手よりも多いかぎり、清麻呂の末裔は＋１/＋２の修整を受けるとともに「このクリーチャーが戦闘ダメージを与えるたび、あなたは３点のライフを得る。」の能力を持つ。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/3/5/354af7fc-fd15-4209-b3e8-8729a401b6a6.jpg?1783944173",
   "small": "https://cards.scryfall.io/small/front/3/5/354af7fc-fd15-4209-b3e8-8729a401b6a6.jpg?1783944173"
  },
  "Diabolic Edict": {
   "artist": "Franz Vohwinkel",
+  "ja": {
+   "artist": "Tetsu Kurosawa",
+   "name": "悪魔の布告",
+   "normal": "https://cards.scryfall.io/normal/front/f/0/f0e4f2f8-cb85-430e-8021-e23f75a98829.jpg?1782837141",
+   "small": "https://cards.scryfall.io/small/front/f/0/f0e4f2f8-cb85-430e-8021-e23f75a98829.jpg?1782837141",
+   "text": "プレイヤー１人を対象とする。そのプレイヤーはクリーチャー１体を生け贄に捧げる。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/4/e/4eabbed2-1399-4cf1-9eba-b53c56caced4.jpg?1783933130",
   "small": "https://cards.scryfall.io/small/front/4/e/4eabbed2-1399-4cf1-9eba-b53c56caced4.jpg?1783933130"
  },
  "Dread Reaper": {
   "artist": "Christopher Rush",
+  "ja": {
+   "artist": "Christopher Rush",
+   "name": "戦慄の死神",
+   "normal": "https://cards.scryfall.io/normal/front/d/7/d7992758-a078-43da-b499-accfe95b502e.jpg?1783053148",
+   "small": "https://cards.scryfall.io/small/front/d/7/d7992758-a078-43da-b499-accfe95b502e.jpg?1783053148"
+  },
   "normal": "https://cards.scryfall.io/normal/front/3/7/379c70c0-5e1a-4670-8f13-0e68db05b54b.jpg?1783941445",
   "small": "https://cards.scryfall.io/small/front/3/7/379c70c0-5e1a-4670-8f13-0e68db05b54b.jpg?1783941445"
  },
  "Echoing Decay": {
   "artist": "Greg Staples",
+  "ja": {
+   "artist": "Greg Staples",
+   "name": "残響する衰微",
+   "normal": "https://cards.scryfall.io/normal/front/d/c/dcd4dff6-fdc2-4e8c-90e0-bd525cadfaaa.jpg?1783025865",
+   "small": "https://cards.scryfall.io/small/front/d/c/dcd4dff6-fdc2-4e8c-90e0-bd525cadfaaa.jpg?1783025865",
+   "text": "クリーチャー１体を対象とする。それ、およびそれと同じ名前を持つ他のすべてのクリーチャーは、ターン終了時まで-2/-2の修正を受ける。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/f/8/f8e688e7-8350-4b78-bd49-a6ffdedad556.jpg?1783944444",
   "small": "https://cards.scryfall.io/small/front/f/8/f8e688e7-8350-4b78-bd49-a6ffdedad556.jpg?1783944444"
  },
  "Edward Kenway": {
   "artist": "Borja Pindado",
+  "ja": {
+   "artist": "Borja Pindado",
+   "name": "エドワード・ケンウェイ",
+   "normal": "https://cards.scryfall.io/normal/front/c/e/cee8ebba-2f35-46bc-8c14-75dda9b38dd4.jpg?1782790270",
+   "small": "https://cards.scryfall.io/small/front/c/e/cee8ebba-2f35-46bc-8c14-75dda9b38dd4.jpg?1782790270",
+   "text": "あなたの終了ステップの開始時に、暗殺者や海賊や機体でありあなたがコントロールしていてタップ状態である１つにつき１つの宝物・トークンを生成する。\nあなたがコントロールしている機体１つがプレイヤー１人に戦闘ダメージを与えるたび、そのプレイヤーのライブラリーの一番上にあるカード１枚を見、裏向きに追放する。そのカードが追放され続けているかぎり、あなたはそれをプレイしてもよい。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/9/4/9472be1e-388c-45fe-a18d-35b2cb12dc5f.jpg?1783910971",
   "small": "https://cards.scryfall.io/small/front/9/4/9472be1e-388c-45fe-a18d-35b2cb12dc5f.jpg?1783910971"
  },
  "Electrodominance": {
   "artist": "Dmitry Burmak",
+  "ja": {
+   "artist": "Dmitry Burmak",
+   "name": "雷電支配",
+   "normal": "https://cards.scryfall.io/normal/front/3/f/3f2eb72f-c264-4fab-90a2-8c4763efb267.jpg?1782773534",
+   "small": "https://cards.scryfall.io/small/front/3/f/3f2eb72f-c264-4fab-90a2-8c4763efb267.jpg?1782773534",
+   "text": "１つを対象とする。雷電支配はそれにＸ点のダメージを与える。あなたの手札からマナ総量がＸ以下である呪文１つを、マナ・コストを支払うことなく唱えてもよい。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/8/5/85e29bdc-938e-4132-813e-70c5e922efaf.jpg?1783907070",
   "small": "https://cards.scryfall.io/small/front/8/5/85e29bdc-938e-4132-813e-70c5e922efaf.jpg?1783907070"
  },
  "Essence Fracture": {
   "artist": "Wayne England",
+  "ja": {
+   "artist": "Wayne England",
+   "name": "本質の裂け目",
+   "normal": "https://cards.scryfall.io/normal/front/8/a/8acb1365-f696-40db-8bf0-0581775ec876.jpg?1783031987",
+   "small": "https://cards.scryfall.io/small/front/8/a/8acb1365-f696-40db-8bf0-0581775ec876.jpg?1783031987"
+  },
   "normal": "https://cards.scryfall.io/normal/front/d/f/df0b6c7a-0891-492d-8e07-6a198bf2ccc4.jpg?1783945084",
   "small": "https://cards.scryfall.io/small/front/d/f/df0b6c7a-0891-492d-8e07-6a198bf2ccc4.jpg?1783945084"
  },
  "Faces of the Past": {
   "artist": "Wayne England",
+  "ja": {
+   "artist": "Wayne England",
+   "name": "過ぎ去りし表情",
+   "normal": "https://cards.scryfall.io/normal/front/d/7/d736981a-4044-4f2f-86c6-43c05389d491.jpg?1783029739",
+   "small": "https://cards.scryfall.io/small/front/d/7/d736981a-4044-4f2f-86c6-43c05389d491.jpg?1783029739"
+  },
   "normal": "https://cards.scryfall.io/normal/front/0/f/0f6dc35b-eb26-498f-ae35-0e860871446e.jpg?1783944887",
   "small": "https://cards.scryfall.io/small/front/0/f/0f6dc35b-eb26-498f-ae35-0e860871446e.jpg?1783944887"
  },
  "Faerie Guidemother": {
   "artist": "Mila Pesic",
+  "ja": {
+   "artist": "Mila Pesic",
+   "name": "フェアリーの導母",
+   "normal": "https://cards.scryfall.io/normal/front/4/4/449a483f-dc62-4eb5-8730-46b7c19d5730.jpg?1782914147",
+   "small": "https://cards.scryfall.io/small/front/4/4/449a483f-dc62-4eb5-8730-46b7c19d5730.jpg?1782914147",
+   "text": "飛行"
+  },
   "normal": "https://cards.scryfall.io/normal/front/e/8/e8bbece8-9620-44d9-b991-350fe952538a.jpg?1783932674",
   "small": "https://cards.scryfall.io/small/front/e/8/e8bbece8-9620-44d9-b991-350fe952538a.jpg?1783932674"
  },
  "Fatal Push": {
   "artist": "Eric Deschamps",
+  "ja": {
+   "artist": "Lie Setiawan",
+   "name": "致命的な一押し",
+   "normal": "https://cards.scryfall.io/normal/front/7/7/77aa9f5e-113b-444b-b3d9-c4ac1a4b2a2a.jpg?1782790889",
+   "small": "https://cards.scryfall.io/small/front/7/7/77aa9f5e-113b-444b-b3d9-c4ac1a4b2a2a.jpg?1782790889",
+   "text": "クリーチャー１体を対象とする。それのマナ総量が２以下なら、そのクリーチャーを破壊する。\n紛争 — このターンにあなたがコントロールしていたパーマネントが戦場を離れていたなら、代わりに、それのマナ総量が４以下なら、そのクリーチャーを破壊する。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/6/e/6e9d8fe4-fd9b-4923-92bf-7dd6b8fa02e7.jpg?1783930180",
   "small": "https://cards.scryfall.io/small/front/6/e/6e9d8fe4-fd9b-4923-92bf-7dd6b8fa02e7.jpg?1783930180"
  },
  "Fate Transfer": {
   "artist": "Wayne England",
+  "ja": {
+   "artist": "Wayne England",
+   "name": "命運の転送",
+   "normal": "https://cards.scryfall.io/normal/front/c/0/c0658f14-bcba-41fc-879d-86f3a209d8a7.jpg?1783006566",
+   "small": "https://cards.scryfall.io/small/front/c/0/c0658f14-bcba-41fc-879d-86f3a209d8a7.jpg?1783006566",
+   "text": "クリーチャー１体と他のクリーチャー１体を対象とする。その前者の上に置かれているすべてのカウンターを、その後者の上に移動する。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/3/e/3e052cde-985a-401f-828a-2d98511bbcd5.jpg?1783942732",
   "small": "https://cards.scryfall.io/small/front/3/e/3e052cde-985a-401f-828a-2d98511bbcd5.jpg?1783942732"
  },
  "Fearless Fledgling": {
   "artist": "Jesper Ejsing",
+  "ja": {
+   "artist": "Anato Finnstark",
+   "name": "恐れなき雛",
+   "normal": "https://cards.scryfall.io/normal/front/3/8/38618631-57bb-458d-96b4-bc831fd151ce.jpg?1782899130",
+   "small": "https://cards.scryfall.io/small/front/3/8/38618631-57bb-458d-96b4-bc831fd151ce.jpg?1782899130",
+   "text": "上陸 ― 土地が１つあなたのコントロール下で戦場に出るたび、恐れなき雛の上に＋１/＋１カウンターを１個置く。ターン終了時まで、これは飛行を得る。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/0/2/02d73eb7-4e76-48d4-90fa-fa972dc0fccb.jpg?1783929420",
   "small": "https://cards.scryfall.io/small/front/0/2/02d73eb7-4e76-48d4-90fa-fa972dc0fccb.jpg?1783929420"
  },
  "Fireblade Charger": {
   "artist": "Lie Setiawan",
+  "ja": {
+   "artist": "Lie Setiawan",
+   "name": "火刃の突撃者",
+   "normal": "https://cards.scryfall.io/normal/front/e/e/eebabb60-0055-4826-b756-b45cf2621f2e.jpg?1782900417",
+   "small": "https://cards.scryfall.io/small/front/e/e/eebabb60-0055-4826-b756-b45cf2621f2e.jpg?1782900417",
+   "text": "火刃の突撃者に装備品がついているかぎり、これは速攻を持つ。\n火刃の突撃者が死亡したとき、クリーチャー１体かプレインズウォーカー１体かプレイヤー１人を対象とする。これはそれに、自身のパワーに等しい点数のダメージを与える。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/c/a/ca657846-f352-4ac4-b2b3-d0ced6607163.jpg?1783929360",
   "small": "https://cards.scryfall.io/small/front/c/a/ca657846-f352-4ac4-b2b3-d0ced6607163.jpg?1783929360"
  },
  "Flame Slash": {
   "artist": "Raymond Swanland",
+  "ja": {
+   "artist": "Raymond Swanland",
+   "name": "炎の斬りつけ",
+   "normal": "https://cards.scryfall.io/normal/front/2/3/23d5c95f-3c5d-450b-a638-cd6d0a22c5f8.jpg?1782949614",
+   "small": "https://cards.scryfall.io/small/front/2/3/23d5c95f-3c5d-450b-a638-cd6d0a22c5f8.jpg?1782949614",
+   "text": "クリーチャー１体を対象とする。炎の斬りつけはそれに４点のダメージを与える。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/1/5/15affc1b-2ebb-4934-87a2-10e89eafe894.jpg?1783937304",
   "small": "https://cards.scryfall.io/small/front/1/5/15affc1b-2ebb-4934-87a2-10e89eafe894.jpg?1783937304"
  },
  "Flare of Fortitude": {
   "artist": "Winona Nelson",
+  "ja": {
+   "artist": "Winona Nelson",
+   "name": "堅忍の閃光",
+   "normal": "https://cards.scryfall.io/normal/front/2/9/2962cab3-832c-4c89-9975-87a85ac7f27c.jpg?1782791814",
+   "small": "https://cards.scryfall.io/small/front/2/9/2962cab3-832c-4c89-9975-87a85ac7f27c.jpg?1782791814",
+   "text": "この呪文のマナ・コストを支払うのではなく、トークンでない白のクリーチャー１体を生け贄に捧げてもよい。\nターン終了時まで、あなたのライフ総量は変化できず、あなたがコントロールしているすべてのパーマネントは呪禁と破壊不能を得る。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/3/7/37b41b59-0296-443b-8a62-8d5c4641ef66.jpg?1783911302",
   "small": "https://cards.scryfall.io/small/front/3/7/37b41b59-0296-443b-8a62-8d5c4641ef66.jpg?1783911302"
  },
  "Forebear's Blade": {
   "artist": "Scott Murphy",
+  "ja": {
+   "artist": "Scott Murphy",
+   "name": "先祖の刃",
+   "normal": "https://cards.scryfall.io/normal/front/c/3/c36e6824-0d03-4466-8ad9-0bd53c92ebb8.jpg?1782816857",
+   "small": "https://cards.scryfall.io/small/front/c/3/c36e6824-0d03-4466-8ad9-0bd53c92ebb8.jpg?1782816857",
+   "text": "装備しているクリーチャーは＋３/＋０の修整を受けるとともに警戒とトランプルを持つ。\n装備しているクリーチャーが死亡するたび、あなたがコントロールしているクリーチャー１体を対象とする。先祖の刃をそれにつける。\n装備{3}"
+  },
   "normal": "https://cards.scryfall.io/normal/front/2/5/2570fb88-358f-4f36-87e3-d8375824d126.jpg?1783915599",
   "small": "https://cards.scryfall.io/small/front/2/5/2570fb88-358f-4f36-87e3-d8375824d126.jpg?1783915599"
  },
  "Forest": {
   "artist": "Samuele Bandini",
+  "ja": {
+   "artist": "Chris Ostrowski",
+   "name": "森",
+   "normal": "https://cards.scryfall.io/normal/front/1/e/1e1b96b7-cfde-4c5a-ae39-76625f807378.jpg?1790689113",
+   "small": "https://cards.scryfall.io/small/front/1/e/1e1b96b7-cfde-4c5a-ae39-76625f807378.jpg?1790689113"
+  },
   "normal": "https://cards.scryfall.io/normal/front/2/e/2e781bfd-f8cb-4d20-b977-4359f3a21311.jpg?1791578317",
   "small": "https://cards.scryfall.io/small/front/2/e/2e781bfd-f8cb-4d20-b977-4359f3a21311.jpg?1791578317"
  },
  "Fresh-Faced Recruit": {
   "artist": "Anthony Palumbo",
+  "ja": {
+   "artist": "Anthony Palumbo",
+   "name": "初々しい補充兵",
+   "normal": "https://cards.scryfall.io/normal/front/f/1/f1507fdc-86ac-408b-9744-f2a873e6b116.jpg?1782805612",
+   "small": "https://cards.scryfall.io/small/front/f/1/f1507fdc-86ac-408b-9744-f2a873e6b116.jpg?1782805612",
+   "text": "あなたのターンの間、初々しい補充兵は先制攻撃を持つ。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/2/7/276d127a-2685-4de2-b4df-dd37f7682cd7.jpg?1783912520",
   "small": "https://cards.scryfall.io/small/front/2/7/276d127a-2685-4de2-b4df-dd37f7682cd7.jpg?1783912520"
  },
  "Furor of the Bitten": {
   "artist": "Randy Gallegos",
+  "ja": {
+   "artist": "Randy Gallegos",
+   "name": "噛み傷への興奮",
+   "normal": "https://cards.scryfall.io/normal/front/d/b/db442440-ecc5-4cd5-85f0-765a1650c0cc.jpg?1782905119",
+   "small": "https://cards.scryfall.io/small/front/d/b/db442440-ecc5-4cd5-85f0-765a1650c0cc.jpg?1782905119",
+   "text": "エンチャント（クリーチャー）\nエンチャントしているクリーチャーは＋２/＋２の修整を受け、各戦闘で、可能なら攻撃する。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/c/b/cb0e6279-8a66-4124-9def-fa0c83c26db9.jpg?1783930689",
   "small": "https://cards.scryfall.io/small/front/c/b/cb0e6279-8a66-4124-9def-fa0c83c26db9.jpg?1783930689"
  },
  "Garna, the Bloodflame": {
   "artist": "Winona Nelson",
+  "ja": {
+   "artist": "Winona Nelson",
+   "name": "血の炎、ガルナ",
+   "normal": "https://cards.scryfall.io/normal/front/4/c/4cc125e5-bbad-4ca7-9c36-21808c0dafdc.jpg?1782845747",
+   "small": "https://cards.scryfall.io/small/front/4/c/4cc125e5-bbad-4ca7-9c36-21808c0dafdc.jpg?1782845747",
+   "text": "瞬速\n血の炎、ガルナが戦場に出たとき、このターンにいずこかからあなたの墓地に置かれてそこにあるすべてのクリーチャー・カードをあなたの手札に戻す。\nあなたがコントロールしていてこれでないすべてのクリーチャーは速攻を持つ。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/7/3/732797d3-59e1-4fff-bcf0-22c2606a7a5f.jpg?1783921413",
   "small": "https://cards.scryfall.io/small/front/7/3/732797d3-59e1-4fff-bcf0-22c2606a7a5f.jpg?1783921413"
  },
  "Gateway Plaza": {
   "artist": "Sung Choi",
+  "ja": {
+   "artist": "Sung Choi",
+   "name": "ギルド門通りの公有地",
+   "normal": "https://cards.scryfall.io/normal/front/d/2/d2c5698e-1875-4114-81d9-661b729a142f.jpg?1782920587",
+   "small": "https://cards.scryfall.io/small/front/d/2/d2c5698e-1875-4114-81d9-661b729a142f.jpg?1782920587",
+   "text": "ギルド門通りの公有地はタップ状態で戦場に出る。\nギルド門通りの公有地が戦場に出たとき、あなたが{1}を支払わないかぎり、これを生け贄に捧げる。\n{T}：好きな色１色のマナ１点を加える。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/8/1/81d69cf2-8643-4926-857e-febbd54d870f.jpg?1783933367",
   "small": "https://cards.scryfall.io/small/front/8/1/81d69cf2-8643-4926-857e-febbd54d870f.jpg?1783933367"
  },
  "Ghostly Flicker": {
   "artist": "Raymond Swanland",
+  "ja": {
+   "artist": "Raymond Swanland",
+   "name": "幽霊のゆらめき",
+   "normal": "https://cards.scryfall.io/normal/front/1/9/195f93fc-9889-459e-bddb-7a0c0ae5fb68.jpg?1782818027",
+   "small": "https://cards.scryfall.io/small/front/1/9/195f93fc-9889-459e-bddb-7a0c0ae5fb68.jpg?1782818027",
+   "text": "アーティファクトやクリーチャーや土地のうちあなたがコントロールしている２つを対象とする。それらを追放する。その後、それらのカードをあなたのコントロール下で戦場に戻す。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/d/c/dc143ba3-2a58-4980-9fa0-a05a9e9ed082.jpg?1783915697",
   "small": "https://cards.scryfall.io/small/front/d/c/dc143ba3-2a58-4980-9fa0-a05a9e9ed082.jpg?1783915697"
  },
  "Hill Giant": {
   "artist": "Kev Walker",
+  "ja": {
+   "artist": "Kev Walker",
+   "name": "丘巨人",
+   "normal": "https://cards.scryfall.io/normal/front/a/4/a4e91307-067d-4e09-9074-35179c93f9a1.jpg?1783010624",
+   "small": "https://cards.scryfall.io/small/front/a/4/a4e91307-067d-4e09-9074-35179c93f9a1.jpg?1783010624"
+  },
   "normal": "https://cards.scryfall.io/normal/front/1/4/14c2be6a-9ca6-4d3a-8dd0-db4ea40799f8.jpg?1783943018",
   "small": "https://cards.scryfall.io/small/front/1/4/14c2be6a-9ca6-4d3a-8dd0-db4ea40799f8.jpg?1783943018"
  },
  "Hysterical Blindness": {
   "artist": "Wayne England",
+  "ja": {
+   "artist": "Wayne England",
+   "name": "恐慌盲",
+   "normal": "https://cards.scryfall.io/normal/front/e/d/ed13af37-cda2-4dc1-81bb-5565419ead63.jpg?1782988132",
+   "small": "https://cards.scryfall.io/small/front/e/d/ed13af37-cda2-4dc1-81bb-5565419ead63.jpg?1782988132",
+   "text": "あなたの対戦相手がコントロールするクリーチャーは、ターン終了時まで－４/－０の修整を受ける。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/5/a/5aeaa757-e3b0-4606-a689-e8a20a686c3a.jpg?1783940973",
   "small": "https://cards.scryfall.io/small/front/5/a/5aeaa757-e3b0-4606-a689-e8a20a686c3a.jpg?1783940973"
  },
  "Ihsan's Shade": {
   "artist": "Daarken",
+  "ja": {
+   "artist": "Daarken",
+   "name": "イーサンの影",
+   "normal": "https://cards.scryfall.io/normal/front/c/1/c1fe4d56-b14c-49b4-866e-21a0cb3e6e9d.jpg?1782934266",
+   "small": "https://cards.scryfall.io/small/front/c/1/c1fe4d56-b14c-49b4-866e-21a0cb3e6e9d.jpg?1782934266",
+   "text": "プロテクション（白）"
+  },
   "normal": "https://cards.scryfall.io/normal/front/f/f/ff128110-b87e-451c-a51d-9f116892e482.jpg?1783935165",
   "small": "https://cards.scryfall.io/small/front/f/f/ff128110-b87e-451c-a51d-9f116892e482.jpg?1783935165"
  },
  "Indomitable Will": {
   "artist": "Micah Epstein",
+  "ja": {
+   "artist": "Micah Epstein",
+   "name": "不退転の意志",
+   "normal": "https://cards.scryfall.io/normal/front/e/e/ee394c09-e7de-4855-90ea-0258b4a9f2bd.jpg?1782780898",
+   "small": "https://cards.scryfall.io/small/front/e/e/ee394c09-e7de-4855-90ea-0258b4a9f2bd.jpg?1782780898",
+   "text": "瞬速（この呪文を、あなたがインスタントを唱えられるときならいつでも唱えてよい。）\nエンチャント（クリーチャー）\nエンチャントしているクリーチャーは＋１/＋２の修整を受ける。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/f/5/f5ba5d4b-5dbb-43d6-8f44-a2f80944df98.jpg?1783930471",
   "small": "https://cards.scryfall.io/small/front/f/5/f5ba5d4b-5dbb-43d6-8f44-a2f80944df98.jpg?1783930471"
  },
  "Island": {
   "artist": "Eren Arik",
+  "ja": {
+   "artist": "Zack Stella",
+   "name": "島",
+   "normal": "https://cards.scryfall.io/normal/front/5/1/5133ea5b-fefc-439c-b403-a56811d068d7.jpg?1790688955",
+   "small": "https://cards.scryfall.io/small/front/5/1/5133ea5b-fefc-439c-b403-a56811d068d7.jpg?1790688955"
+  },
   "normal": "https://cards.scryfall.io/normal/front/1/3/1335d293-3dd2-4f13-bd2c-22181f4528ee.jpg?1791578424",
   "small": "https://cards.scryfall.io/small/front/1/3/1335d293-3dd2-4f13-bd2c-22181f4528ee.jpg?1791578424"
  },
  "Juggernaut": {
   "artist": "Kev Walker",
+  "ja": {
+   "artist": "Kev Walker",
+   "name": "巨大戦車",
+   "normal": "https://cards.scryfall.io/normal/front/6/4/64a861ae-6e2e-426b-9b3e-062444c34427.jpg?1791690643",
+   "small": "https://cards.scryfall.io/small/front/6/4/64a861ae-6e2e-426b-9b3e-062444c34427.jpg?1791690643",
+   "text": "各戦闘で、このクリーチャーは可能なら攻撃する。\nこのクリーチャーは壁にはブロックされない。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/f/4/f4468fff-cd6f-428c-b7a0-ff89f5bbea2e.jpg?1783909048",
   "small": "https://cards.scryfall.io/small/front/f/4/f4468fff-cd6f-428c-b7a0-ff89f5bbea2e.jpg?1783909048"
  },
  "Junún Efreet": {
   "artist": "Christopher Rush",
+  "ja": {
+   "artist": "Christopher Rush",
+   "name": "ジュナン・イフリート",
+   "normal": "https://cards.scryfall.io/normal/front/c/d/cd941938-1414-43ce-ac8d-f5c037c10b06.jpg?1783060796",
+   "small": "https://cards.scryfall.io/small/front/c/d/cd941938-1414-43ce-ac8d-f5c037c10b06.jpg?1783060796"
+  },
   "normal": "https://cards.scryfall.io/normal/front/5/f/5f6529eb-79ff-4ddc-9fae-38326324f7e6.jpg?1783941442",
   "small": "https://cards.scryfall.io/small/front/5/f/5f6529eb-79ff-4ddc-9fae-38326324f7e6.jpg?1783941442"
  },
  "Kaalia of the Vast": {
   "artist": "Justyna Dura",
+  "ja": {
+   "artist": "Michael Komarck",
+   "name": "巨大なるカーリア",
+   "normal": "https://cards.scryfall.io/normal/front/4/6/467416f2-0af9-4eb9-8634-7937885d8d57.jpg?1782990868",
+   "small": "https://cards.scryfall.io/small/front/4/6/467416f2-0af9-4eb9-8634-7937885d8d57.jpg?1782990868",
+   "text": "飛行\n巨大なるカーリアがいずれかの対戦相手に攻撃するたび、あなたはあなたの手札にある天使・クリーチャー・カード１枚かデーモン・クリーチャー・カード１枚かドラゴン・クリーチャー・カード１枚を、タップ状態で攻撃している状態で戦場に出してもよい。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/e/7/e71c8c39-3fbb-4a42-9cf6-b3224f5a56fc.jpg?1783911211",
   "small": "https://cards.scryfall.io/small/front/e/7/e71c8c39-3fbb-4a42-9cf6-b3224f5a56fc.jpg?1783911211"
  },
  "Karn, Scion of Urza": {
   "artist": "Chase Stone",
+  "ja": {
+   "artist": "Chase Stone",
+   "name": "ウルザの後継、カーン",
+   "normal": "https://cards.scryfall.io/normal/front/4/e/4eb8d4af-cfe8-4c24-b232-ce0c209148f2.jpg?1782933986",
+   "small": "https://cards.scryfall.io/small/front/4/e/4eb8d4af-cfe8-4c24-b232-ce0c209148f2.jpg?1782933986",
+   "text": "+1：あなたのライブラリーの一番上から２枚のカードを公開する。対戦相手１人は、そのうち１枚を選ぶ。そのカードをあなたの手札に加え、他の１枚を銀カウンターを１個置いた状態で追放する。\n-1：追放領域から、あなたがオーナーであり銀カウンターが置かれているカード１枚をあなたの手札に戻す。\n-2：「このクリーチャーは、あなたがコントロールしているアーティファクト１つにつき＋１/＋１の修整を受ける。」を持つ無色の０/０の構築物・アーティファクト・クリーチャー・トークンを１体生成する。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/0/7/07a3d9e8-8597-498b-869c-cff79e0df516.jpg?1783935054",
   "small": "https://cards.scryfall.io/small/front/0/7/07a3d9e8-8597-498b-869c-cff79e0df516.jpg?1783935054"
  },
  "Kolaghan's Command": {
   "artist": "Daarken",
+  "ja": {
+   "artist": "Daarken",
+   "name": "コラガンの命令",
+   "normal": "https://cards.scryfall.io/normal/front/7/f/7f93b437-fdf1-4d69-949d-8b35d3a1471b.jpg?1782794646",
+   "small": "https://cards.scryfall.io/small/front/7/f/7f93b437-fdf1-4d69-949d-8b35d3a1471b.jpg?1782794646",
+   "text": "以下から２つを選ぶ。\n・あなたの墓地にあるクリーチャー・カード１枚を対象とする。それをあなたの手札に戻す。\n・プレイヤー１人を対象とする。そのプレイヤーはカード１枚を捨てる。\n・アーティファクト１つを対象とする。それを破壊する。\n・１つを対象とする。コラガンの命令はそれに２点のダメージを与える。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/a/0/a0dab027-a475-481b-b012-b6a76e21e494.jpg?1783921822",
   "small": "https://cards.scryfall.io/small/front/a/0/a0dab027-a475-481b-b012-b6a76e21e494.jpg?1783921822"
  },
  "Kozilek's Command": {
   "artist": "Yeong-Hao Han",
+  "ja": {
+   "artist": "Yeong-Hao Han",
+   "name": "コジレックの命令",
+   "normal": "https://cards.scryfall.io/normal/front/c/5/c5ed82df-a485-4370-84d2-812ed575c7da.jpg?1782794234",
+   "small": "https://cards.scryfall.io/small/front/c/5/c5ed82df-a485-4370-84d2-812ed575c7da.jpg?1782794234",
+   "text": "以下から２つを選ぶ。\n・プレイヤー１人を対象とする。そのプレイヤーは「このクリーチャーを生け贄に捧げる：{C}を加える。」を持つ無色の０/１のエルドラージ・落とし子・クリーチャー・トークンＸ体を生成する。\n・プレイヤー１人を対象とする。そのプレイヤーは占術Ｘを行い、その後、カード１枚を引く。\n・マナ総量がＸ以下であるクリーチャー１体を対象とする。それを追放する。\n・墓地にあるカード最大Ｘ枚を対象とする。それらを追放する。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/9/2/92585587-cfdc-406a-9114-4f6dd8802c37.jpg?1784634156",
   "small": "https://cards.scryfall.io/small/front/9/2/92585587-cfdc-406a-9114-4f6dd8802c37.jpg?1784634156"
  },
  "Krosan Groundshaker": {
   "artist": "Wayne England",
+  "ja": {
+   "artist": "Wayne England",
+   "name": "クローサの地鳴り獣",
+   "normal": "https://cards.scryfall.io/normal/front/5/c/5c523ee2-3bbc-4c26-a518-ea81aab6ca6d.jpg?1783031043",
+   "small": "https://cards.scryfall.io/small/front/5/c/5c523ee2-3bbc-4c26-a518-ea81aab6ca6d.jpg?1783031043"
+  },
   "normal": "https://cards.scryfall.io/normal/front/8/2/82105090-5f71-4690-9ade-187354311ae3.jpg?1783945040",
   "small": "https://cards.scryfall.io/small/front/8/2/82105090-5f71-4690-9ade-187354311ae3.jpg?1783945040"
  },
@@ -246,96 +567,226 @@
  },
  "Ledev Champion": {
   "artist": "Daarken",
+  "ja": {
+   "artist": "Daarken",
+   "name": "レーデヴの勇者",
+   "normal": "https://cards.scryfall.io/normal/front/6/c/6c9bf56e-23f0-4835-888d-9e8d17f833fc.jpg?1782926350",
+   "small": "https://cards.scryfall.io/small/front/6/c/6c9bf56e-23f0-4835-888d-9e8d17f833fc.jpg?1782926350",
+   "text": "レーデヴの勇者が攻撃するたび、あなたはあなたがコントロールしているアンタップ状態のクリーチャー望む数をタップしてもよい。ターン終了時まで、レーデヴの勇者は、これによりタップしたクリーチャー１体につき＋１/＋１の修整を受ける。\n{3}{G}{W}：絆魂を持つ白の１/１の兵士・クリーチャー・トークンを１体生成する。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/b/c/bc4f508b-a48d-4462-9d89-ee2ead3a0847.jpg?1783934128",
   "small": "https://cards.scryfall.io/small/front/b/c/bc4f508b-a48d-4462-9d89-ee2ead3a0847.jpg?1783934128"
  },
  "Lightning Bolt": {
   "artist": "Milivoj Ćeran",
+  "ja": {
+   "artist": "Milivoj Ćeran",
+   "name": "稲妻",
+   "normal": "https://cards.scryfall.io/normal/front/8/9/89ea9a01-a4e9-43c5-bdd7-3a0e4dcec0f3.jpg?1785282945",
+   "small": "https://cards.scryfall.io/small/front/8/9/89ea9a01-a4e9-43c5-bdd7-3a0e4dcec0f3.jpg?1785282945",
+   "text": "１つを対象とする。稲妻はそれに３点のダメージを与える。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/7/6/7673784e-db4b-43a1-8d55-1bb9fc1e284f.jpg?1783903008",
   "small": "https://cards.scryfall.io/small/front/7/6/7673784e-db4b-43a1-8d55-1bb9fc1e284f.jpg?1783903008"
  },
  "Living Tempest": {
   "artist": "Campbell White",
+  "ja": {
+   "artist": "Campbell White",
+   "name": "生ける嵐",
+   "normal": "https://cards.scryfall.io/normal/front/4/e/4e7516a0-149e-4d35-9885-c8db624b467b.jpg?1782901025",
+   "small": "https://cards.scryfall.io/small/front/4/e/4e7516a0-149e-4d35-9885-c8db624b467b.jpg?1782901025",
+   "text": "瞬速\n飛行"
+  },
   "normal": "https://cards.scryfall.io/normal/front/a/0/a05ed233-9b53-4c67-ab1c-0217386c9fe4.jpg?1783929394",
   "small": "https://cards.scryfall.io/small/front/a/0/a05ed233-9b53-4c67-ab1c-0217386c9fe4.jpg?1783929394"
  },
  "Luminous Bonds": {
   "artist": "Mark Behm",
+  "ja": {
+   "artist": "Mark Behm",
+   "name": "光明の縛め",
+   "normal": "https://cards.scryfall.io/normal/front/e/7/e7978dc1-5b6f-4ee2-87e3-279bf7a195f2.jpg?1782927651",
+   "small": "https://cards.scryfall.io/small/front/e/7/e7978dc1-5b6f-4ee2-87e3-279bf7a195f2.jpg?1782927651",
+   "text": "エンチャント（クリーチャー）\nエンチャントされているクリーチャーでは攻撃もブロックもできない。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/5/d/5d471de4-a7b2-4e13-9492-3fa94f5867ac.jpg?1783934196",
   "small": "https://cards.scryfall.io/small/front/5/d/5d471de4-a7b2-4e13-9492-3fa94f5867ac.jpg?1783934196"
  },
  "Marionette Apprentice": {
   "artist": "Steve Ellis",
+  "ja": {
+   "artist": "Steve Ellis",
+   "name": "マリオネットの見習い",
+   "normal": "https://cards.scryfall.io/normal/front/c/6/c600337c-4d95-4136-8f5b-d438f89e7782.jpg?1782791701",
+   "small": "https://cards.scryfall.io/small/front/c/6/c600337c-4d95-4136-8f5b-d438f89e7782.jpg?1782791701",
+   "text": "製造１\nあなたがコントロールしていてクリーチャーやアーティファクトでありこれでない１つが墓地から戦場に出るたび、各対戦相手はそれぞれ１点のライフを失う。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/d/1/d16f8670-f038-400a-83e7-a53a7f8c47ac.jpg?1783911278",
   "small": "https://cards.scryfall.io/small/front/d/1/d16f8670-f038-400a-83e7-a53a7f8c47ac.jpg?1783911278"
  },
  "Martyr of Frost": {
   "artist": "Wayne England",
+  "ja": {
+   "artist": "Wayne England",
+   "name": "霜の殉教者",
+   "normal": "https://cards.scryfall.io/normal/front/f/b/fbf5e5ee-448b-4d03-9879-21b3f55e5477.jpg?1783003557",
+   "small": "https://cards.scryfall.io/small/front/f/b/fbf5e5ee-448b-4d03-9879-21b3f55e5477.jpg?1783003557",
+   "text": "{2}, あなたの手札から青のカードをＸ枚公開する, 霜の殉教者を生け贄に捧げる：呪文１つを対象とする。それのコントローラーが{X}を支払わないかぎり、それを打ち消す。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/0/e/0e7c25c9-1634-4675-b975-e9d477d1f8e1.jpg?1783938747",
   "small": "https://cards.scryfall.io/small/front/0/e/0e7c25c9-1634-4675-b975-e9d477d1f8e1.jpg?1783938747"
  },
  "Metamorphic Alteration": {
   "artist": "Livia Prima",
+  "ja": {
+   "artist": "Livia Prima",
+   "name": "変態変異",
+   "normal": "https://cards.scryfall.io/normal/front/1/3/13a1ca18-47b1-4c39-88f2-1d3d1890a6d1.jpg?1782931091",
+   "small": "https://cards.scryfall.io/small/front/1/3/13a1ca18-47b1-4c39-88f2-1d3d1890a6d1.jpg?1782931091",
+   "text": "エンチャント（クリーチャー）\n変態変異が戦場に出るに際し、クリーチャー１体を選ぶ。\nエンチャントされているクリーチャーは、その選ばれたクリーチャーのコピーになる。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/e/f/eff03d37-d90a-4dcc-bacd-64fd71301354.jpg?1783934585",
   "small": "https://cards.scryfall.io/small/front/e/f/eff03d37-d90a-4dcc-bacd-64fd71301354.jpg?1783934585"
  },
  "Moonglove Changeling": {
   "artist": "Wayne England",
+  "ja": {
+   "artist": "Wayne England",
+   "name": "ツキノテブクロの変わり身",
+   "normal": "https://cards.scryfall.io/normal/front/0/7/07150b9b-848d-4e64-9378-2d47e8c5059a.jpg?1783007836",
+   "small": "https://cards.scryfall.io/small/front/0/7/07150b9b-848d-4e64-9378-2d47e8c5059a.jpg?1783007836",
+   "text": "多相 （このカードは常にすべてのクリーチャー・タイプである。）\n{B}：ツキノテブクロの変わり身は、ターン終了時まで接死を得る。 （それがいずれかのクリーチャーにダメージを与えるたび、そのクリーチャーを破壊する。）"
+  },
   "normal": "https://cards.scryfall.io/normal/front/6/9/6955348b-70e9-49c3-9343-9becf977abe8.jpg?1783942792",
   "small": "https://cards.scryfall.io/small/front/6/9/6955348b-70e9-49c3-9343-9becf977abe8.jpg?1783942792"
  },
  "Mountain": {
   "artist": "VEN",
+  "ja": {
+   "artist": "Chris Ostrowski",
+   "name": "山",
+   "normal": "https://cards.scryfall.io/normal/front/d/8/d8ba1c49-a734-4674-b355-f4d0f06ee7dd.jpg?1790689062",
+   "small": "https://cards.scryfall.io/small/front/d/8/d8ba1c49-a734-4674-b355-f4d0f06ee7dd.jpg?1790689062"
+  },
   "normal": "https://cards.scryfall.io/normal/front/8/5/85177bd7-6c50-48da-b692-ae5fe7bd357c.jpg?1791578439",
   "small": "https://cards.scryfall.io/small/front/8/5/85177bd7-6c50-48da-b692-ae5fe7bd357c.jpg?1791578439"
  },
  "Mulldrifter": {
   "artist": "Eric Fortune",
+  "ja": {
+   "artist": "Eric Fortune",
+   "name": "熟考漂い",
+   "normal": "https://cards.scryfall.io/normal/front/e/f/ef951619-bd85-4d49-8881-db26658aa038.jpg?1782762915",
+   "small": "https://cards.scryfall.io/small/front/e/f/ef951619-bd85-4d49-8881-db26658aa038.jpg?1782762915",
+   "text": "飛行\nこのクリーチャーが戦場に出たとき、カード２枚を引く。\n想起{2U}（この呪文を想起コストで唱えてもよい。そうしたなら、これが戦場に出たとき、これを生け贄に捧げる。）"
+  },
   "normal": "https://cards.scryfall.io/normal/front/3/d/3de308cc-14ac-407e-99e7-568572ecd0e7.jpg?1783904564",
   "small": "https://cards.scryfall.io/small/front/3/d/3de308cc-14ac-407e-99e7-568572ecd0e7.jpg?1783904564"
  },
  "Mutiny": {
   "artist": "Gabor Szikszai",
+  "ja": {
+   "artist": "Gabor Szikszai",
+   "name": "反逆",
+   "normal": "https://cards.scryfall.io/normal/front/b/0/b07fba0f-cdbd-4882-8b36-fc93ed3a77e3.jpg?1782935164",
+   "small": "https://cards.scryfall.io/small/front/b/0/b07fba0f-cdbd-4882-8b36-fc93ed3a77e3.jpg?1782935164",
+   "text": "対戦相手がコントロールしているクリーチャー１体と、そのプレイヤーがコントロールしている他のクリーチャー１体を対象とする。その前者はその後者に自身のパワーに等しい点数のダメージを与える。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/0/1/010711a0-5e95-4a8c-816f-e314f2a909ef.jpg?1783935297",
   "small": "https://cards.scryfall.io/small/front/0/1/010711a0-5e95-4a8c-816f-e314f2a909ef.jpg?1783935297"
  },
  "Nephalia Seakite": {
   "artist": "Wayne England",
+  "ja": {
+   "artist": "Wayne England",
+   "name": "ネファリアの海鳶",
+   "normal": "https://cards.scryfall.io/normal/front/8/3/83e2f2cd-ec8c-432f-b4ad-3dcc907bfd86.jpg?1782976903",
+   "small": "https://cards.scryfall.io/small/front/8/3/83e2f2cd-ec8c-432f-b4ad-3dcc907bfd86.jpg?1782976903",
+   "text": "瞬速（あなたはこの呪文を、あなたがインスタントを唱えられるときならいつでも唱えてよい。）飛行"
+  },
   "normal": "https://cards.scryfall.io/normal/front/3/9/39714ec8-b43c-4d61-9e53-46ac62da2c9f.jpg?1783939931",
   "small": "https://cards.scryfall.io/small/front/3/9/39714ec8-b43c-4d61-9e53-46ac62da2c9f.jpg?1783939931"
  },
  "Nether Shadow": {
   "artist": "Christopher Rush",
+  "ja": {
+   "artist": "DiTerlizzi",
+   "name": "冥界の影",
+   "normal": "https://cards.scryfall.io/normal/front/8/f/8ff9e866-dcd9-4e3b-9a4e-97040ba07ad1.jpg?1783054864",
+   "small": "https://cards.scryfall.io/small/front/8/f/8ff9e866-dcd9-4e3b-9a4e-97040ba07ad1.jpg?1783054864"
+  },
   "normal": "https://cards.scryfall.io/normal/front/1/1/11988c46-6d0c-46a8-85aa-8c6da72bfe30.jpg?1783942949",
   "small": "https://cards.scryfall.io/small/front/1/1/11988c46-6d0c-46a8-85aa-8c6da72bfe30.jpg?1783942949"
  },
  "Nomad Outpost": {
   "artist": "Alayna Danner",
+  "ja": {
+   "artist": "Pablo Mendoza",
+   "name": "遊牧民の前哨地",
+   "normal": "https://cards.scryfall.io/normal/front/e/5/e5ebd03b-354a-43b8-a13a-fd4242479d27.jpg?1782768952",
+   "small": "https://cards.scryfall.io/small/front/e/5/e5ebd03b-354a-43b8-a13a-fd4242479d27.jpg?1782768952",
+   "text": "この土地はタップ状態で戦場に出る。\n{T}：{R}か{W}か{B}を加える。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/a/6/a68fbeaa-941f-4d53-becd-f93ed22b9a54.jpg?1783907273",
   "small": "https://cards.scryfall.io/small/front/a/6/a68fbeaa-941f-4d53-becd-f93ed22b9a54.jpg?1783907273"
  },
  "Opt": {
   "artist": "Craig J Spearing",
+  "ja": {
+   "artist": "Craig J Spearing",
+   "name": "選択",
+   "normal": "https://cards.scryfall.io/normal/front/5/a/5aee2e7e-8493-4db5-a2bb-d3baafe11d28.jpg?1782773752",
+   "small": "https://cards.scryfall.io/small/front/5/a/5aee2e7e-8493-4db5-a2bb-d3baafe11d28.jpg?1782773752",
+   "text": "占術１を行う。（あなたのライブラリーの一番上にあるカード１枚を見る。そのカードを一番下に置いてもよい。）\nカード１枚を引く。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/b/b/bbc99a51-1501-4525-a3cc-f48249b64bed.jpg?1783907102",
   "small": "https://cards.scryfall.io/small/front/b/b/bbc99a51-1501-4525-a3cc-f48249b64bed.jpg?1783907102"
  },
  "Ornithopter": {
   "artist": "Franz Vohwinkel",
+  "ja": {
+   "artist": "Franz Vohwinkel",
+   "name": "羽ばたき飛行機械",
+   "normal": "https://cards.scryfall.io/normal/front/c/1/c190251b-b29b-4abe-bdb1-2e69458e09a1.jpg?1782831491",
+   "small": "https://cards.scryfall.io/small/front/c/1/c190251b-b29b-4abe-bdb1-2e69458e09a1.jpg?1782831491",
+   "text": "飛行"
+  },
   "normal": "https://cards.scryfall.io/normal/front/3/0/305078a5-ac18-4721-bba2-3434eba5b1cf.jpg?1783918410",
   "small": "https://cards.scryfall.io/small/front/3/0/305078a5-ac18-4721-bba2-3434eba5b1cf.jpg?1783918410"
  },
  "Phantom Nantuko": {
   "artist": "Wayne England",
+  "ja": {
+   "artist": "Wayne England",
+   "name": "幻影のナントゥーコ",
+   "normal": "https://cards.scryfall.io/normal/front/1/7/17dc8c00-4d13-439f-a856-d48c12b203eb.jpg?1782834012",
+   "small": "https://cards.scryfall.io/small/front/1/7/17dc8c00-4d13-439f-a856-d48c12b203eb.jpg?1782834012",
+   "text": "トランプル\n幻影のナントゥーコは、＋１/＋１カウンター２個が置かれた状態で戦場に出る。\n幻影のナントゥーコがダメージを受けるなら、そのダメージを軽減し、幻影のナントゥーコの上から＋１/＋１カウンター１個を取り除く。\n{T}：幻影のナントゥーコの上に＋１/＋１カウンター１個を置く。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/2/f/2fd65594-cf66-4dd4-8d7b-b565756f2f86.jpg?1783936253",
   "small": "https://cards.scryfall.io/small/front/2/f/2fd65594-cf66-4dd4-8d7b-b565756f2f86.jpg?1783936253"
  },
  "Pile On": {
   "artist": "Javier Charro",
+  "ja": {
+   "artist": "Javier Charro",
+   "name": "全軍突撃",
+   "normal": "https://cards.scryfall.io/normal/front/4/4/44c72fc7-d813-4729-8147-93527f748b08.jpg?1782803795",
+   "small": "https://cards.scryfall.io/small/front/4/4/44c72fc7-d813-4729-8147-93527f748b08.jpg?1782803795",
+   "text": "召集（あなたのクリーチャーが、この呪文を唱える助けとなる。この呪文を唱える段階であなたがタップした各クリーチャーはそれぞれ{1}かそのクリーチャーの色のマナ１点を支払う。）\nクリーチャーやプレインズウォーカーである１体を対象とする。それを破壊する。諜報２を行う。（あなたのライブラリーの一番上にあるカード２枚を見て、そのうちの望む枚数をあなたの墓地に、残りをあなたのライブラリーの一番上に望む順番で置く。）"
+  },
   "normal": "https://cards.scryfall.io/normal/front/5/7/570b56ff-b25a-43e4-927b-99dba542be5e.jpg?1783913004",
   "small": "https://cards.scryfall.io/small/front/5/7/570b56ff-b25a-43e4-927b-99dba542be5e.jpg?1783913004"
  },
  "Plains": {
   "artist": "Shahab Alizadeh",
+  "ja": {
+   "artist": "Florian Herold",
+   "name": "平地",
+   "normal": "https://cards.scryfall.io/normal/front/d/3/d3d81474-f4c2-4b51-9f3a-6433745459e4.jpg?1790688900",
+   "small": "https://cards.scryfall.io/small/front/d/3/d3d81474-f4c2-4b51-9f3a-6433745459e4.jpg?1790688900"
+  },
   "normal": "https://cards.scryfall.io/normal/front/0/9/09ac862f-0a51-44dd-b86f-9412b8218b13.jpg?1791578423",
   "small": "https://cards.scryfall.io/small/front/0/9/09ac862f-0a51-44dd-b86f-9412b8218b13.jpg?1791578423"
  },
@@ -346,21 +797,48 @@
  },
  "Prodigal Pyromancer": {
   "artist": "Jeremy Jarvis",
+  "ja": {
+   "artist": "Jeremy Jarvis",
+   "name": "放蕩紅蓮術士",
+   "normal": "https://cards.scryfall.io/normal/front/2/9/29a28d72-cb27-4e8b-84b5-31d5386713d7.jpg?1782890016",
+   "small": "https://cards.scryfall.io/small/front/2/9/29a28d72-cb27-4e8b-84b5-31d5386713d7.jpg?1782890016",
+   "text": "{T}：クリーチャー１体かプレインズウォーカー１体かプレイヤー１人を対象とする。放蕩紅蓮術士はそれに１点のダメージを与える。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/c/f/cf16600a-c2a5-49e4-89e2-260cfaf58b52.jpg?1783927792",
   "small": "https://cards.scryfall.io/small/front/c/f/cf16600a-c2a5-49e4-89e2-260cfaf58b52.jpg?1783927792"
  },
  "Prophetic Prism": {
   "artist": "Quintin Gleim",
+  "ja": {
+   "artist": "John Avon",
+   "name": "予言のプリズム",
+   "normal": "https://cards.scryfall.io/normal/front/b/7/b7f2eadc-18b0-4384-92c6-99daeb15efe8.jpg?1782778648",
+   "small": "https://cards.scryfall.io/small/front/b/7/b7f2eadc-18b0-4384-92c6-99daeb15efe8.jpg?1782778648",
+   "text": "予言のプリズムが戦場に出たとき、カード１枚を引く。\n{1},{T}：好きな色１色のマナ１点を加える。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/1/f/1fae351c-b918-4648-a361-d5239ae63156.jpg?1783915058",
   "small": "https://cards.scryfall.io/small/front/1/f/1fae351c-b918-4648-a361-d5239ae63156.jpg?1783915058"
  },
  "Putrid Imp": {
   "artist": "Wayne England",
+  "ja": {
+   "artist": "Wayne England",
+   "name": "朽ちゆくインプ",
+   "normal": "https://cards.scryfall.io/normal/front/1/6/164f035e-8746-40da-8a3b-5617eb98f62b.jpg?1783033467",
+   "small": "https://cards.scryfall.io/small/front/1/6/164f035e-8746-40da-8a3b-5617eb98f62b.jpg?1783033467"
+  },
   "normal": "https://cards.scryfall.io/normal/front/4/7/47a929a4-b861-432c-a2f3-3125f8a2665b.jpg?1783939284",
   "small": "https://cards.scryfall.io/small/front/4/7/47a929a4-b861-432c-a2f3-3125f8a2665b.jpg?1783939284"
  },
  "Queen's Agent": {
   "artist": "Winona Nelson",
+  "ja": {
+   "artist": "Winona Nelson",
+   "name": "女王の工作員",
+   "normal": "https://cards.scryfall.io/normal/front/3/2/32529d72-5e30-4f8a-a58b-38b748e61197.jpg?1782937632",
+   "small": "https://cards.scryfall.io/small/front/3/2/32529d72-5e30-4f8a-a58b-38b748e61197.jpg?1782937632",
+   "text": "絆魂\n女王の工作員が戦場に出たとき、これは探検を行う。（あなたのライブラリーの一番上のカードを公開する。それが土地であるなら、そのカードをあなたの手札に加える。そうでないなら、このクリーチャーの上に＋１/＋１カウンターを１個置き、その後、そのカードを戻すかあなたの墓地に置く。）"
+  },
   "normal": "https://cards.scryfall.io/normal/front/3/5/3562f65a-bd69-47e4-9d9d-ab5c2c6ceb35.jpg?1783935758",
   "small": "https://cards.scryfall.io/small/front/3/5/3562f65a-bd69-47e4-9d9d-ab5c2c6ceb35.jpg?1783935758"
  },
@@ -371,181 +849,429 @@
  },
  "Reckless Fireweaver": {
   "artist": "Deruchenko Alexander",
+  "ja": {
+   "artist": "Deruchenko Alexander",
+   "name": "無謀な炎織り",
+   "normal": "https://cards.scryfall.io/normal/front/7/6/76b2ff46-2b72-4571-b5e9-9f47a1f3515c.jpg?1782776164",
+   "small": "https://cards.scryfall.io/small/front/7/6/76b2ff46-2b72-4571-b5e9-9f47a1f3515c.jpg?1782776164",
+   "text": "あなたがコントロールしているアーティファクト１つが戦場に出るたび、このクリーチャーは各対戦相手にそれぞれ１点のダメージを与える。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/6/3/63ffac51-62c4-4170-85b3-a43d7cfae7d7.jpg?1783937190",
   "small": "https://cards.scryfall.io/small/front/6/3/63ffac51-62c4-4170-85b3-a43d7cfae7d7.jpg?1783937190"
  },
  "Relic Runner": {
   "artist": "Josu Hernaiz",
+  "ja": {
+   "artist": "Josu Hernaiz",
+   "name": "秘宝を追う者",
+   "normal": "https://cards.scryfall.io/normal/front/6/d/6d7c4623-9fbf-426f-9f57-4313008d20cd.jpg?1782903437",
+   "small": "https://cards.scryfall.io/small/front/6/d/6d7c4623-9fbf-426f-9f57-4313008d20cd.jpg?1782903437",
+   "text": "このターンにあなたが歴史的な呪文を唱えていたなら、秘宝を追う者はブロックされない。（歴史的とは、アーティファクトと伝説と英雄譚のことである。）"
+  },
   "normal": "https://cards.scryfall.io/normal/front/f/b/fbced19d-7035-4284-93b3-cf2d4bcf9734.jpg?1783930193",
   "small": "https://cards.scryfall.io/small/front/f/b/fbced19d-7035-4284-93b3-cf2d4bcf9734.jpg?1783930193"
  },
  "Relic of Progenitus": {
   "artist": "Jean-Sébastien Rossbach",
+  "ja": {
+   "artist": "Jean-Sébastien Rossbach",
+   "name": "大祖始の遺産",
+   "normal": "https://cards.scryfall.io/normal/front/0/4/046696b7-b9e7-43a6-91af-71afdbfaf5d6.jpg?1782837696",
+   "small": "https://cards.scryfall.io/small/front/0/4/046696b7-b9e7-43a6-91af-71afdbfaf5d6.jpg?1782837696",
+   "text": "{T}：プレイヤー１人を対象とする。そのプレイヤーは自分の墓地にあるカード１枚を追放する。\n{1},大祖始の遺産を追放する：すべての墓地を追放する。カード１枚を引く。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/4/3/436cd66c-0622-43cd-8748-af4d21a2db3f.jpg?1783937543",
   "small": "https://cards.scryfall.io/small/front/4/3/436cd66c-0622-43cd-8748-af4d21a2db3f.jpg?1783937543"
  },
  "Restless Cottage": {
   "artist": "Jesper Ejsing",
+  "ja": {
+   "artist": "Jesper Ejsing",
+   "name": "眠らずの小屋",
+   "normal": "https://cards.scryfall.io/normal/front/b/2/b241157f-f2ed-424c-bf02-b3b807476bd2.jpg?1782813307",
+   "small": "https://cards.scryfall.io/small/front/b/2/b241157f-f2ed-424c-bf02-b3b807476bd2.jpg?1782813307",
+   "text": "眠らずの小屋はタップ状態で戦場に出る。\n{T}：{B}か{G}を加える。\n{2}{B}{G}：ターン終了時まで、眠らずの小屋は黒緑の４/４のホラー・クリーチャーになる。これは土地でもある。\n眠らずの小屋が攻撃するたび、墓地にあるカード最大１枚を対象とする。食物・トークン１つを生成し、その対象としたカードを追放する。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/7/8/787eadf3-5005-4ae5-820f-4012a4d4e1a5.jpg?1783915056",
   "small": "https://cards.scryfall.io/small/front/7/8/787eadf3-5005-4ae5-820f-4012a4d4e1a5.jpg?1783915056"
  },
  "Rolling Thunder": {
   "artist": "Yohann Schepacz",
+  "ja": {
+   "artist": "Yohann Schepacz",
+   "name": "とどろく雷鳴",
+   "normal": "https://cards.scryfall.io/normal/front/c/9/c9b1f2b2-9a1a-415f-a8a6-aec98430db6d.jpg?1782958051",
+   "small": "https://cards.scryfall.io/small/front/c/9/c9b1f2b2-9a1a-415f-a8a6-aec98430db6d.jpg?1782958051",
+   "text": "望む数のクリーチャーやプレイヤーを対象とする。とどろく雷鳴はそれらに、Ｘ点のダメージをあなたの望むように分割して与える。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/0/d/0df50703-5655-4bc4-adc9-d719c2da3bfd.jpg?1783933977",
   "small": "https://cards.scryfall.io/small/front/0/d/0df50703-5655-4bc4-adc9-d719c2da3bfd.jpg?1783933977"
  },
  "Scornful Egotist": {
   "artist": "Jim Nelson",
+  "ja": {
+   "artist": "Jim Nelson",
+   "name": "軽蔑する利己主義者",
+   "normal": "https://cards.scryfall.io/normal/front/0/1/013e00c0-00c5-4a4d-a592-5b53f8dc1ee7.jpg?1783029644",
+   "small": "https://cards.scryfall.io/small/front/0/1/013e00c0-00c5-4a4d-a592-5b53f8dc1ee7.jpg?1783029644"
+  },
   "normal": "https://cards.scryfall.io/normal/front/f/e/fec6b189-97e7-4627-9785-a9ce2f1ad89f.jpg?1783944884",
   "small": "https://cards.scryfall.io/small/front/f/e/fec6b189-97e7-4627-9785-a9ce2f1ad89f.jpg?1783944884"
  },
  "Season of Loss": {
   "artist": "Dominik Mayer",
+  "ja": {
+   "artist": "Dominik Mayer",
+   "name": "損失の季節",
+   "normal": "https://cards.scryfall.io/normal/front/b/2/b200c077-1a47-4b48-aa2f-c79a1ba1ff88.jpg?1782789491",
+   "small": "https://cards.scryfall.io/small/front/b/2/b200c077-1a47-4b48-aa2f-c79a1ba1ff88.jpg?1782789491",
+   "text": "以下から{P}最大５つ分のモードを選ぶ。同じモードを２回以上選んでもよい。\n{P} ― 各プレイヤーはそれぞれクリーチャー１体を生け贄に捧げる。\n{P}{P} ― あなたがコントロールしていてこのターンに死亡したクリーチャー１体につき１枚のカードを引く。\n{P}{P}{P} ― 各対戦相手はそれぞれＸ点のライフを失う。Ｘは、あなたの墓地にあるクリーチャー・カードの枚数に等しい。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/c/c/cc540652-916b-45c5-ae5a-0a0bc557cee1.jpg?1783910829",
   "small": "https://cards.scryfall.io/small/front/c/c/cc540652-916b-45c5-ae5a-0a0bc557cee1.jpg?1783910829"
  },
  "Sejiri Shelter": {
   "artist": "Darek Zabrocki",
+  "ja": {
+   "artist": "Darek Zabrocki",
+   "name": "セジーリの防護",
+   "normal": "https://cards.scryfall.io/normal/front/d/0/d00a76de-38cd-403f-ab35-5fcb043e952e.jpg?1782901252",
+   "small": "https://cards.scryfall.io/small/front/d/0/d00a76de-38cd-403f-ab35-5fcb043e952e.jpg?1782901252",
+   "text": "あなたがコントロールしているクリーチャー１体を対象とする。色１色を選ぶ。ターン終了時まで、それはプロテクション（その選ばれた色）を得る。\n土地\n{T}：{W}を加える。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/f/2/f25d56f9-aa54-4657-9ac9-e93fbba3e715.jpg?1783929413",
   "small": "https://cards.scryfall.io/small/front/f/2/f25d56f9-aa54-4657-9ac9-e93fbba3e715.jpg?1783929413"
  },
  "Shimmering Grotto": {
   "artist": "Cliff Childs",
+  "ja": {
+   "artist": "Cliff Childs",
+   "name": "ゆらめく岩屋",
+   "normal": "https://cards.scryfall.io/normal/front/d/0/d02de2a0-d13b-4c93-8154-b5d2a5152828.jpg?1782935907",
+   "small": "https://cards.scryfall.io/small/front/d/0/d02de2a0-d13b-4c93-8154-b5d2a5152828.jpg?1782935907",
+   "text": "{T}：あなたのマナ・プールに{C}を加える。\n{1}, {T}：あなたのマナ・プールに、好きな色１色のマナ１点を加える。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/e/0/e03f2594-c6e8-4758-86b4-885d1dba3a91.jpg?1783935500",
   "small": "https://cards.scryfall.io/small/front/e/0/e03f2594-c6e8-4758-86b4-885d1dba3a91.jpg?1783935500"
  },
  "Skirk Prospector": {
   "artist": "Slawomir Maniak",
+  "ja": {
+   "artist": "Slawomir Maniak",
+   "name": "スカークの探鉱者",
+   "normal": "https://cards.scryfall.io/normal/front/f/4/f41b996a-aee4-4d93-897e-40caffd7bb4f.jpg?1782832758",
+   "small": "https://cards.scryfall.io/small/front/f/4/f41b996a-aee4-4d93-897e-40caffd7bb4f.jpg?1782832758",
+   "text": "ゴブリン１体を生け贄に捧げる：{R}を加える。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/7/b/7bc508b3-8b38-4cf0-89a7-a2cb247ed083.jpg?1783918455",
   "small": "https://cards.scryfall.io/small/front/7/b/7bc508b3-8b38-4cf0-89a7-a2cb247ed083.jpg?1783918455"
  },
  "Snarespinner": {
   "artist": "Michele Giorgi",
+  "ja": {
+   "artist": "Michele Giorgi",
+   "name": "罠紡ぎ",
+   "normal": "https://cards.scryfall.io/normal/front/8/4/84527a6d-9db5-4432-bbc2-7f05933ea2a4.jpg?1782844300",
+   "small": "https://cards.scryfall.io/small/front/8/4/84527a6d-9db5-4432-bbc2-7f05933ea2a4.jpg?1782844300",
+   "text": "到達\n罠紡ぎが飛行を持つクリーチャー１体をブロックするたび、ターン終了時まで、罠紡ぎは＋２/＋０の修整を受ける。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/0/b/0b51c3b5-db70-4976-986d-ed3fc8584d1a.jpg?1783921293",
   "small": "https://cards.scryfall.io/small/front/0/b/0b51c3b5-db70-4976-986d-ed3fc8584d1a.jpg?1783921293"
  },
  "Song of Freyalise": {
   "artist": "Min Yum",
+  "ja": {
+   "artist": "Min Yum",
+   "name": "フレイアリーズの歌",
+   "normal": "https://cards.scryfall.io/normal/front/9/a/9aac8795-285b-4b9b-acab-d631dbd51dbf.jpg?1782932694",
+   "small": "https://cards.scryfall.io/small/front/9/a/9aac8795-285b-4b9b-acab-d631dbd51dbf.jpg?1782932694",
+   "text": "（この英雄譚が出た際とあなたのドロー・ステップの後に、伝承カウンターを１個加える。IIIの後に、生け贄に捧げる。）\nI, II ― あなたの次のターンまで、あなたがコントロールしているクリーチャーは「{T}：好きな色１色のマナ１点を加える。」を持つ。\nIII ― あなたがコントロールしている各クリーチャーの上に＋１/＋１カウンターをそれぞれ１個置く。ターン終了時まで、それらのクリーチャーは警戒とトランプルと破壊不能を得る。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/a/4/a45b534b-8442-4074-a8d2-f38e83f24868.jpg?1783934974",
   "small": "https://cards.scryfall.io/small/front/a/4/a45b534b-8442-4074-a8d2-f38e83f24868.jpg?1783934974"
  },
  "Spawnbroker": {
   "artist": "Wayne England",
+  "ja": {
+   "artist": "Wayne England",
+   "name": "落とし子の仲買人",
+   "normal": "https://cards.scryfall.io/normal/front/9/8/98355e85-9cf9-4c3c-b3a1-756a366310df.jpg?1783019511",
+   "small": "https://cards.scryfall.io/small/front/9/8/98355e85-9cf9-4c3c-b3a1-756a366310df.jpg?1783019511",
+   "text": "落とし子の仲買人が場に出たとき、あなたがコントロールするクリーチャー１体を対象とし、そのクリーチャーのパワー以下のパワーを持ついずれかの対戦相手がコントロールするクリーチャー１体を対象とする。あなたはそれらのコントロールを交換してもよい。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/c/e/ce1e4aa6-b06d-4b87-9912-a4c403e8d7c6.jpg?1783943680",
   "small": "https://cards.scryfall.io/small/front/c/e/ce1e4aa6-b06d-4b87-9912-a4c403e8d7c6.jpg?1783943680"
  },
  "Storm Fleet Swashbuckler": {
   "artist": "Kieran Yanner",
+  "ja": {
+   "artist": "Kieran Yanner",
+   "name": "風雲艦隊の剣客",
+   "normal": "https://cards.scryfall.io/normal/front/5/d/5d298c84-372f-449a-9741-97133eeadd53.jpg?1782935086",
+   "small": "https://cards.scryfall.io/small/front/5/d/5d298c84-372f-449a-9741-97133eeadd53.jpg?1782935086",
+   "text": "昇殿（あなたがパーマネントを10個以上コントロールしているなら、このゲームの間、あなたは都市の承認を得る。）\nあなたが都市の承認を持っているかぎり、風雲艦隊の剣客は二段攻撃を持つ。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/7/0/7093bd0e-3b98-4f46-9717-202ddd277bf5.jpg?1783935292",
   "small": "https://cards.scryfall.io/small/front/7/0/7093bd0e-3b98-4f46-9717-202ddd277bf5.jpg?1783935292"
  },
  "Stormbound Geist": {
   "artist": "Dan Murayama Scott",
+  "ja": {
+   "artist": "Dan Murayama Scott",
+   "name": "嵐縛りの霊",
+   "normal": "https://cards.scryfall.io/normal/front/3/2/32c1d5c1-3c58-4171-88b5-a5e1c2447283.jpg?1782986294",
+   "small": "https://cards.scryfall.io/small/front/3/2/32c1d5c1-3c58-4171-88b5-a5e1c2447283.jpg?1782986294",
+   "text": "飛行\n嵐縛りの霊は、飛行を持つクリーチャーのみをブロックできる。不死（このクリーチャーが死亡したとき、それの上に＋１/＋１カウンターが置かれていなかった場合、それを＋１/＋１カウンターが１個置かれた状態でオーナーのコントロール下で戦場に戻す。）"
+  },
   "normal": "https://cards.scryfall.io/normal/front/0/4/040eddb0-fca2-41eb-ab07-c48d49385973.jpg?1783940836",
   "small": "https://cards.scryfall.io/small/front/0/4/040eddb0-fca2-41eb-ab07-c48d49385973.jpg?1783940836"
  },
  "Submerged Boneyard": {
   "artist": "Cliff Childs",
+  "ja": {
+   "artist": "Cliff Childs",
+   "name": "水没した骨塚",
+   "normal": "https://cards.scryfall.io/normal/front/a/c/ac8e2ed0-91fd-497b-8423-bf7824860337.jpg?1782901785",
+   "small": "https://cards.scryfall.io/small/front/a/c/ac8e2ed0-91fd-497b-8423-bf7824860337.jpg?1782901785",
+   "text": "水没した骨塚はタップ状態で戦場に出る。\n{T}：{U}か{B}を加える。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/8/b/8b949b06-210d-4658-97a6-43f54eb18b87.jpg?1783929437",
   "small": "https://cards.scryfall.io/small/front/8/b/8b949b06-210d-4658-97a6-43f54eb18b87.jpg?1783929437"
  },
  "Sulfur Falls": {
   "artist": "Cliff Childs",
+  "ja": {
+   "artist": "Cliff Childs",
+   "name": "硫黄の滝",
+   "normal": "https://cards.scryfall.io/normal/front/a/6/a6d6de75-69a6-4f84-9855-4c2694c4c9f0.jpg?1790694808",
+   "small": "https://cards.scryfall.io/small/front/a/6/a6d6de75-69a6-4f84-9855-4c2694c4c9f0.jpg?1790694808",
+   "text": "あなたが島や山をコントロールしていないかぎり、この土地はタップ状態で戦場に出る。\n{T}：{U}か{R}を加える。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/2/b/2b20fa73-c6de-49c1-b3d0-6ebd543a00d0.jpg?1789599921",
   "small": "https://cards.scryfall.io/small/front/2/b/2b20fa73-c6de-49c1-b3d0-6ebd543a00d0.jpg?1789599921"
  },
  "Swamp": {
   "artist": "Maojin Lee",
+  "ja": {
+   "artist": "Leon Tukker",
+   "name": "沼",
+   "normal": "https://cards.scryfall.io/normal/front/7/f/7f81cd10-d6ad-4291-b1e6-f8df916faede.jpg?1790689009",
+   "small": "https://cards.scryfall.io/small/front/7/f/7f81cd10-d6ad-4291-b1e6-f8df916faede.jpg?1790689009"
+  },
   "normal": "https://cards.scryfall.io/normal/front/b/2/b233b117-9369-45c1-80c5-cc857386b6be.jpg?1791578437",
   "small": "https://cards.scryfall.io/small/front/b/2/b233b117-9369-45c1-80c5-cc857386b6be.jpg?1791578437"
  },
  "Swiftwater Cliffs": {
   "artist": "Piotr Dura",
+  "ja": {
+   "artist": "Piotr Dura",
+   "name": "急流の崖",
+   "normal": "https://cards.scryfall.io/normal/front/0/a/0ac959a1-bf2e-4bd0-8f1e-4d97f2fe17d5.jpg?1782774810",
+   "small": "https://cards.scryfall.io/small/front/0/a/0ac959a1-bf2e-4bd0-8f1e-4d97f2fe17d5.jpg?1782774810",
+   "text": "この土地はタップ状態で戦場に出る。\nこの土地が戦場に出たとき、１点のライフを得る。\n{T}：{U}か{R}を加える。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/c/a/ca53fb19-b8ca-485b-af1a-5117ae54bfe3.jpg?1783907271",
   "small": "https://cards.scryfall.io/small/front/c/a/ca53fb19-b8ca-485b-af1a-5117ae54bfe3.jpg?1783907271"
  },
  "Sword of Feast and Famine": {
   "artist": "Chris Rahn",
+  "ja": {
+   "artist": "Thanh Tuấn",
+   "name": "饗宴と飢餓の剣",
+   "normal": "https://cards.scryfall.io/normal/front/e/1/e11b7df5-1a0b-441d-8da0-123a810874bc.jpg?1782790841",
+   "small": "https://cards.scryfall.io/small/front/e/1/e11b7df5-1a0b-441d-8da0-123a810874bc.jpg?1782790841",
+   "text": "装備しているクリーチャーは、＋２/＋２の修整を受けプロテクション（黒）とプロテクション（緑）を持つ。\n装備しているクリーチャーがプレイヤー１人に戦闘ダメージを与えるたび、そのプレイヤーはカード１枚を捨て、あなたはあなたがコントロールしているすべての土地をアンタップする。\n装備{2}"
+  },
   "normal": "https://cards.scryfall.io/normal/front/c/7/c7710eb5-c56a-437b-8847-2a829c404d47.jpg?1783930094",
   "small": "https://cards.scryfall.io/small/front/c/7/c7710eb5-c56a-437b-8847-2a829c404d47.jpg?1783930094"
  },
  "Sylvok Explorer": {
   "artist": "Wayne England",
+  "ja": {
+   "artist": "Wayne England",
+   "name": "シルヴォクの開拓者",
+   "normal": "https://cards.scryfall.io/normal/front/9/4/9415aada-25a1-4104-894d-5086f268c025.jpg?1782946612",
+   "small": "https://cards.scryfall.io/small/front/9/4/9415aada-25a1-4104-894d-5086f268c025.jpg?1782946612",
+   "text": "{T}：あなたのマナ・プールに、対戦相手がコントロールする土地が生み出すことのできる色のうち好きな色１色のマナ１点を加える。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/3/8/3881e40f-5d10-4461-aa88-11ba33e5d510.jpg?1783937056",
   "small": "https://cards.scryfall.io/small/front/3/8/3881e40f-5d10-4461-aa88-11ba33e5d510.jpg?1783937056"
  },
  "Symbiotic Elf": {
   "artist": "Wayne England",
+  "ja": {
+   "artist": "Wayne England",
+   "name": "共生するエルフ",
+   "normal": "https://cards.scryfall.io/normal/front/6/0/604f2cd5-1c6e-4d3a-b4f9-dc4f191c578e.jpg?1783030961",
+   "small": "https://cards.scryfall.io/small/front/6/0/604f2cd5-1c6e-4d3a-b4f9-dc4f191c578e.jpg?1783030961"
+  },
   "normal": "https://cards.scryfall.io/normal/front/8/e/8e552d26-d203-4040-ba11-d01d65f038a4.jpg?1783941270",
   "small": "https://cards.scryfall.io/small/front/8/e/8e552d26-d203-4040-ba11-d01d65f038a4.jpg?1783941270"
  },
  "Temple Garden": {
   "artist": "Shahab Alizadeh",
+  "ja": {
+   "artist": "Adam Paquette",
+   "name": "寺院の庭",
+   "normal": "https://cards.scryfall.io/normal/front/6/9/69e59595-22ea-452c-b7a6-5365e4248c06.jpg?1791678835",
+   "small": "https://cards.scryfall.io/small/front/6/9/69e59595-22ea-452c-b7a6-5365e4248c06.jpg?1791678835",
+   "text": "（{T}：{G}か{W}を加える。）\nこの土地が戦場に出るに際し、２点のライフを支払ってもよい。そうしないなら、これはタップ状態で戦場に出る。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/b/9/b9b0589d-f327-46a7-8bac-06b7654c547a.jpg?1784036854",
   "small": "https://cards.scryfall.io/small/front/b/9/b9b0589d-f327-46a7-8bac-06b7654c547a.jpg?1784036854"
  },
  "Temporal Eddy": {
   "artist": "Wayne England",
+  "ja": {
+   "artist": "Wayne England",
+   "name": "時間の渦",
+   "normal": "https://cards.scryfall.io/normal/front/0/8/089db438-2d10-483a-9fc6-2beda3c70fce.jpg?1783014593",
+   "small": "https://cards.scryfall.io/small/front/0/8/089db438-2d10-483a-9fc6-2beda3c70fce.jpg?1783014593",
+   "text": "クリーチャー１体か土地１つを対象とし、それをオーナーのライブラリーの一番上に置く。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/3/c/3cab2147-d496-489b-aaf0-b354e31a6b45.jpg?1783943239",
   "small": "https://cards.scryfall.io/small/front/3/c/3cab2147-d496-489b-aaf0-b354e31a6b45.jpg?1783943239"
  },
  "Tender Wildguide": {
   "artist": "Jakob Eirich",
+  "ja": {
+   "artist": "Jakob Eirich",
+   "name": "耕作する高原導き",
+   "normal": "https://cards.scryfall.io/normal/front/b/5/b57ac576-ab71-4d2a-a945-669dded50a7e.jpg?1782789127",
+   "small": "https://cards.scryfall.io/small/front/b/5/b57ac576-ab71-4d2a-a945-669dded50a7e.jpg?1782789127",
+   "text": "新生{2}（この呪文を唱えるに際し、追加で{2}を支払ってもよい。そうしたなら、このクリーチャーが戦場に出たとき、１/１でこれのコピーであるトークン１体を生成する。\n{T}：好きな色１色のマナ１点を加える。\n{T}：このクリーチャーの上に＋１/＋１カウンター１個を置く。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/6/b/6b8bfa91-adb0-4596-8c16-d8bb64fdb26d.jpg?1783910802",
   "small": "https://cards.scryfall.io/small/front/6/b/6b8bfa91-adb0-4596-8c16-d8bb64fdb26d.jpg?1783910802"
  },
  "Terminate": {
   "artist": "Lordigan",
+  "ja": {
+   "artist": "Lordigan",
+   "name": "終止",
+   "normal": "https://cards.scryfall.io/normal/front/5/2/52fe11c5-a647-453f-bb8c-e4d26054bbd0.jpg?1785264791",
+   "small": "https://cards.scryfall.io/small/front/5/2/52fe11c5-a647-453f-bb8c-e4d26054bbd0.jpg?1785264791",
+   "text": "クリーチャー１体を対象とする。それを破壊する。それは再生できない。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/3/7/379ffc67-4142-4ead-a871-0f851523745e.jpg?1783903230",
   "small": "https://cards.scryfall.io/small/front/3/7/379ffc67-4142-4ead-a871-0f851523745e.jpg?1783903230"
  },
  "Thornvault Forager": {
   "artist": "Mark Behm",
+  "ja": {
+   "artist": "Mark Behm",
+   "name": "茨越えの餌あさり",
+   "normal": "https://cards.scryfall.io/normal/front/0/e/0e2ea643-3e14-4a95-a4d6-46b82a2e27f1.jpg?1782788547",
+   "small": "https://cards.scryfall.io/small/front/0/e/0e2ea643-3e14-4a95-a4d6-46b82a2e27f1.jpg?1782788547",
+   "text": "{T}：{G}を加える。\n{T}, 給餌する：望む色の組み合わせのマナ２点を加える。\n{3}{G}, {T}：あなたのライブラリーからリス・カード１枚を探し、公開し、あなたの手札に加える。その後、ライブラリーを切り直す。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/8/c/8c2d6b02-a453-40f9-992a-5c5542987cfb.jpg?1783910802",
   "small": "https://cards.scryfall.io/small/front/8/c/8c2d6b02-a453-40f9-992a-5c5542987cfb.jpg?1783910802"
  },
  "Underhanded Designs": {
   "artist": "Anastasia Ovchinnikova",
+  "ja": {
+   "artist": "Anastasia Ovchinnikova",
+   "name": "奥の手",
+   "normal": "https://cards.scryfall.io/normal/front/a/e/ae22c227-b8e2-46c4-89a3-74122302d968.jpg?1782948727",
+   "small": "https://cards.scryfall.io/small/front/a/e/ae22c227-b8e2-46c4-89a3-74122302d968.jpg?1782948727",
+   "text": "アーティファクトが１つあなたのコントロール下で戦場に出るたび、あなたは{1}を支払ってもよい。そうしたなら、各対戦相手はそれぞれ１点のライフを失い、あなたは１点のライフを得る。\n{1}{B}, 奥の手を生け贄に捧げる：クリーチャー１体を対象とし、それを破壊する。この能力は、あなたがアーティファクトを２つ以上コントロールしているときにのみ起動できる。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/4/3/4392fe0a-a15e-46c6-9a3d-8e30e4dab17f.jpg?1783937200",
   "small": "https://cards.scryfall.io/small/front/4/3/4392fe0a-a15e-46c6-9a3d-8e30e4dab17f.jpg?1783937200"
  },
  "Urza's Bauble": {
   "artist": "Christopher Rush",
+  "ja": {
+   "artist": "Christopher Rush",
+   "name": "ウルザのガラクタ",
+   "normal": "https://cards.scryfall.io/normal/front/6/c/6c292c7b-fffc-491e-a410-fab8946c25a6.jpg?1783053699",
+   "small": "https://cards.scryfall.io/small/front/6/c/6c292c7b-fffc-491e-a410-fab8946c25a6.jpg?1783053699"
+  },
   "normal": "https://cards.scryfall.io/normal/front/2/9/29175e6b-a2ab-4373-8093-cb372aa8c7d0.jpg?1789040656",
   "small": "https://cards.scryfall.io/small/front/2/9/29175e6b-a2ab-4373-8093-cb372aa8c7d0.jpg?1789040656"
  },
  "Urza's Mine": {
   "artist": "Brian Snõddy",
+  "ja": {
+   "artist": "Brian Snõddy",
+   "name": "ウルザの鉱山",
+   "normal": "https://cards.scryfall.io/normal/front/2/7/27d56051-6ff6-4ffc-8090-15c41be66803.jpg?1782794319",
+   "small": "https://cards.scryfall.io/small/front/2/7/27d56051-6ff6-4ffc-8090-15c41be66803.jpg?1782794319",
+   "text": "{T}：{C}を加える。あなたがウルザの・魔力炉とウルザの・塔をコントロールしているなら、代わりに{C}{C}を加える。（あなたがすべての土地・タイプを持つ土地をコントロールしているなら、ウルザの鉱山は{C}{C}を加える。）"
+  },
   "normal": "https://cards.scryfall.io/normal/front/3/9/396bbb7d-ae61-4d8d-b931-9ed2f712832e.jpg?1783915371",
   "small": "https://cards.scryfall.io/small/front/3/9/396bbb7d-ae61-4d8d-b931-9ed2f712832e.jpg?1783915371"
  },
  "Urza's Power Plant": {
   "artist": "Brian Snõddy",
+  "ja": {
+   "artist": "Brian Snõddy",
+   "name": "ウルザの魔力炉",
+   "normal": "https://cards.scryfall.io/normal/front/3/1/31f36c75-9d76-479a-9dba-4a9473294560.jpg?1782794317",
+   "small": "https://cards.scryfall.io/small/front/3/1/31f36c75-9d76-479a-9dba-4a9473294560.jpg?1782794317",
+   "text": "{T}：{C}を加える。あなたがウルザの・鉱山とウルザの・塔をコントロールしているなら、代わりに{C}{C}を加える。（あなたがすべての土地・タイプを持つ土地をコントロールしているなら、ウルザの魔力炉は{C}{C}を加える。）"
+  },
   "normal": "https://cards.scryfall.io/normal/front/b/0/b0449a19-37f7-4169-9e32-928db5ec76fe.jpg?1783915370",
   "small": "https://cards.scryfall.io/small/front/b/0/b0449a19-37f7-4169-9e32-928db5ec76fe.jpg?1783915370"
  },
  "Urza's Tower": {
   "artist": "Brian Snõddy",
+  "ja": {
+   "artist": "Brian Snõddy",
+   "name": "ウルザの塔",
+   "normal": "https://cards.scryfall.io/normal/front/c/8/c8c99b2b-6f45-411f-ad66-0e4510f59bf6.jpg?1782794314",
+   "small": "https://cards.scryfall.io/small/front/c/8/c8c99b2b-6f45-411f-ad66-0e4510f59bf6.jpg?1782794314",
+   "text": "{T}：{C}を加える。あなたがウルザの・鉱山とウルザの・魔力炉をコントロールしているなら、代わりに{C}{C}{C}を加える。（あなたがすべての土地・タイプを持つ土地をコントロールしているなら、ウルザの塔は{C}{C}{C}を加える。）"
+  },
   "normal": "https://cards.scryfall.io/normal/front/1/e/1e9f09b3-dd2d-4ba9-a57e-4f3c1793f752.jpg?1783915371",
   "small": "https://cards.scryfall.io/small/front/1/e/1e9f09b3-dd2d-4ba9-a57e-4f3c1793f752.jpg?1783915371"
  },
  "Weldfast Wingsmith": {
   "artist": "Dan Murayama Scott",
+  "ja": {
+   "artist": "Dan Murayama Scott",
+   "name": "速接会の翼鍛冶",
+   "normal": "https://cards.scryfall.io/normal/front/9/7/97ff0ee4-5fe9-4329-9c45-7d292f0d05e4.jpg?1782835701",
+   "small": "https://cards.scryfall.io/small/front/9/7/97ff0ee4-5fe9-4329-9c45-7d292f0d05e4.jpg?1782835701",
+   "text": "アーティファクト１つがあなたのコントロール下で戦場に出るたび、ターン終了時まで、速接会の翼鍛冶は飛行を得る。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/8/b/8b115a65-e273-4264-9db7-317e1855f492.jpg?1783937211",
   "small": "https://cards.scryfall.io/small/front/8/b/8b115a65-e273-4264-9db7-317e1855f492.jpg?1783937211"
  },
  "Wretched Gryff": {
   "artist": "Darek Zabrocki",
+  "ja": {
+   "artist": "Darek Zabrocki",
+   "name": "不憫なグリフ",
+   "normal": "https://cards.scryfall.io/normal/front/f/b/fb982d21-8327-4439-b402-7e4d85c25bc3.jpg?1782951439",
+   "small": "https://cards.scryfall.io/small/front/f/b/fb982d21-8327-4439-b402-7e4d85c25bc3.jpg?1782951439",
+   "text": "現出{5}{U}（あなたはこの呪文を、クリーチャー１体を生け贄に捧げるとともに{X}だけ減らした現出コストを支払って唱えてもよい。Ｘはそのクリーチャーの点数で見たマナ・コストに等しい。）\nあなたが不憫なグリフを唱えたとき、カードを１枚引く。\n飛行"
+  },
   "normal": "https://cards.scryfall.io/normal/front/7/2/722b519a-715d-4393-9d3c-97f329896ef4.jpg?1783908187",
   "small": "https://cards.scryfall.io/small/front/7/2/722b519a-715d-4393-9d3c-97f329896ef4.jpg?1783908187"
  },
  "Ygra, Eater of All": {
   "artist": "Chris Rahn",
+  "ja": {
+   "artist": "Ilse Gort",
+   "name": "全てを喰らうもの、イグラ",
+   "normal": "https://cards.scryfall.io/normal/front/2/3/23157914-787e-4ae2-b55d-d0f0d1488e82.jpg?1782788787",
+   "small": "https://cards.scryfall.io/small/front/2/3/23157914-787e-4ae2-b55d-d0f0d1488e82.jpg?1782788787",
+   "text": "護法―食物１つを生け贄に捧げる。\nこれでないすべてのクリーチャーは他のタイプに加えて食物・アーティファクトであり「{2}, {T}, このパーマネントを生け贄に捧げる：３点のライフを得る。」を持つ。\n食物１つが戦場から墓地に置かれるたび、全てを喰らうもの、イグラの上に＋１/＋１カウンター２個を置く。"
+  },
   "normal": "https://cards.scryfall.io/normal/front/b/9/b9ac7673-eae8-4c4b-889e-5025213a6151.jpg?1783910790",
   "small": "https://cards.scryfall.io/small/front/b/9/b9ac7673-eae8-4c4b-889e-5025213a6151.jpg?1783910790"
  },
  "Yotian Soldier": {
   "artist": "Luca Zontini",
+  "ja": {
+   "artist": "Luca Zontini",
+   "name": "ヨーティアの兵",
+   "normal": "https://cards.scryfall.io/normal/front/c/9/c9422749-d0cf-42bd-b301-dd412721d5e1.jpg?1782931543",
+   "small": "https://cards.scryfall.io/small/front/c/9/c9422749-d0cf-42bd-b301-dd412721d5e1.jpg?1782931543",
+   "text": "警戒"
+  },
   "normal": "https://cards.scryfall.io/normal/front/9/e/9e71190b-c96c-4aea-9696-780c69eff395.jpg?1783934784",
   "small": "https://cards.scryfall.io/small/front/9/e/9e71190b-c96c-4aea-9696-780c69eff395.jpg?1783934784"
  }
