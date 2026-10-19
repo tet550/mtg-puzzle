@@ -1,0 +1,164 @@
+{
+  "schemaVersion": 1,
+  "title": "Possibility Storm - Assassin's Creed #01",
+  "description": "Win this turn. Your opponent has five (unknown) cards in their library. Ensure your solution takes all possible opponent decisions into account!",
+  "source": {
+    "type": "forge-pzl",
+    "file": "PS_ACR1.pzl",
+    "url": "https://i1.wp.com/www.possibilitystorm.com/wp-content/uploads/2024/07/latest-scaled.jpg?ssl=1",
+    "difficulty": "Mythic"
+  },
+  "engine": {
+    "type": "forge",
+    "version": "2.0.15"
+  },
+  "game": {
+    "activePlayer": "p1",
+    "phase": "main1",
+    "turn": 1,
+    "players": [
+      {
+        "id": "p1",
+        "life": 5,
+        "hand": [
+          {
+            "id": "p1H0",
+            "cardId": "Poison-Blade Mentor"
+          },
+          {
+            "id": "p1H1",
+            "cardId": "Fatal Push"
+          },
+          {
+            "id": "p1H2",
+            "cardId": "Terminate"
+          },
+          {
+            "id": "p1H3",
+            "cardId": "Apple of Eden, Isu Relic"
+          }
+        ],
+        "battlefield": [
+          {
+            "id": "p1B0",
+            "cardId": "Edward Kenway"
+          },
+          {
+            "id": "p1B1",
+            "cardId": "Adrestia"
+          },
+          {
+            "id": "p1B2",
+            "cardId": "Sword of Feast and Famine"
+          },
+          {
+            "id": "p1B3",
+            "cardId": "Submerged Boneyard"
+          },
+          {
+            "id": "p1B4",
+            "cardId": "Submerged Boneyard"
+          },
+          {
+            "id": "p1B5",
+            "cardId": "Submerged Boneyard"
+          },
+          {
+            "id": "p1B6",
+            "cardId": "Submerged Boneyard"
+          },
+          {
+            "id": "p1B7",
+            "cardId": "Mountain"
+          },
+          {
+            "id": "p1B8",
+            "cardId": "Mountain"
+          }
+        ],
+        "graveyard": [],
+        "exile": [],
+        "library": []
+      },
+      {
+        "id": "p2",
+        "life": 5,
+        "hand": [
+          {
+            "id": "p2H0",
+            "cardId": "Flare of Fortitude"
+          },
+          {
+            "id": "p2H1",
+            "cardId": "Marionette Apprentice"
+          },
+          {
+            "id": "p2H2",
+            "cardId": "Kozilek's Command"
+          }
+        ],
+        "battlefield": [
+          {
+            "id": "p2B0",
+            "cardId": "Kaalia of the Vast",
+            "counters": {
+              "P1P1": 3
+            }
+          },
+          {
+            "id": "p2B1",
+            "cardId": "Nomad Outpost",
+            "tapped": true
+          },
+          {
+            "id": "p2B2",
+            "cardId": "Nomad Outpost",
+            "tapped": true
+          },
+          {
+            "id": "p2B3",
+            "cardId": "Nomad Outpost",
+            "tapped": true
+          },
+          {
+            "id": "p2B4",
+            "cardId": "Nomad Outpost",
+            "tapped": true
+          }
+        ],
+        "graveyard": [],
+        "exile": [],
+        "library": [
+          {
+            "id": "p2L0",
+            "cardId": "Opt"
+          },
+          {
+            "id": "p2L1",
+            "cardId": "Opt"
+          },
+          {
+            "id": "p2L2",
+            "cardId": "Opt"
+          },
+          {
+            "id": "p2L3",
+            "cardId": "Opt"
+          },
+          {
+            "id": "p2L4",
+            "cardId": "Opt"
+          }
+        ]
+      }
+    ]
+  },
+  "goal": {
+    "type": "win",
+    "player": "p1",
+    "deadline": "current_turn"
+  },
+  "opponent": {
+    "policy": "pass"
+  }
+}

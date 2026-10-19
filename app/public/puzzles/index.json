@@ -28,5 +28,47 @@
     "title": "S10 Modal spell",
     "description": "Win this turn",
     "source": null
+  },
+  {
+    "id": "PS_ACR1",
+    "title": "Possibility Storm - Assassin's Creed #01",
+    "description": "Win this turn. Your opponent has five (unknown) cards in their library. Ensure your solution takes all possible opponent decisions into account!",
+    "source": "Forge のパズル（PS_ACR1.pzl）"
+  },
+  {
+    "id": "PS_DOM5",
+    "title": "Possibility Storm - Dominaria #05",
+    "description": "Win this turn. You have exiled Fatal Push and Mutiny with Karn. Assume any cards you could draw from your library are irrelevant. You already have the city's blessing at the start of the puzzle.",
+    "source": "Forge のパズル（PS_DOM5.pzl）"
+  },
+  {
+    "id": "PP12",
+    "title": "Pauper Puzzles #12 - To The Skies",
+    "description": "",
+    "source": "Forge のパズル（PP12.pzl）"
+  },
+  {
+    "id": "PS_RNA6",
+    "title": "Possibility Storm - Ravnica Allegiance #06",
+    "description": "Win this turn. Your solution must satisfy all possible blocking scenarios.",
+    "source": "Forge のパズル（PS_RNA6.pzl）"
+  },
+  {
+    "id": "PS_BLB1",
+    "title": "Possibility Storm - Bloomburrow #01",
+    "description": "Win this turn. Assume your opponent could have copies of any Bloomburrow Standard-legal Squirrels in their library (...but none of them do anything in this situation). Ensure your solution takes all possible opponent decisions into account!",
+    "source": "Forge のパズル（PS_BLB1.pzl）"
+  },
+  {
+    "id": "PS_ZNR5",
+    "title": "Possibility Storm - Zendikar Rising #05",
+    "description": "Win this turn. Remember that your solution must satisfy all blocking scenarios.",
+    "source": "Forge のパズル（PS_ZNR5.pzl）"
+  },
+  {
+    "id": "PC_021616",
+    "title": "Perplexing Chimera (GatheringMagic.com) 021616 - Old Artists Never Die",
+    "description": "Win on your turn.",
+    "source": "Forge のパズル（PC_021616.pzl）"
   }
 ]

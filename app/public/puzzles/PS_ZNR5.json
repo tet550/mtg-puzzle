@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "title": "Possibility Storm - Zendikar Rising #05",
+  "description": "Win this turn. Remember that your solution must satisfy all blocking scenarios.",
+  "source": {
+    "type": "forge-pzl",
+    "file": "PS_ZNR5.pzl",
+    "url": "https://i0.wp.com/www.possibilitystorm.com/wp-content/uploads/2020/12/162.-ZNR5-scaled.jpg",
+    "difficulty": "Rare"
+  },
+  "engine": {
+    "type": "forge",
+    "version": "2.0.15"
+  },
+  "game": {
+    "activePlayer": "p1",
+    "phase": "main1",
+    "turn": 1,
+    "players": [
+      {
+        "id": "p1",
+        "life": 20,
+        "hand": [
+          {
+            "id": "p1H0",
+            "cardId": "Faerie Guidemother"
+          },
+          {
+            "id": "p1H1",
+            "cardId": "Furor of the Bitten"
+          },
+          {
+            "id": "p1H2",
+            "cardId": "Sejiri Shelter"
+          },
+          {
+            "id": "p1H3",
+            "cardId": "Furor of the Bitten"
+          }
+        ],
+        "battlefield": [
+          {
+            "id": "p1B0",
+            "cardId": "Fearless Fledgling",
+            "counters": {
+              "P1P1": 1
+            }
+          },
+          {
+            "id": "p1B1",
+            "cardId": "Fireblade Charger"
+          },
+          {
+            "id": "p1B2",
+            "cardId": "Celestial Enforcer"
+          },
+          {
+            "id": "p1B3",
+            "cardId": "Plains"
+          },
+          {
+            "id": "p1B4",
+            "cardId": "Plains"
+          },
+          {
+            "id": "p1B5",
+            "cardId": "Plains"
+          },
+          {
+            "id": "p1B6",
+            "cardId": "Mountain"
+          },
+          {
+            "id": "p1B7",
+            "cardId": "Mountain"
+          }
+        ],
+        "graveyard": [],
+        "exile": [],
+        "library": []
+      },
+      {
+        "id": "p2",
+        "life": 5,
+        "hand": [],
+        "battlefield": [
+          {
+            "id": "p2B0",
+            "cardId": "Snarespinner"
+          },
+          {
+            "id": "p2B1",
+            "cardId": "Living Tempest"
+          }
+        ],
+        "graveyard": [],
+        "exile": [],
+        "library": []
+      }
+    ]
+  },
+  "goal": {
+    "type": "win",
+    "player": "p1",
+    "deadline": "current_turn"
+  },
+  "opponent": {
+    "policy": "pass"
+  }
+}

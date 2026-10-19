@@ -6,7 +6,9 @@ import { renderCatalog } from "./ui/catalog";
 import { h } from "./ui/dom";
 import { PlayPage } from "./ui/play";
 
-const engine = new ForgeEngine();
+// ?timeout=<秒> でエンジンの 1 回の呼び出しの待ち時間を変える（調査用）
+const timeout = Number(new URLSearchParams(location.search).get("timeout"));
+const engine = new ForgeEngine(timeout > 0 ? { callTimeoutMs: timeout * 1000 } : {});
 const root = document.getElementById("app")!;
 let page: PlayPage | null = null;
 
