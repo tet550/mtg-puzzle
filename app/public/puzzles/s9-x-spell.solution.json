@@ -1,0 +1,1 @@
+{"puzzle":"s9-x-spell","steps":[{"kind":"PRIORITY","indexes":[1],"labels":["Blaze | Blaze deals X damage to any target."]},{"kind":"CHOOSE_NUMBER","indexes":[3],"labels":["3"]},{"kind":"TARGETS","indexes":[1],"labels":["player:p2"]},{"kind":"PAY_MANA","indexes":[0],"labels":["Auto pay"]},{"kind":"PRIORITY","indexes":[0],"labels":["Pass priority"]}]}

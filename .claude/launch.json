@@ -4,8 +4,21 @@
     {
       "name": "prototype-web",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["prototype/web/serve.mjs"],
+      "runtimeArgs": [
+        "prototype/web/serve.mjs"
+      ],
       "port": 8123
+    },
+    {
+      "name": "app",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "app",
+        "run",
+        "dev"
+      ],
+      "port": 5173
     }
   ]
 }

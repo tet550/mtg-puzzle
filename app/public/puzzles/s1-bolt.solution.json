@@ -1,0 +1,1 @@
+{"puzzle":"s1-bolt","steps":[{"kind":"PRIORITY","indexes":[1],"labels":["Lightning Bolt | Lightning Bolt deals 3 damage to any target."]},{"kind":"TARGETS","indexes":[1],"labels":["player:p2"]},{"kind":"PAY_MANA","indexes":[0],"labels":["Auto pay"]},{"kind":"PRIORITY","indexes":[0],"labels":["Pass priority"]}]}

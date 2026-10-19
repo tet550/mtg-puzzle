@@ -168,7 +168,8 @@ public class PuzzleDefinition {
             String k = forgeKey(i);
             lines.add(k + "life=" + p.life);
             lines.add(k + "hand=" + zone(p.hand));
-            lines.add(k + "battlefield=" + zone(p.battlefield));
+            // 問題の初期盤面は「すでに戦場にある」状態なので、戦場に出たときの誘発を起こさない
+            lines.add(k + "battlefield=" + p.battlefield.stream().map(c -> card(c) + "|NoETBTrigs").collect(Collectors.joining(";")));
             lines.add(k + "graveyard=" + zone(p.graveyard));
             lines.add(k + "exile=" + zone(p.exile));
             lines.add(k + "library=" + zone(p.library));

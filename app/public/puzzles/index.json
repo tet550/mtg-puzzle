@@ -1,0 +1,32 @@
+[
+  {
+    "id": "s1-bolt",
+    "title": "S1 Lightning Bolt",
+    "description": "Win this turn",
+    "source": null
+  },
+  {
+    "id": "s2-attack",
+    "title": "S2 Attack",
+    "description": "Win this turn",
+    "source": null
+  },
+  {
+    "id": "s6-activated",
+    "title": "S6 Activated ability",
+    "description": "Win this turn",
+    "source": null
+  },
+  {
+    "id": "s9-x-spell",
+    "title": "S9 X spell",
+    "description": "Win this turn",
+    "source": null
+  },
+  {
+    "id": "s10-modal",
+    "title": "S10 Modal spell",
+    "description": "Win this turn",
+    "source": null
+  }
+]

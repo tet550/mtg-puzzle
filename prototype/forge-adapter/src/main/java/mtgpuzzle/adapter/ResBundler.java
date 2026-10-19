@@ -38,7 +38,9 @@ public final class ResBundler {
 
         Set<String> names = new TreeSet<>();
         try (Stream<Path> files = Files.list(puzzles)) {
-            for (Path p : files.filter(f -> f.toString().endsWith(".json")).toList()) {
+            // 解答手順（*.solution.json）と一覧（index.json）は問題データではない
+            for (Path p : files.filter(f -> f.toString().endsWith(".json") && !f.toString().endsWith(".solution.json")
+                    && !f.getFileName().toString().equals("index.json")).toList()) {
                 PuzzleDefinition def = PuzzleDefinition.fromJson(Files.readString(p));
                 for (PuzzleDefinition.PlayerDef pl : def.game.players) {
                     for (List<PuzzleDefinition.CardDef> zone : List.of(pl.hand, pl.battlefield, pl.graveyard, pl.exile, pl.library)) {

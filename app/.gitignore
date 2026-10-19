@@ -1,0 +1,8 @@
+node_modules/
+dist/
+# tools/build-engine.sh が作る（jar・res バンドル・プリロード一覧）
+public/engine/*.jar
+public/engine/*.zip
+public/engine/preload.json
+test-results/
+playwright-report/

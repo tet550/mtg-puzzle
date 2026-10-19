@@ -14,6 +14,7 @@
 -keep public class mtgpuzzle.adapter.WebApi { public static *; }
 -keep public class mtgpuzzle.adapter.Smoke { public static void main(java.lang.String[]); }
 -keep public class mtgpuzzle.adapter.ResBundler { public static void main(java.lang.String[]); }
+-keep public class mtgpuzzle.adapter.Solver { public static void main(java.lang.String[]); }
 
 # Guava EventBus は @Subscribe の付いたメソッドをリフレクションで探して呼ぶ
 -keepclassmembers class * {

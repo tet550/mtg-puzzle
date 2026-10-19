@@ -174,6 +174,7 @@ public final class ForgeSession implements AutoCloseable {
         deadlineExceeded = false;
         setupDone = false;
         halted = false;
+        fallbackLog.clear();
         outcome = null;
         eventBuffer.clear();
         instanceToForgeId.clear();
