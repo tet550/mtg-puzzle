@@ -28,6 +28,8 @@ export interface BoardUi {
   startTurn: number;
   /** 直前の出来事で変わったカード（短く光らせる） */
   flash: Set<string>;
+  /** カード画像の URL（画像を出さない設定か、画像が無ければ null） */
+  art: (name: string) => string | null;
 }
 
 const KIND_ORDER: CardKind[] = ["creature", "artifact", "enchantment", "planeswalker", "battle"];
@@ -125,9 +127,9 @@ function mySide(view: GameView, p: PlayerView, ui: BoardUi, hooks: BoardHooks): 
   const hand = p.cards.filter((c) => c.zone === "Hand");
 
   const piles = h("div.piles", null,
-    pile("ライブラリー", p.libraryCount, null, false, null),
-    pile("墓地", gy.length, gy[gy.length - 1] ?? null, ui.open.has("my-graveyard") || gy.some((c) => ui.marks.has(c.instanceId)), () => hooks.toggle("my-graveyard")),
-    ex.length ? pile("追放", ex.length, ex[ex.length - 1], ui.open.has("my-exile") || ex.some((c) => ui.marks.has(c.instanceId)), () => hooks.toggle("my-exile")) : null,
+    pile("ライブラリー", p.libraryCount, null, false, null, ui),
+    pile("墓地", gy.length, gy[gy.length - 1] ?? null, ui.open.has("my-graveyard") || gy.some((c) => ui.marks.has(c.instanceId)), () => hooks.toggle("my-graveyard"), ui),
+    ex.length ? pile("追放", ex.length, ex[ex.length - 1], ui.open.has("my-exile") || ex.some((c) => ui.marks.has(c.instanceId)), () => hooks.toggle("my-exile"), ui) : null,
   );
   const field = h("div.field", null,
     h("div.row.bfrow", null, kindGroups(others, p, ui, hooks)),
@@ -140,8 +142,11 @@ function mySide(view: GameView, p: PlayerView, ui: BoardUi, hooks: BoardHooks): 
   return side;
 }
 
-function pile(label: string, count: number, top: CardView | null, open: boolean, onclick: (() => void) | null): HTMLElement {
-  const face = top ? h("div.face", null, h("div.ftext", null, top.name)) : count ? h("div.face.back") : null;
+function pile(label: string, count: number, top: CardView | null, open: boolean, onclick: (() => void) | null, ui: BoardUi): HTMLElement {
+  const url = top ? ui.art(top.name) : null;
+  const face = top
+    ? h("div.face", null, url ? h("img", { src: url, alt: top.name, loading: "lazy" }) : h("div.ftext", null, top.name))
+    : count ? h("div.face.back") : null;
   return h("div.pile" + (count ? "" : ".empty") + (open ? ".open" : ""), {
     onclick: onclick && count ? (ev: Event) => { ev.stopPropagation(); onclick(); } : null,
     title: `${label} ${count} 枚`,
@@ -231,26 +236,38 @@ function combatBox(view: GameView, ui: BoardUi, hooks: BoardHooks): HTMLElement 
 
 export function cardTile(c: CardView, ui: BoardUi, hooks: BoardHooks, extra: string): HTMLElement {
   const mark = ui.marks.get(c.instanceId);
-  const cls = "div.card" + extra + (c.tapped ? ".tapped" : "") + (mark ? `.${mark}` : "") + (ui.flash.has(c.instanceId) ? ".flash" : "");
+  const small = extra.includes("small");
+  const url = small || c.faceDown ? null : ui.art(c.name);
+  const cls = "div.card" + extra + (url ? ".withart" : "") + (c.tapped ? ".tapped" : "") + (mark ? `.${mark}` : "")
+    + (ui.flash.has(c.instanceId) ? ".flash" : "");
   const d = h(cls as "div", { "data-id": c.instanceId, title: `${c.name}${c.tapped ? "（タップ）" : ""}` });
-  const head = h("div.nm", null, c.name);
-  const cost = c.manaCost && c.manaCost !== "no cost" ? h("span.cost", null, c.manaCost) : null;
-  d.append(h("div.top", null, head, cost));
-  if (!extra.includes("small") && !extra.includes("under")) {
-    d.append(h("div.tl", null, c.typeLine));
-  }
   const flags: string[] = [];
   if (c.token) flags.push("トークン");
   if (c.sick && c.kinds.includes("creature") && c.zone === "Battlefield") flags.push("召喚酔い");
   if (c.controller !== c.owner) flags.push(`持ち主 ${c.owner}`);
-  if (flags.length) d.append(h("div.flags", null, flags.join(" · ")));
-  const chips = h("div.over");
-  for (const [k, n] of Object.entries(c.counters)) chips.append(h("span.chip", null, `${counterName(k)} ×${n}`));
-  if (c.damage) chips.append(h("span.chip.dmg", null, `ダメージ ${c.damage}`));
-  if (chips.childNodes.length) d.append(chips);
-  if (c.power !== null && c.toughness !== null) {
-    const changed = c.power !== c.basePower || c.toughness !== c.baseToughness;
-    d.append(h("span.pt" + (changed ? ".mod" : ""), null, `${c.power}/${c.toughness}`));
+  const chips: HTMLElement[] = Object.entries(c.counters).map(([k, n]) => h("span.chip.strong", null, `${counterName(k)} ×${n}`));
+  if (c.damage) chips.push(h("span.chip.strong.dmg", null, `ダメージ ${c.damage}`));
+  const pt = c.power !== null && c.toughness !== null
+    ? h("span.pt" + (c.power !== c.basePower || c.toughness !== c.baseToughness ? ".mod" : ""), null, `${c.power}/${c.toughness}`)
+    : null;
+
+  if (url) {
+    // 画像のカード: 絵の上にエンジンが持っている情報（状態・カウンター・P/T）を重ねる（mtgtable の art と同じ）
+    const img = h("img.art", { src: url, alt: c.name, loading: "lazy" });
+    const box = h("div.artbox", null, img,
+      flags.length ? h("div.flags", null, flags.map((f) => h("span.chip.strong", null, f))) : null,
+      chips.length ? h("div.over", null, chips) : null,
+      pt);
+    img.addEventListener("error", () => { box.classList.add("noimg"); img.remove(); box.prepend(h("div.alt", null, c.name)); });
+    d.append(box);
+    if (!extra.includes("under")) d.append(h("div.nm", null, c.name));
+  } else {
+    const cost = c.manaCost && c.manaCost !== "no cost" ? h("span.cost", null, c.manaCost) : null;
+    d.append(h("div.top", null, h("div.nm", null, c.name), cost));
+    if (!small && !extra.includes("under")) d.append(h("div.tl", null, c.typeLine));
+    if (flags.length) d.append(h("div.flags", null, flags.join(" · ")));
+    if (chips.length) d.append(h("div.over", null, chips));
+    if (pt) d.append(pt);
   }
   onTapOrHold(d, (ev) => { ev.stopPropagation(); hooks.card(c); }, () => hooks.detail(c));
   return d;
@@ -261,12 +278,15 @@ function counterName(k: string): string {
   return m[k] ?? k.toLowerCase();
 }
 
-export function detailBody(c: CardView): HTMLElement {
+export function detailBody(c: CardView, art: string | null, artist: string | null): HTMLElement {
   const lines = [
+    art ? h("img.big", { src: art, alt: c.name }) : null,
+    art && artist ? h("div.muted.credit", null, `Illustrated by ${artist}`) : null,
     h("div.dname", null, c.name, c.manaCost && c.manaCost !== "no cost" ? h("span.cost", null, " ", c.manaCost) : null),
     h("div.tl", null, c.typeLine),
     c.power !== null ? h("div", null, `P/T ${c.power}/${c.toughness}` + (c.power !== c.basePower || c.toughness !== c.baseToughness ? `（元は ${c.basePower}/${c.baseToughness}）` : "")) : null,
-    h("div.otext", null, c.text || "（ルール文なし）"),
+    // Forge のルール文は改行を "\n" の 2 文字で持っている
+    h("div.otext", null, c.text ? c.text.replace(/\\n/g, "\n") : "（ルール文なし）"),
     h("div.muted", null, [c.tapped && "タップ状態", c.sick && c.kinds.includes("creature") && "召喚酔い", c.token && "トークン",
       c.damage && `ダメージ ${c.damage}`].filter(Boolean).join(" · ")),
   ];

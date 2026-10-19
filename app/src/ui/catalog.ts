@@ -14,7 +14,9 @@ export function renderCatalog(entries: CatalogEntry[], open: (id: string) => voi
           h("span.pzt", null, e.title, cleared.has(e.id) ? h("span.chip.ok", null, "クリア済み") : null),
           e.description ? h("span.pzd.muted", null, e.description.split("\n")[0]) : null,
           e.source ? h("span.pzs.muted", null, e.source) : null))))),
-    h("footer.credits.muted", null,
+    h("footer.credits.muted", null, [
       "ルールエンジン: Forge（GPL-3.0）。CheerpJ でブラウザ上で動かしています。",
-      "Magic: The Gathering は Wizards of the Coast LLC の商標です。本サイトは非公式のファンコンテンツです。"));
+      "カードの画像: Scryfall（Scryfall とは無関係です）。",
+      "本サイトは Wizards of the Coast の Fan Content Policy に基づく非公式のファンコンテンツで、Wizards of the Coast による承認・支援は受けていません。使用している素材の一部は Wizards of the Coast LLC の財産です。©Wizards of the Coast LLC. Magic: The Gathering は Wizards of the Coast LLC の商標です。",
+    ].map((t) => h("div", null, t))));
 }

@@ -9,6 +9,7 @@ import { PuzzleSession, type SessionState } from "../puzzle/session";
 import { detailBody, renderBoard, type BoardHooks, type BoardUi } from "./board";
 import { buildInteraction, marksOf, optionLabel, type Interaction } from "./decision";
 import { h } from "./dom";
+import { cardImage, imagesEnabled, setImagesEnabled } from "./images";
 import { decisionPrompt, eventText, passLabel, PHASE_NAMES } from "./text";
 
 const VIEWER = "p1";
@@ -28,6 +29,7 @@ export class PlayPage {
   private readonly unsubs: (() => void)[] = [];
   private flashTimer = 0;
   private lastHistoryLength = 0;
+  private images = imagesEnabled();
 
   constructor(engine: ForgeEngine, private readonly puzzleId: string, private readonly onBack: () => void) {
     this.el = h("div.play");
@@ -93,6 +95,7 @@ export class PlayPage {
       open: this.open,
       startTurn: s.startTurn || view?.turn || 1,
       flash: this.flash,
+      art: (name) => (this.images ? cardImage(name)?.normal ?? null : null),
     };
     const hooks: BoardHooks = {
       card: (c) => this.onCard(c, interaction),
@@ -112,6 +115,8 @@ export class PlayPage {
       h("span.spacer"),
       engineBadge(this.engineStatus),
       h("button", { type: "button", onclick: () => void this.session.reset(), disabled: !s.puzzle || s.phase === "loading" || s.phase === "busy", title: "初期盤面からやり直す" }, "リセット"),
+      h("button" + (this.images ? ".on" : ""), { type: "button", "aria-pressed": String(this.images), title: "カードの画像を出す・出さない",
+        onclick: () => { this.images = !this.images; setImagesEnabled(this.images); this.render(); } }, "画像"),
       h("button" + (this.logOpen ? ".on" : ""), { type: "button", onclick: () => { this.logOpen = !this.logOpen; this.render(); }, title: "Log を開く・閉じる（L キー）" }, "Log"),
     );
 
@@ -129,7 +134,8 @@ export class PlayPage {
     const panel = this.actionPanel(s, interaction);
     const detail = this.detail ? h("div.float.cdetail", { role: "dialog" },
       h("div.fhead", null, "カード", h("button", { type: "button", onclick: () => { this.detail = null; this.render(); }, title: "閉じる" }, "×")),
-      detailBody(this.detail)) : null;
+      detailBody(this.detail, this.images ? cardImage(this.detail.name)?.normal ?? null : null,
+        cardImage(this.detail.name)?.artist ?? null)) : null;
     const menu = this.menu ? optionMenu(this.menu, (o) => this.choose(o, interaction)) : null;
 
     this.el.replaceChildren(header, main, panel, ...(detail ? [detail] : []), ...(menu ? [menu] : []));
