@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>V2 CheerpJ</title>
+  <link rel="stylesheet" href="../common/harness.css">
+  <!-- CheerpJ ランタイム（技術評価は無償。商用利用はライセンスが必要: https://cheerpj.com/licensing/） -->
+  <script src="https://cjrtnc.leaningtech.com/4.3/loader.js"></script>
+</head>
+<body>
+  <h1>V2 方式C: <span id="engine"></span></h1>
+  <div class="bar">
+    <select id="puzzle"></select>
+    <button id="load" disabled>読み込む</button>
+    <button id="reset" disabled>リセット</button>
+    <span id="status"></span>
+  </div>
+  <div id="decision"></div>
+  <div class="grid">
+    <pre id="state"></pre>
+    <pre id="metrics"></pre>
+  </div>
+  <h2 style="font-size:14px">ログ</h2>
+  <pre id="log"></pre>
+  <script type="module">
+    import { start } from "../common/harness.js";
+
+    // サーバーのルートは prototype/。CheerpJ では /app/ がサーバーのルートに対応する
+    const JAR = "/app/forge-adapter/target/forge-adapter-all.jar";
+    const RES_ZIP = "/app/web/res-mini.zip";
+    const RES_DIR = "/files/forge-res";
+    let api;
+
+    const engine = {
+      async boot(log) {
+        log("cheerpjInit(version 17)");
+        await cheerpjInit({ version: 17, status: "none" });
+        log("cheerpjRunLibrary " + JAR);
+        const lib = await cheerpjRunLibrary(JAR);
+        api = await lib.mtgpuzzle.adapter.WebApi;
+      },
+      init: () => api.init(RES_ZIP, RES_DIR),
+      load: (json) => api.load(json),
+      submit: (ids) => api.submit(ids),
+      reset: () => api.reset(),
+    };
+    start(engine, "CheerpJ 4.3 (Java 17)");
+  </script>
+</body>
+</html>

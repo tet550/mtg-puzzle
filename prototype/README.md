@@ -40,7 +40,34 @@ cd prototype/forge-adapter && JAVA_HOME="/c/Program Files/Android/Android Studio
 
 全件ロードで計測するときは `-Dlazy=false` を付ける。
 
+## ブラウザ検証（V2）
+
+1. 依存込み jar を作る（`forge-adapter/target/forge-adapter-all.jar`）:
+
+```bash
+cd prototype/forge-adapter && JAVA_HOME="/c/Program Files/Android/Android Studio/jbr" ~/tools/apache-maven-3.9.16/bin/mvn -B package -DskipTests
+```
+
+2. 問題で使うカードだけを入れた res バンドルを作る（`web/res-mini.zip`）:
+
+```bash
+cd prototype/forge-adapter && "/c/Program Files/Android/Android Studio/jbr/bin/java" -cp target/forge-adapter-all.jar mtgpuzzle.adapter.ResBundler ../forge/forge-gui/res ../puzzles ../web/res-mini.zip
+```
+
+3. 静的サーバーを起動し（`prototype/` がルート、ポート 8123）、`http://localhost:8123/web/cheerpj/index.html` を開く:
+
+```bash
+node prototype/web/serve.mjs
+```
+
+TeaVM の変換を試すとき（V2-B）:
+
+```bash
+cd prototype/wasm/teavm && JAVA_HOME="/c/Program Files/Android/Android Studio/jbr" ~/tools/apache-maven-3.9.16/bin/mvn -B package
+```
+
 ## 検証結果
 
 - V0: [results/v0.md](results/v0.md)
 - V1: [results/v1.md](results/v1.md)
+- V2: [results/v2.md](results/v2.md)
