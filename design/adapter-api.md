@@ -112,6 +112,7 @@ interface StackItem {
   sourceId: InstanceId;        // 呪文はそのカード、能力は発生源
   controller: PlayerId;
   description: string;
+  descriptionJa: string | null; // 解決する部分（選んだモードなど）の日本語の文（Forge の訳）
   spell: boolean;
   targets: (InstanceId | PlayerId)[];
 }
@@ -127,7 +128,9 @@ interface Attack { attackerId: InstanceId; defender: PlayerId | InstanceId; bloc
 interface Decision {
   seq: number;
   kind: DecisionKind;
-  prompt: string;              // 英語の説明（Forge の文）。UI は kind と ref から自前の文を作る
+  prompt: string;              // 英語の説明
+  promptKey: string | null;    // 説明の種類（targets / mode / payMana / totalPower / assignDamage など）。null は Forge が作った説明
+  promptArgs: Record<string, string>; // 種類ごとの値（card: 英語のカード名、cost、n、desc / descJa など）
   min: number;                 // 選ぶ数の範囲。submit には min〜max 個の ID を渡す
   max: number;
   options: Option[];
@@ -144,7 +147,7 @@ type DecisionKind =
   | "CHOOSE_MODE"    // モードを選ぶ（min〜max 個）
   | "CHOOSE_NUMBER"; // 数を選ぶ（X など）。上限の無い数は 21 個までの選択肢に区切る
 
-interface Option { id: string; label: string; ref: Ref | null }
+interface Option { id: string; label: string; labelJa: string | null; ref: Ref | null }  // labelJa: Forge の訳の日本語の文
 
 type Ref =
   | { type: "card"; cardId: InstanceId }
@@ -191,4 +194,4 @@ type GameEvent =
   パワーの合計の条件付きのタップ（搭乗など）と、カウンターを取り除くコスト（プレインズウォーカーのマイナス能力など）は対応している。
 - コストのカードを選ぶ選択要求（CHOOSE_CARDS）には "cancel" が付く。"cancel" だけを送ると、選択数の範囲に関係なく受け付け、唱える・起動する前に戻す。
 - 召集・即席（chooseCardsForConvokeOrImprovise）は未対応で、通常のマナで支払う。
-- `prompt` と `label` は Forge の英語の文。UI の表示には `kind` と `ref` を使う。
+- `label` と `prompt` は英語の文。日本語の画面では `labelJa`（Forge の訳。res バンドルの `languages/cardnames-ja-JP.txt`）と、`promptKey` / `promptArgs` から画面の辞書で作る文を使う（design/option-i18n.md の方式 A）。Forge の訳が無い文は、画面側の雛形（`app/src/ui/localize.ts`）で補うか、英語のまま出す。
