@@ -9,6 +9,7 @@ import { PuzzleSession, type SessionState } from "../puzzle/session";
 import { combatBody, combatSets, detailBody, renderBoard, stackBody, type BoardHooks, type BoardUi } from "./board";
 import { fitHands, setupFloat } from "./float";
 import { macroAnswer, startMacro, type Macro } from "./quick";
+import { manaNodes } from "./mana";
 import { icon, type IconName } from "./icons";
 import { buildInteraction, marksOf, optionLabel, type Interaction } from "./decision";
 import { h } from "./dom";
@@ -412,14 +413,14 @@ export class PlayPage {
   private decisionBar(bar: HTMLElement, s: SessionState, i: Interaction) {
     const d = i.decision;
     const view = s.step!.view;
-    bar.append(h("div.prompt", null, decisionPrompt(d)));
+    bar.append(h("div.prompt", null, manaNodes(decisionPrompt(d))));
     const btns = h("div.btns");
     // 盤面に無い選択肢（モード・数・見えない領域のカード）はここに並べる
     if (i.listed.length) {
       const list = h("div.listed");
       for (const o of i.listed) {
         const on = this.selected.has(o.id);
-        list.append(h("button.opt" + (on ? ".on" : ""), { type: "button", onclick: () => this.choose(o, i) }, optionLabel(o)));
+        list.append(h("button.opt" + (on ? ".on" : ""), { type: "button", onclick: () => this.choose(o, i) }, manaNodes(optionLabel(o))));
       }
       bar.append(list);
     }
@@ -436,7 +437,7 @@ export class PlayPage {
       const ic: IconName | null = value === "pass" ? passIcon(view.phase, view.stack.length) : null;
       btns.append(h("button.big" + (value === "pass" || value === "yes" ? ".on" : ""), {
         type: "button", "data-special": value, onclick: () => this.send([o.id]),
-      }, ic ? icon(ic) : null, text));
+      }, ic ? icon(ic) : null, manaNodes(text)));
     }
     bar.append(btns);
   }
@@ -516,7 +517,7 @@ function optionMenu(m: { x: number; y: number; options: Option[] }, choose: (o: 
   const x = Math.min(m.x, window.innerWidth - 300);
   const y = Math.min(m.y, window.innerHeight - 60 * (m.options.length + 1) - 20);
   return h("div.menu", { role: "menu", style: `left:${Math.max(8, x)}px;top:${Math.max(8, y)}px` } as never,
-    m.options.map((o) => h("button", { type: "button", role: "menuitem", onclick: () => choose(o) }, optionLabel(o))),
+    m.options.map((o) => h("button", { type: "button", role: "menuitem", onclick: () => choose(o) }, manaNodes(optionLabel(o)))),
     h("button.mcancel", { type: "button", role: "menuitem", onclick: close }, t("menu.cancel")));
 }
 

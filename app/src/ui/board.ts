@@ -11,6 +11,7 @@ import { t, type MessageKey } from "../i18n";
 import { avatarUrl, icon } from "./icons";
 import { displayName } from "./images";
 import { localized } from "./localize";
+import { manaNodes } from "./mana";
 import { PHASE_STRIP, passLabel, phaseName } from "./text";
 
 export type Mark = "cand" | "chosen";
@@ -81,7 +82,7 @@ function playerHead(view: GameView, p: PlayerView, ui: BoardUi, hooks: BoardHook
   const extra = h("span.pextra");
   for (const c of MANA_ORDER) {
     const n = p.manaPool[c];
-    if (n) extra.append(h(`span.chip.mana.m${c}`, null, `{${c}} ×${n}`));
+    if (n) extra.append(h(`span.chip.mana.m${c}`, { title: `{${c}} ×${n}` }, manaNodes(`{${c}}`), ` ×${n}`));
   }
   if (p.poison) extra.append(h("span.chip", null, t("player.poison", { n: p.poison })));
   head.append(extra);
@@ -271,7 +272,7 @@ export function stackBody(view: GameView, ui: BoardUi, hooks: BoardHooks, names:
       c ? cardTile(c, ui, hooks, ".instack" + (c.zone === "Stack" ? "" : ".src")) : null,
       h("div.sbody", null,
         h("div.shead", null, h("span.chip", null, top), h("span.sname", null, displayName(name))),
-        h("div.stext", null, text),
+        h("div.stext", null, manaNodes(text)),
         targets.length ? h("div.stargets.muted", null, "→ ", targets.map((x) =>
           view.players.some((p) => p.id === x) ? (x === ui.viewer ? t("player.you") : t("player.opponent")) : displayName(byId.get(x)?.name ?? names.get(x) ?? x)).join(t("log.sep"))) : null));
   return h("ol.stack.panel", null,
@@ -312,7 +313,7 @@ export function cardTile(c: CardView, ui: BoardUi, hooks: BoardHooks, extra: str
     d.append(box);
     if (!extra.includes("under")) d.append(h("div.nm", null, displayName(c.name)));
   } else {
-    const cost = c.manaCost && c.manaCost !== "no cost" ? h("span.cost", null, c.manaCost) : null;
+    const cost = c.manaCost && c.manaCost !== "no cost" ? h("span.cost", null, manaNodes(c.manaCost)) : null;
     d.append(h("div.top", null, h("div.nm", null, displayName(c.name)), cost));
     if (!small && !extra.includes("under")) d.append(h("div.tl", null, c.typeLine));
     if (flags.length) d.append(h("div.flags", null, flags.join(" · ")));
@@ -333,19 +334,20 @@ function counterName(k: string): string {
 export function detailBody(c: CardView, art: string | null, artist: string | null, printed: string | null): HTMLElement {
   const oracle = c.text ? c.text.replace(/\\n/g, "\n") : t("card.noText"); // Forge は改行を "\n" の 2 文字で持つ
   const changed = c.power !== c.basePower || c.toughness !== c.baseToughness;
-  const state = [c.tapped && t("card.tappedState"), c.sick && c.kinds.includes("creature") && t("card.sick"), c.token && t("card.token"),
+  // タップ状態は {T} のアイコンを添える
+  const state = [c.tapped && `{T} ${t("card.tappedState")}`, c.sick && c.kinds.includes("creature") && t("card.sick"), c.token && t("card.token"),
     c.damage && t("card.damage", { n: c.damage })].filter(Boolean).join(" · ");
   return h("div.detail", null,
     art ? h("img.big", { src: art, alt: displayName(c.name) }) : null,
-    h("div.dname", null, displayName(c.name), c.manaCost && c.manaCost !== "no cost" ? h("span.cost", null, " ", c.manaCost) : null),
+    h("div.dname", null, displayName(c.name), c.manaCost && c.manaCost !== "no cost" ? h("span.cost", null, " ", manaNodes(c.manaCost)) : null),
     displayName(c.name) !== c.name ? h("div.muted", null, c.name) : null,
     h("div.tl", null, c.typeLine),
     c.power !== null ? h("div", null, `P/T ${c.power}/${c.toughness}` + (changed ? t("card.base", { p: c.basePower ?? "", t: c.baseToughness ?? "" }) : "")) : null,
     printed
-      ? [h("div.otext", null, printed), h("div.muted.onote", null, t("card.printedNote")),
-        h("details.oracle-en", null, h("summary", null, t("card.oracleEn")), h("div.otext", null, oracle))]
-      : h("div.otext", null, oracle),
-    state ? h("div.muted", null, state) : null,
+      ? [h("div.otext", null, manaNodes(printed)), h("div.muted.onote", null, t("card.printedNote")),
+        h("details.oracle-en", null, h("summary", null, t("card.oracleEn")), h("div.otext", null, manaNodes(oracle)))]
+      : h("div.otext", null, manaNodes(oracle)),
+    state ? h("div.muted", null, manaNodes(state)) : null,
     art && artist ? h("div.muted.credit", null, `Illustrated by ${artist}`) : null,
   );
 }
