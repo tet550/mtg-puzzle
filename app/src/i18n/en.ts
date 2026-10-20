@@ -3,7 +3,7 @@ import type { Messages } from "./ja";
 
 export const en: Messages = {
   "catalog.tagline": "Can you win this turn?",
-  "catalog.lead": "Study the board and find a way to win this turn. Tap a card to choose an action. Long-press (right-click) a card for details.",
+  "catalog.lead": "Study the board and find a way to win this turn. Tap a card to choose an action. Long-press (right-click) a card for details. Drag a card from your hand onto a target, or double-click a card, to cast it and resolve it in one go.",
   "catalog.cleared": "Cleared",
   "catalog.source.forge": "Forge puzzle ({file})",
   "credits.engine": "Rules engine: Forge (GPL-3.0), running in the browser with CheerpJ.",
@@ -137,6 +137,8 @@ export const en: Messages = {
   "action.toCatalog": "Back to puzzles",
   "action.reload": "Reload",
   "action.reset": "Reset",
+  "quick.running": "Auto: casting {card} and resolving it (choose targets etc. when asked)",
+  "quick.stop": "Stop",
   "status.preparing": "Preparing the engine… ({status})",
   "status.loading": "Loading the puzzle…",
   "status.busy": "Working…",

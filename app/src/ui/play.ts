@@ -8,6 +8,7 @@ import type { PuzzleJson } from "../puzzle/schema";
 import { PuzzleSession, type SessionState } from "../puzzle/session";
 import { combatBody, combatSets, detailBody, renderBoard, stackBody, type BoardHooks, type BoardUi } from "./board";
 import { fitHands, setupFloat } from "./float";
+import { macroAnswer, startMacro, type Macro } from "./quick";
 import { icon, type IconName } from "./icons";
 import { buildInteraction, marksOf, optionLabel, type Interaction } from "./decision";
 import { h } from "./dom";
@@ -34,6 +35,16 @@ export class PlayPage {
   private flashTimer = 0;
   private lastHistoryLength = 0;
   private images = imagesEnabled();
+  /** 進行中のおまかせ（ドラッグ・ダブルクリックで唱えて解決まで進める。quick.ts） */
+  private macro: Macro | null = null;
+  /** 手札のドラッグ */
+  private drag: { id: string; el: HTMLElement; x: number; y: number; ghost: HTMLElement | null; over: HTMLElement | null; dx: number; dy: number } | null = null;
+  private suppressClick = false;
+  /**
+   * 直前に押したカード。ダブルクリックは自前で判定する: 1 回目のクリックで唱え始めるとカードが手札から
+   * スタックへ移って描き直され、2 回目は別の要素に当たるので、ブラウザの dblclick は届かない
+   */
+  private lastPress: { id: string; at: number; x: number; y: number } | null = null;
   /** 畳んでいる小窓（"stack" / "combat" / "play"）。選択要求が変わると開き直す（操作パネルは除く） */
   private minimized = new Set<string>();
 
@@ -43,6 +54,7 @@ export class PlayPage {
     this.unsubs.push(engine.onStatus((s) => { this.engineStatus = s; this.render(); }));
     this.unsubs.push(this.session.subscribe((s) => this.onSession(s)));
     document.addEventListener("keydown", this.onKey);
+    this.setupQuickActions();
   }
 
   async load(data: unknown) {
@@ -63,6 +75,10 @@ export class PlayPage {
   dispose() {
     this.unsubs.forEach((u) => u());
     document.removeEventListener("keydown", this.onKey);
+    window.removeEventListener("pointermove", this.onDragMove);
+    window.removeEventListener("pointerup", this.onDragEnd);
+    window.removeEventListener("pointercancel", this.onDragCancel);
+    if (this.drag) this.endDrag(this.drag);
     window.clearTimeout(this.flashTimer);
   }
 
@@ -93,7 +109,139 @@ export class PlayPage {
       this.flashTimer = window.setTimeout(() => { this.flash.clear(); this.render(); }, 900);
     }
     if (s.phase === "finished" && s.verdict.result === "CLEARED") markCleared(this.puzzleId);
+    if (s.phase === "finished" || s.phase === "error" || s.phase === "loading") this.macro = null;
     this.render();
+    if (this.macro && s.phase === "playing") queueMicrotask(() => this.stepMacro());
+  }
+
+  // ---------------------------------------------------------------- 手早く唱える（ドラッグ・ダブルクリック）
+
+  /** おまかせを 1 歩進める。人が決める選択なら待つ（答えた後の状態でまた呼ばれる） */
+  private stepMacro() {
+    const s = this.session.state;
+    const m = this.macro;
+    if (!m || s.phase !== "playing" || !s.step?.pending) return;
+    const ans = macroAnswer(m, s.step.pending, s.step.view);
+    if (ans === "end") {
+      this.macro = null;
+      this.render();
+      return;
+    }
+    if (ans) void this.session.answer(ans);
+  }
+
+  private startQuick(cardId: string, targetKey: string | null) {
+    this.menu = null;
+    this.selected.clear();
+    this.macro = startMacro(cardId, targetKey);
+    this.render();
+    this.stepMacro();
+  }
+
+  /** 今そのカードで唱える・起動することができるか（優先権の選択肢にあるか） */
+  private castable(cardId: string): boolean {
+    const d = this.session.state.step?.pending;
+    return this.session.state.phase === "playing" && d?.kind === "PRIORITY"
+      && d.options.some((o) => o.ref?.type === "ability" && o.ref.cardId === cardId);
+  }
+
+  private setupQuickActions() {
+    // 手札のドラッグ: 対象の上で離すとその対象で、盤面の上で離すと対象なしで唱える
+    this.el.addEventListener("pointerdown", (ev) => {
+      if (ev.button !== 0) return;
+      // ダブルクリック（400 ms 以内に、ほぼ同じ所を 2 回押す）: 1 回目に押したカードを唱えて解決まで進める
+      const prev = this.lastPress;
+      const now = performance.now();
+      if (prev && now - prev.at < 400 && Math.hypot(ev.clientX - prev.x, ev.clientY - prev.y) < 12 && !this.macro) {
+        this.lastPress = null;
+        const d = this.session.state.step?.pending;
+        // 1 回目のクリックで唱え始めていれば、その続きから進める
+        const busy = this.session.state.phase === "busy"; // 1 回目のクリックの「唱える」をエンジンが処理中
+        if (this.castable(prev.id) || busy || (d && d.kind !== "PRIORITY")) {
+          this.suppressClick = true; // 2 回目のクリックは、下にあった別のカードを押したことにしない
+          if (this.detail?.instanceId === prev.id) this.detail = null;
+          this.startQuick(prev.id, null);
+          return;
+        }
+      }
+      const pressed = (ev.target as HTMLElement).closest<HTMLElement>(".board .card[data-id]");
+      this.lastPress = pressed ? { id: pressed.dataset.id!, at: now, x: ev.clientX, y: ev.clientY } : null;
+      const card = (ev.target as HTMLElement).closest<HTMLElement>(".hand .card[data-id]");
+      if (!card) return;
+      const r = card.getBoundingClientRect();
+      this.drag = { id: card.dataset.id!, el: card, x: ev.clientX, y: ev.clientY, ghost: null, over: null, dx: ev.clientX - r.left, dy: ev.clientY - r.top };
+    });
+    window.addEventListener("pointermove", this.onDragMove);
+    window.addEventListener("pointerup", this.onDragEnd);
+    window.addEventListener("pointercancel", this.onDragCancel);
+    // ドラッグ・ダブルクリックの後のクリックは捨てる（カードを押したことにしない）
+    this.el.addEventListener("click", (ev) => {
+      if (this.suppressClick) {
+        this.suppressClick = false;
+        ev.stopPropagation();
+        ev.preventDefault();
+      }
+    }, true);
+    this.el.addEventListener("dblclick", (ev) => ev.preventDefault());
+  }
+
+  private readonly onDragMove = (ev: PointerEvent) => {
+    const g = this.drag;
+    if (!g) return;
+    if (!g.ghost) {
+      if (Math.hypot(ev.clientX - g.x, ev.clientY - g.y) < 8) return;
+      if (!this.castable(g.id)) { this.drag = null; return; }
+      const r = g.el.getBoundingClientRect();
+      const ghost = g.el.cloneNode(true) as HTMLElement;
+      ghost.classList.add("dragghost");
+      Object.assign(ghost.style, { width: `${r.width}px`, height: `${r.height}px` });
+      document.body.append(ghost);
+      g.ghost = ghost;
+      g.el.classList.add("dragging");
+      document.body.classList.add("nosel");
+    }
+    ev.preventDefault();
+    g.ghost.style.transform = `translate(${ev.clientX - g.dx}px, ${ev.clientY - g.dy}px)`;
+    const target = this.dropTarget(ev.clientX, ev.clientY);
+    if (target !== g.over) {
+      g.over?.classList.remove("dropover");
+      target?.classList.add("dropover");
+      g.over = target;
+    }
+  };
+
+  /** 指の下の落とし先: 盤面のカード・プレイヤーの見出し（自分の手札は除く） */
+  private dropTarget(x: number, y: number): HTMLElement | null {
+    const hit = document.elementFromPoint(x, y) as HTMLElement | null;
+    const t = hit?.closest<HTMLElement>(".board [data-player], .board .card[data-id]");
+    if (!t || t.closest(".hand")) return null;
+    return t;
+  }
+
+  private readonly onDragEnd = (ev: PointerEvent) => {
+    const g = this.drag;
+    this.drag = null;
+    if (!g?.ghost) return;
+    const target = this.dropTarget(ev.clientX, ev.clientY);
+    const onBoard = !!(document.elementFromPoint(ev.clientX, ev.clientY) as HTMLElement | null)?.closest(".board");
+    this.endDrag(g);
+    this.suppressClick = true;
+    window.setTimeout(() => { this.suppressClick = false; }, 0);
+    if (!onBoard) return; // 盤面の外で離したら取りやめ
+    const key = target ? (target.dataset.player ?? target.dataset.id ?? null) : null;
+    this.startQuick(g.id, key);
+  };
+
+  private readonly onDragCancel = () => {
+    if (this.drag) this.endDrag(this.drag);
+    this.drag = null;
+  };
+
+  private endDrag(g: NonNullable<PlayPage["drag"]>) {
+    g.ghost?.remove();
+    g.over?.classList.remove("dropover");
+    g.el.classList.remove("dragging");
+    document.body.classList.remove("nosel");
   }
 
   // ---------------------------------------------------------------- 描画
@@ -228,6 +376,10 @@ export class PlayPage {
         break;
     }
     if (s.notice) bar.prepend(h("div.notice", null, s.notice));
+    if (this.macro && (s.phase === "playing" || s.phase === "busy")) {
+      bar.prepend(h("div.quick", null, h("span", null, t("quick.running", { card: displayName(this.names.get(this.macro.cardId) ?? "") })),
+        h("button", { type: "button", onclick: () => { this.macro = null; this.render(); } }, t("quick.stop"))));
+    }
     if (s.puzzle?.description) bar.prepend(h("details.pdesc", null, h("summary", null, s.puzzle.title), h("div.muted", null, s.puzzle.description)));
     return bar;
   }

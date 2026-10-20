@@ -194,11 +194,23 @@ button svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke
 .tuck > .card.under .flags, .tuck > .card.under .over { display: none; }
 .tuck > .card:not(.under) { position: relative; z-index: 1; }
 
+/* 手札のドラッグ: 元のカードは空いた場所の印、写しを画面の上に重ねて動かす。落とせる所は点線で囲む */
+.hand .card { touch-action: none; }
+.card.dragging { opacity: .25; }
+.dragghost { position: fixed; left: 0; top: 0; margin: 0 !important; z-index: 70; pointer-events: none; cursor: grabbing;
+  transition: none !important; filter: drop-shadow(0 10px 14px rgba(0, 0, 0, .55)); }
+.dropover { outline: 3px dashed #6aa9ff !important; outline-offset: 2px; }
+body.nosel, body.nosel * { user-select: none !important; -webkit-user-select: none !important; }
+.actions .quick { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--accent); font-weight: 600; }
+.actions .quick span { flex: 1; }
+
 /* 手札: 扇（mtgtable と同じ）。中央からの位置（--off。端で ±3 になるよう JS が決める）で少し傾け、端ほど少し下げる。
    横にスクロールさせず、重なり（--ov。fitHand が決める）を詰めて幅に収める。ホバーでまっすぐ浮かせる */
 .handbox { position: relative; z-index: 1; }
 .hand { display: flex; gap: 6px; padding: 14px 4px 4px; }
-.hand.fan { flex-wrap: nowrap; overflow: visible; }
+.hand.fan { flex-wrap: nowrap; overflow: visible; align-items: flex-start; }
+/* カードの高さは絵の高さのまま（行の高さに縮めると、ハイライトの枠が絵の途中で切れてずれて見える） */
+.hand.fan > .card { align-self: flex-start; height: auto; }
 .hand.fan > .card { flex: none; transition: transform .12s; transform-origin: 50% 100%;
   transform: translateY(calc(var(--off, 0) * var(--off, 0) * .7px)) rotate(calc(var(--off, 0) * 1.6deg)); }
 .hand.fan > .card + .card { margin-left: var(--ov, calc(var(--h) * -.36)); }

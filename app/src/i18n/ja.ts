@@ -3,7 +3,7 @@
 export const ja = {
   // 一覧
   "catalog.tagline": "このターン中に勝てるか？",
-  "catalog.lead": "盤面を見て、このターン中に勝つ手順を見つけてください。カードを押すと行動を選べます。長押し（右クリック）でカードの詳細。",
+  "catalog.lead": "盤面を見て、このターン中に勝つ手順を見つけてください。カードを押すと行動を選べます。長押し（右クリック）でカードの詳細。手札を対象へドラッグするか、カードをダブルクリックすると、唱えて解決まで一度に進めます。",
   "catalog.cleared": "クリア済み",
   "catalog.source.forge": "Forge のパズル（{file}）",
   "credits.engine": "ルールエンジン: Forge（GPL-3.0）。CheerpJ でブラウザ上で動かしています。",
@@ -142,6 +142,8 @@ export const ja = {
   "action.toCatalog": "問題の一覧へ",
   "action.reload": "再読み込み",
   "action.reset": "リセット",
+  "quick.running": "おまかせ中: {card} を唱えて解決まで進めます（対象などは選んでください）",
+  "quick.stop": "やめる",
   "status.preparing": "エンジンを準備しています…（{status}）",
   "status.loading": "問題を読み込んでいます…",
   "status.busy": "処理中…",

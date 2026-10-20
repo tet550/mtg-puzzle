@@ -45,11 +45,16 @@ export const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.g
 export function onTapOrHold(el: HTMLElement, onTap: (ev: Event) => void, onHold: () => void) {
   let timer = 0;
   let held = false;
+  let sx = 0, sy = 0;
   el.addEventListener("pointerdown", (ev) => {
     if (ev.pointerType !== "touch") return;
     held = false;
+    sx = ev.clientX;
+    sy = ev.clientY;
     timer = window.setTimeout(() => { held = true; onHold(); }, 450);
   });
+  // 指を動かしたら長押しにしない（手札のドラッグ）
+  el.addEventListener("pointermove", (ev) => { if (Math.hypot(ev.clientX - sx, ev.clientY - sy) > 8) window.clearTimeout(timer); });
   const cancel = () => window.clearTimeout(timer);
   el.addEventListener("pointerup", cancel);
   el.addEventListener("pointerleave", cancel);
