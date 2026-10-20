@@ -1,11 +1,19 @@
 package mtgpuzzle.adapter;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Forge が p1 に求めている選択。UI はこれを表示し、options の id で回答する。
+ * prompt は英語の説明。promptKey があれば、UI は promptKey と promptArgs から画面の言語の文を作る
+ * （Forge が作った説明は promptKey が null で、英語のまま）。
  */
-public record Decision(int seq, Kind kind, String prompt, List<Option> options, int min, int max) {
+public record Decision(int seq, Kind kind, String prompt, List<Option> options, int min, int max,
+                       String promptKey, Map<String, String> promptArgs) {
+
+    public Decision(int seq, Kind kind, String prompt, List<Option> options, int min, int max) {
+        this(seq, kind, prompt, options, min, max, null, Map.of());
+    }
 
     public enum Kind {
         /** 優先権: 唱える・起動する・土地を置く、またはパス */
@@ -28,10 +36,34 @@ public record Decision(int seq, Kind kind, String prompt, List<Option> options, 
         CHOOSE_NUMBER
     }
 
-    /** ref は UI が盤面の要素と結び付けるための参照（無ければ null）。Forge の内部 ID のまま持ち、WebApi でインスタンス ID に直す */
-    public record Option(String id, String label, Ref ref) {
+    /**
+     * ref は UI が盤面の要素と結び付けるための参照（無ければ null）。Forge の内部 ID のまま持ち、WebApi でインスタンス ID に直す。
+     * labelJa は日本語の文（Forge の訳。訳せない・訳が無ければ null）
+     */
+    public record Option(String id, String label, Ref ref, String labelJa) {
         public Option(String id, String label) {
-            this(id, label, null);
+            this(id, label, null, null);
+        }
+
+        public Option(String id, String label, Ref ref) {
+            this(id, label, ref, null);
+        }
+    }
+
+    /** 説明: 英語の文と、UI が画面の言語で文にするための種類（key）と値（args） */
+    public record Prompt(String text, String key, Map<String, String> args) {
+        static Prompt of(String text, String key, String... kv) {
+            Map<String, String> m = new java.util.LinkedHashMap<>();
+            for (int i = 0; i + 1 < kv.length; i += 2) {
+                if (kv[i + 1] != null) {
+                    m.put(kv[i], kv[i + 1]);
+                }
+            }
+            return new Prompt(text, key, m);
+        }
+
+        static Prompt text(String text) {
+            return new Prompt(text, null, Map.of());
         }
     }
 

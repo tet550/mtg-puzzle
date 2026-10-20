@@ -173,6 +173,8 @@ public final class WebApi {
         m.put("seq", d.seq());
         m.put("kind", d.kind().name());
         m.put("prompt", d.prompt());
+        m.put("promptKey", d.promptKey());
+        m.put("promptArgs", d.promptArgs() == null ? Map.of() : new LinkedHashMap<>(d.promptArgs()));
         m.put("min", d.min());
         m.put("max", d.max());
         List<Map<String, Object>> options = new ArrayList<>();
@@ -180,6 +182,7 @@ public final class WebApi {
             Map<String, Object> om = new LinkedHashMap<>();
             om.put("id", o.id());
             om.put("label", o.label());
+            om.put("labelJa", o.labelJa());
             om.put("ref", toMap(s, o.ref()));
             options.add(om);
         }
@@ -224,6 +227,7 @@ public final class WebApi {
             sm.put("sourceId", si.sourceId());
             sm.put("controller", si.controller());
             sm.put("description", si.description());
+            sm.put("descriptionJa", si.descriptionJa());
             sm.put("spell", si.spell());
             sm.put("targets", si.targets());
             stack.add(sm);

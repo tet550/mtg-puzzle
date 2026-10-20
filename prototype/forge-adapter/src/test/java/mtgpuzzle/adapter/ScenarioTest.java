@@ -418,4 +418,28 @@ class ScenarioTest {
         }
         return r;
     }
+
+    /** 方式 A（design/option-i18n.md）: 選択肢に Forge の訳の日本語の文（labelJa）、説明に種類と値（promptKey / promptArgs）が付く */
+    @Test
+    void japaneseLabelsAndPromptKeys() throws Exception {
+        org.junit.jupiter.api.Assumptions.assumeTrue(Ja.available(), "日本語の訳（cardnames-ja-JP.txt）が無い");
+        try (ForgeSession s = ForgeSession.load(puzzle("s10-modal"))) {
+            Decision d = expect(s, Decision.Kind.PRIORITY);
+            assertEquals("priority", d.promptKey());
+            Decision.Option cmd = d.findByLabelPrefix("Kolaghan's Command");
+            assertTrue(cmd.labelJa().startsWith("コラガンの命令 | 以下から２つを選ぶ"), cmd.labelJa());
+            assertTrue(cmd.label().startsWith("Kolaghan's Command | Choose two"), "英語の文はそのまま: " + cmd.label());
+            s.submit(cmd.id());
+            Decision modes = expect(s, Decision.Kind.CHOOSE_MODE);
+            assertEquals("mode", modes.promptKey());
+            assertEquals("Kolaghan's Command", modes.promptArgs().get("card"));
+            assertEquals("アーティファクト１つを対象とし、それを破壊する。", modes.findByLabelPrefix("Destroy target artifact").labelJa());
+        }
+        try (ForgeSession s = ForgeSession.load(puzzle("s1-bolt"))) {
+            s.submit(expect(s, Decision.Kind.PRIORITY).findByLabelPrefix("Lightning Bolt").id());
+            Decision t = expect(s, Decision.Kind.TARGETS);
+            assertEquals("targets", t.promptKey());
+            assertEquals("Lightning Bolt", t.promptArgs().get("card"));
+        }
+    }
 }

@@ -1,7 +1,7 @@
 // 画面に出す文（フェイズ・出来事・選択要求の説明）。文そのものは i18n の辞書にある。
 
 import type { Decision, GameEvent, Phase } from "../engine/protocol";
-import { t, type MessageKey } from "../i18n";
+import { lang, t, type MessageKey } from "../i18n";
 import { displayName } from "./images";
 
 export function phaseName(p: Phase): string {
@@ -38,25 +38,51 @@ export function passLabel(phase: Phase, stackSize: number): string {
 }
 
 export function decisionPrompt(d: Decision): string {
+  // Adapter が種類と値（promptKey / promptArgs）を返した説明は、画面の言語の辞書で文にする
+  const fromKey = d.promptKey ? askText(d.promptKey, d) : null;
+  if (fromKey) return fromKey;
+  // Forge が作った説明（英語）。種類だけで言えるものは辞書の文にする
   switch (d.kind) {
     case "PRIORITY": return t("prompt.PRIORITY");
     case "TARGETS": return d.max > 1 ? t("prompt.TARGETS.n", { n: countText(d) }) : t("prompt.TARGETS");
     case "ATTACKERS": return t("prompt.ATTACKERS");
-    case "CONFIRM": return d.prompt;
-    case "PAY_MANA": return t("prompt.PAY_MANA", { cost: d.prompt.replace(/^Pay /, "").replace(/ for .*/, "") });
-    case "CHOOSE_CARDS": {
-      const crew = /^Tap creatures with total power (\d+) or greater/.exec(d.prompt);
-      return crew ? t("prompt.totalPower", { n: crew[1] }) : t("prompt.CHOOSE_CARDS", { n: countText(d) });
-    }
-    case "CHOOSE_ENTITY": return t("prompt.CHOOSE_ENTITY", { prompt: d.prompt, n: countText(d) });
+    case "CHOOSE_CARDS": return t("prompt.CHOOSE_CARDS", { n: countText(d) });
     case "CHOOSE_MODE": return t("prompt.CHOOSE_MODE", { n: countText(d) });
-    case "CHOOSE_NUMBER": {
-      if (d.prompt.startsWith("Announce")) return t("prompt.X");
-      const dmg = /^Assign combat damage from (.+) to (.+) \(lethal (\d+), (\d+) left\)$/.exec(d.prompt);
-      if (dmg) return t("prompt.assignDamage", { from: displayName(dmg[1]), to: displayName(dmg[2]), lethal: dmg[3], left: dmg[4] });
-      return d.prompt;
-    }
+    case "CHOOSE_ENTITY": return t("prompt.CHOOSE_ENTITY", { prompt: d.prompt, n: countText(d) });
+    default: return d.prompt;
   }
+}
+
+/** promptKey ごとの文。args のカード名は画面の言語の名前にする */
+function askText(key: string, d: Decision): string | null {
+  const a = d.promptArgs ?? {};
+  const card = a.card ? displayName(a.card) : "";
+  const desc = lang() === "ja" && a.descJa && /[ぁ-んァ-ヶ一-龠]/.test(a.descJa) ? a.descJa : a.desc ?? "";
+  switch (key) {
+    case "priority": return t("prompt.PRIORITY");
+    case "targets": return d.max > 1 ? t("prompt.TARGETS.n", { n: countText(d) }) : t("ask.targets", { card });
+    case "optionalTrigger": return t("ask.optionalTrigger", { desc });
+    case "mode": return t("ask.mode", { card, n: countText(d) });
+    case "attackers": return t("prompt.ATTACKERS");
+    case "payMana": return t("ask.payMana", { cost: a.cost ?? "", card });
+    case "payCost": return t("ask.payCost", { card, n: countText(d) });
+    case "totalPower": return t("prompt.totalPower", { n: a.n ?? "" });
+    case "assignDamage":
+      return t("prompt.assignDamage", { from: displayName(a.from ?? ""), to: displayName(a.to ?? ""), lethal: a.lethal ?? "", left: a.left ?? "" });
+    case "announce": return a.what === "X" ? t("prompt.X") : t("ask.announce", { what: a.what ?? "", card });
+    case "zoneChange": return t("ask.zoneChange", { zone: zoneName(capitalize(a.zone ?? "")) });
+    case "sacrifice": return t("ask.sacrifice", { n: countText(d) });
+    case "discardHandSize": return t("ask.discardHandSize", { n: a.n ?? "" });
+    case "counterType": return t("ask.counterType");
+    case "protection": return t("ask.protection");
+    case "replacementOrder": return t("ask.replacementOrder");
+    case "staticOrder": return t("ask.staticOrder");
+    default: return null;
+  }
+}
+
+function capitalize(s: string): string {
+  return s ? s[0].toUpperCase() + s.slice(1).toLowerCase() : s;
 }
 
 function countText(d: Decision): string {

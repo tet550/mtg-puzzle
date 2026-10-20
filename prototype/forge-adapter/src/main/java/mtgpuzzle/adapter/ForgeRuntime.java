@@ -47,6 +47,8 @@ public final class ForgeRuntime {
             mark("imageKeys");
             Lang.createInstance("en-US");
             Localizer.getInstance().initialize("en-US", res + "languages" + File.separator);
+            // 日本語の訳（cardnames-ja-JP.txt があれば）。選択肢の日本語の文を作るのに使う（Ja、design/option-i18n.md）
+            Ja.init(res + "languages" + File.separator);
             mark("localizer");
 
             // 絞り込んだバンドルでは中身が空のディレクトリが zip に入らないので、ここで作っておく

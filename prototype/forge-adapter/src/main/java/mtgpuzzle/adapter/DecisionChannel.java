@@ -2,6 +2,7 @@ package mtgpuzzle.adapter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -34,7 +35,11 @@ final class DecisionChannel {
     // ---- ゲームスレッド側 ----
 
     List<String> ask(Decision.Kind kind, String prompt, List<Decision.Option> options, int min, int max) {
-        Decision d = new Decision(++seq, kind, prompt, List.copyOf(options), min, max);
+        return ask(kind, Decision.Prompt.text(prompt), options, min, max);
+    }
+
+    List<String> ask(Decision.Kind kind, Decision.Prompt prompt, List<Decision.Option> options, int min, int max) {
+        Decision d = new Decision(++seq, kind, prompt.text(), List.copyOf(options), min, max, prompt.key(), Map.copyOf(prompt.args()));
         try {
             toCaller.put(new Pending(d));
             List<String> answer = toGame.take();

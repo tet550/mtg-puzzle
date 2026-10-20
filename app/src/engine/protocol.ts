@@ -101,6 +101,8 @@ export interface StackItem {
   sourceId: InstanceId;
   controller: PlayerId;
   description: string;
+  /** 日本語の文（Forge の訳。訳が無ければ null） */
+  descriptionJa?: string | null;
   spell: boolean;
   targets: (InstanceId | PlayerId)[];
 }
@@ -118,7 +120,10 @@ export type DecisionKind =
 export interface Decision {
   seq: number;
   kind: DecisionKind;
+  /** 英語の説明。promptKey があれば、画面の言語の文は promptKey と promptArgs から作る */
   prompt: string;
+  promptKey?: string | null;
+  promptArgs?: Record<string, string>;
   min: number;
   max: number;
   options: Option[];
@@ -127,6 +132,8 @@ export interface Decision {
 export interface Option {
   id: string;
   label: string;
+  /** 日本語の文（Forge の訳。訳せない・訳が無ければ null） */
+  labelJa?: string | null;
   ref: Ref | null;
 }
 

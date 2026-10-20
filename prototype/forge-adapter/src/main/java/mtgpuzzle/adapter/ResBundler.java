@@ -92,6 +92,23 @@ public final class ResBundler {
                 }
             }
 
+            // 日本語の訳（design/option-i18n.md の方式 A）: cardnames-ja-JP.txt のうち、問題のカードの行だけ
+            Path ja = res.resolve("languages").resolve("cardnames-ja-JP.txt");
+            if (Files.exists(ja)) {
+                Set<String> lower = new java.util.HashSet<>();
+                names.forEach(n -> lower.add(n.toLowerCase()));
+                StringBuilder sb = new StringBuilder();
+                for (String line : Files.readAllLines(ja, java.nio.charset.StandardCharsets.UTF_8)) {
+                    String key = line.split("\\|", 2)[0].split("\\s*\\$", 2)[0].trim().toLowerCase();
+                    if (lower.contains(key)) {
+                        sb.append(line).append('\n');
+                    }
+                }
+                zip.putNextEntry(new ZipEntry("languages/cardnames-ja-JP.txt"));
+                zip.write(sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                zip.closeEntry();
+            }
+
             // エディション: カードごとに、収録しているエディションを 1 つだけ（Core / Expansion を優先）
             Set<Path> editions = new java.util.TreeSet<>();
             if (fullEditions) {

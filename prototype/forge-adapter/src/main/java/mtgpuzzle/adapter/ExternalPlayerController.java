@@ -103,11 +103,15 @@ class ExternalPlayerController extends BaseAdapterController {
 
     /** 候補（カード・プレイヤー）から選ばせ、選ばれた候補を返す */
     private <T extends GameObject> List<T> chooseObjects(Decision.Kind kind, String prompt, List<T> candidates, int min, int max) {
+        return chooseObjects(kind, Decision.Prompt.text(prompt), candidates, min, max, false);
+    }
+
+    private <T extends GameObject> List<T> chooseObjects(Decision.Kind kind, Decision.Prompt prompt, List<T> candidates, int min, int max) {
         return chooseObjects(kind, prompt, candidates, min, max, false);
     }
 
     /** cancellable なら「取りやめ」も出し、選ばれたら null を返す（コストの支払いを取りやめ、唱える前に戻す） */
-    private <T extends GameObject> List<T> chooseObjects(Decision.Kind kind, String prompt, List<T> candidates, int min, int max,
+    private <T extends GameObject> List<T> chooseObjects(Decision.Kind kind, Decision.Prompt prompt, List<T> candidates, int min, int max,
             boolean cancellable) {
         List<Decision.Option> options = new ArrayList<>();
         for (T o : candidates) {
@@ -142,8 +146,9 @@ class ExternalPlayerController extends BaseAdapterController {
                     continue; // マナ能力は支払いのときに起動する
                 }
                 playable.add(sa);
+                String ja = Ja.with(sa::toString);
                 options.add(new Decision.Option("a" + (playable.size() - 1), c.getName() + " | " + sa,
-                        Decision.Ref.ability(c.getId(), abilityKind(sa))));
+                        Decision.Ref.ability(c.getId(), abilityKind(sa)), ja == null ? null : Ja.name(c.getName()) + " | " + ja));
             }
         }
         if (askedPriority && getGame().getStack().isEmpty() && !isStop()) {
@@ -151,7 +156,7 @@ class ExternalPlayerController extends BaseAdapterController {
         }
         askedPriority = true;
         List<String> answer = channel.ask(Decision.Kind.PRIORITY,
-                getGame().getPhaseHandler().debugPrintState(true), options, 1, 1);
+                Decision.Prompt.of(getGame().getPhaseHandler().debugPrintState(true), "priority"), options, 1, 1);
         String id = answer.get(0);
         return id.equals("pass") ? null : List.of(playable.get(Integer.parseInt(id.substring(1))));
     }
@@ -169,7 +174,9 @@ class ExternalPlayerController extends BaseAdapterController {
             return sa.isTargetNumberValid();
         }
         List<GameObject> chosen = chooseObjects(Decision.Kind.TARGETS,
-                "Choose targets for " + sa.getHostCard().getName() + ": " + sa.getDescription(),
+                Decision.Prompt.of("Choose targets for " + sa.getHostCard().getName() + ": " + sa.getDescription(), "targets",
+                        "card", sa.getHostCard().getName(), "desc", sa.getDescription(),
+                        "descJa", Ja.description(sa.getDescription(), sa.getHostCard())),
                 candidates, sa.getMinTargets(), sa.getMaxTargets());
         for (GameObject o : chosen) {
             sa.getTargets().add(o);
@@ -184,16 +191,18 @@ class ExternalPlayerController extends BaseAdapterController {
         if (wrapper.isMandatory()) {
             return true;
         }
-        return confirm("Use optional trigger? " + wrapper);
+        String desc = wrapper.toString();
+        return confirm(Decision.Prompt.of("Use optional trigger? " + desc, "optionalTrigger", "desc", desc,
+                "descJa", Ja.with(wrapper::toString)));
     }
 
     @Override
     public boolean confirmAction(SpellAbility sa, PlayerActionConfirmMode mode, String message, List<String> options,
             Card cardToShow, Map<String, Object> params) {
-        return confirm(message);
+        return confirm(Decision.Prompt.text(message));
     }
 
-    private boolean confirm(String prompt) {
+    private boolean confirm(Decision.Prompt prompt) {
         List<String> answer = channel.ask(Decision.Kind.CONFIRM, prompt,
                 List.of(special("yes", "Yes"), special("no", "No")), 1, 1);
         return answer.get(0).equals("yes");
@@ -245,10 +254,12 @@ class ExternalPlayerController extends BaseAdapterController {
         }
         List<Decision.Option> options = new ArrayList<>();
         for (int i = 0; i < possible.size(); i++) {
-            options.add(new Decision.Option("m" + i,
-                    possible.get(i).getDescription().replace("CARDNAME", sa.getHostCard().getName())));
+            String desc = possible.get(i).getDescription();
+            options.add(new Decision.Option("m" + i, desc.replace("CARDNAME", sa.getHostCard().getName()), null,
+                    Ja.available() ? Ja.description(desc, sa.getHostCard()).replaceFirst("^[・•]\\s*", "") : null)); // 訳の箇条書きの「・」は外す
         }
-        List<String> answer = channel.ask(Decision.Kind.CHOOSE_MODE, "Choose mode for " + sa.getHostCard().getName(),
+        List<String> answer = channel.ask(Decision.Kind.CHOOSE_MODE,
+                Decision.Prompt.of("Choose mode for " + sa.getHostCard().getName(), "mode", "card", sa.getHostCard().getName()),
                 options, min, Math.min(num, possible.size()));
         List<AbilitySub> out = new ArrayList<>();
         for (Decision.Option o : options) {
@@ -278,29 +289,35 @@ class ExternalPlayerController extends BaseAdapterController {
         }
         List<Decision.Option> opts = new ArrayList<>();
         for (int i = 0; i < options.size(); i++) {
-            opts.add(new Decision.Option("k" + i, MagicColor.toLongString(options.get(i))));
+            opts.add(new Decision.Option("k" + i, MagicColor.toLongString(options.get(i)), null, COLOR_JA.get(MagicColor.toLongString(options.get(i)))));
         }
         String id = channel.ask(Decision.Kind.CHOOSE_MODE, message, opts, 1, 1).get(0);
         return options.get(Integer.parseInt(id.substring(1)));
     }
 
+    private static final Map<String, String> COLOR_JA = Map.of("white", "白", "blue", "青", "black", "黒", "red", "赤", "green", "緑");
+
     /** 同時に当てはまる置換効果・常在型能力のうち、どれを先に適用するか */
     @Override
     public ReplacementEffect chooseSingleReplacementEffect(List<ReplacementEffect> possible) {
-        return possible.size() == 1 ? possible.get(0) : possible.get(chooseIndex("Choose which replacement effect applies first", possible));
+        return possible.size() == 1 ? possible.get(0)
+                : possible.get(chooseIndex(Decision.Prompt.of("Choose which replacement effect applies first", "replacementOrder"), possible));
     }
 
     @Override
     public StaticAbility chooseSingleStaticAbility(List<StaticAbility> possible) {
-        return possible.size() == 1 ? possible.get(0) : possible.get(chooseIndex("Choose which effect applies first", possible));
+        return possible.size() == 1 ? possible.get(0)
+                : possible.get(chooseIndex(Decision.Prompt.of("Choose which effect applies first", "staticOrder"), possible));
     }
 
-    private int chooseIndex(String prompt, List<?> items) {
+    private int chooseIndex(Decision.Prompt prompt, List<?> items) {
         List<Decision.Option> opts = new ArrayList<>();
         for (int i = 0; i < items.size(); i++) {
             Object it = items.get(i);
-            String host = it instanceof forge.game.CardTraitBase t && t.getHostCard() != null ? t.getHostCard().getName() + ": " : "";
-            opts.add(new Decision.Option("k" + i, host + it));
+            forge.game.card.Card hostCard = it instanceof forge.game.CardTraitBase t ? t.getHostCard() : null;
+            String host = hostCard != null ? hostCard.getName() + ": " : "";
+            String ja = hostCard != null ? Ja.name(hostCard.getName()) + ": " + Ja.description(String.valueOf(it), hostCard) : null;
+            opts.add(new Decision.Option("k" + i, host + it, null, Ja.available() ? ja : null));
         }
         return Integer.parseInt(channel.ask(Decision.Kind.CHOOSE_MODE, prompt, opts, 1, 1).get(0).substring(1));
     }
@@ -339,8 +356,9 @@ class ExternalPlayerController extends BaseAdapterController {
                 left = 0;
                 break;
             }
-            int v = chooseNumberIn("Assign combat damage from " + attacker.getName() + " to " + b.getName()
-                    + " (lethal " + lethal + ", " + left + " left)", 0, left);
+            int v = chooseNumberIn(Decision.Prompt.of("Assign combat damage from " + attacker.getName() + " to " + b.getName()
+                    + " (lethal " + lethal + ", " + left + " left)", "assignDamage", "from", attacker.getName(), "to", b.getName(),
+                    "lethal", String.valueOf(lethal), "left", String.valueOf(left)), 0, left);
             if (v > 0) {
                 map.put(b, v);
             }
@@ -376,7 +394,9 @@ class ExternalPlayerController extends BaseAdapterController {
         List<Card> candidates = new ArrayList<>();
         fetchList.forEach(candidates::add);
         List<Card> chosen = chooseObjects(Decision.Kind.CHOOSE_ENTITY,
-                selectPrompt == null || selectPrompt.isBlank() ? "Choose a card to move to " + destination : selectPrompt,
+                selectPrompt == null || selectPrompt.isBlank()
+                        ? Decision.Prompt.of("Choose a card to move to " + destination, "zoneChange", "zone", String.valueOf(destination))
+                        : Decision.Prompt.text(selectPrompt),
                 candidates, isOptional ? 0 : 1, 1);
         return chosen.isEmpty() ? null : chosen.get(0);
     }
@@ -391,7 +411,8 @@ class ExternalPlayerController extends BaseAdapterController {
             return new CardCollection(candidates); // 選ぶ余地が無い
         }
         return new CardCollection(chooseObjects(Decision.Kind.CHOOSE_ENTITY,
-                message == null || message.isBlank() ? "Choose permanents to sacrifice" : message, candidates, min, max));
+                message == null || message.isBlank() ? Decision.Prompt.of("Choose permanents to sacrifice", "sacrifice") : Decision.Prompt.text(message),
+                candidates, min, max));
     }
 
     /** クリンナップで手札の上限まで捨てる */
@@ -402,9 +423,16 @@ class ExternalPlayerController extends BaseAdapterController {
         if (hand.size() <= numDiscard) {
             return new CardCollection(hand);
         }
-        return new CardCollection(chooseObjects(Decision.Kind.CHOOSE_ENTITY, "Discard " + numDiscard + " card(s) to your maximum hand size",
+        return new CardCollection(chooseObjects(Decision.Kind.CHOOSE_ENTITY,
+                Decision.Prompt.of("Discard " + numDiscard + " card(s) to your maximum hand size", "discardHandSize", "n", String.valueOf(numDiscard)),
                 hand, numDiscard, numDiscard));
     }
+
+    private static final Map<String, String[]> BINARY_JA = Map.of(
+            "HeadsOrTails", new String[]{"表", "裏"}, "TapOrUntap", new String[]{"タップ", "アンタップ"},
+            "PlayOrDraw", new String[]{"先手", "後手"}, "OddsOrEvens", new String[]{"奇数", "偶数"},
+            "UntapOrLeaveTapped", new String[]{"アンタップする", "タップ状態のままにする"}, "LeftOrRight", new String[]{"左", "右"},
+            "AddOrRemove", new String[]{"置く", "取り除く"}, "IncreaseOrDecrease", new String[]{"増やす", "減らす"});
 
     /** 二択（表か裏か、タップかアンタップか、など） */
     @Override
@@ -419,8 +447,10 @@ class ExternalPlayerController extends BaseAdapterController {
             case AddOrRemove -> new String[]{"Add", "Remove"};
             case IncreaseOrDecrease -> new String[]{"Increase", "Decrease"};
         };
+        String[] ja = BINARY_JA.get(kindOfChoice.name());
         String id = channel.ask(Decision.Kind.CHOOSE_MODE, question,
-                List.of(new Decision.Option("k0", labels[0]), new Decision.Option("k1", labels[1])), 1, 1).get(0);
+                List.of(new Decision.Option("k0", labels[0], null, ja == null ? null : ja[0]),
+                        new Decision.Option("k1", labels[1], null, ja == null ? null : ja[1])), 1, 1).get(0);
         return id.equals("k0");
     }
 
@@ -429,7 +459,8 @@ class ExternalPlayerController extends BaseAdapterController {
         if (options.size() == 1) {
             return options.get(0);
         }
-        return options.get(chooseIndex(prompt == null || prompt.isBlank() ? "Choose a counter type" : prompt, options));
+        return options.get(chooseIndex(prompt == null || prompt.isBlank()
+                ? Decision.Prompt.of("Choose a counter type", "counterType") : Decision.Prompt.text(prompt), options));
     }
 
     @Override
@@ -437,7 +468,7 @@ class ExternalPlayerController extends BaseAdapterController {
         if (choices.size() == 1) {
             return choices.get(0);
         }
-        return choices.get(chooseIndex("Choose a protection", choices));
+        return choices.get(chooseIndex(Decision.Prompt.of("Choose a protection", "protection"), choices));
     }
 
     /** コストを払う順（マナと、タップ・生け贄などの順）。並びのままでよい（人間用の画面でも既定の順で払う） */
@@ -450,12 +481,13 @@ class ExternalPlayerController extends BaseAdapterController {
 
     @Override
     public Integer announceRequirements(SpellAbility ability, int min, int max, String announce) {
-        return chooseNumberIn("Announce " + announce + " for " + ability.getHostCard().getName(), min, max);
+        return chooseNumberIn(Decision.Prompt.of("Announce " + announce + " for " + ability.getHostCard().getName(), "announce",
+                "what", announce, "card", ability.getHostCard().getName()), min, max);
     }
 
     @Override
     public int chooseNumber(SpellAbility sa, String title, int min, int max) {
-        return chooseNumberIn(title, min, max);
+        return chooseNumberIn(Decision.Prompt.text(title), min, max);
     }
 
     @Override
@@ -467,7 +499,7 @@ class ExternalPlayerController extends BaseAdapterController {
         return Integer.parseInt(channel.ask(Decision.Kind.CHOOSE_NUMBER, title, options, 1, 1).get(0).substring(1));
     }
 
-    private int chooseNumberIn(String title, int min, int max) {
+    private int chooseNumberIn(Decision.Prompt title, int min, int max) {
         int hi = max;
         if ((long) max - min + 1 > MAX_NUMBER_OPTIONS) {
             hi = min + MAX_NUMBER_OPTIONS - 1;
@@ -501,7 +533,8 @@ class ExternalPlayerController extends BaseAdapterController {
         for (Card c : able) {
             options.add(new Decision.Option("c" + c.getId(), c.getName(), Decision.Ref.card(c.getId())));
         }
-        List<String> answer = channel.ask(Decision.Kind.ATTACKERS, "Declare attackers (defender: " + defender + ")",
+        List<String> answer = channel.ask(Decision.Kind.ATTACKERS,
+                Decision.Prompt.of("Declare attackers (defender: " + defender + ")", "attackers"),
                 options, 0, able.size());
         for (String id : answer) {
             combat.addAttacker(able.get(indexOf(options, id)), defender);
@@ -518,10 +551,13 @@ class ExternalPlayerController extends BaseAdapterController {
         List<Decision.Option> options = new ArrayList<>();
         options.add(special("auto", "Auto pay"));
         for (int i = 0; i < sources.size(); i++) {
-            options.add(new Decision.Option("m" + i, sources.get(i).label(), Decision.Ref.card(sources.get(i).ability().getHostCard().getId())));
+            ManaPayer.Source src = sources.get(i);
+            options.add(new Decision.Option("m" + i, src.label(), Decision.Ref.card(src.ability().getHostCard().getId()),
+                    Ja.available() ? Ja.name(src.ability().getHostCard().getName()) + ": " + Ja.with(src.ability()::toString) : null));
         }
         options.add(special("cancel", "Cancel"));
-        String id = channel.ask(Decision.Kind.PAY_MANA, "Pay " + remaining + " for " + saPaidFor.getHostCard().getName(),
+        String id = channel.ask(Decision.Kind.PAY_MANA, Decision.Prompt.of("Pay " + remaining + " for " + saPaidFor.getHostCard().getName(),
+                "payMana", "cost", remaining, "card", saPaidFor.getHostCard().getName()),
                 options, 1, 1).get(0);
         if (id.equals("cancel")) {
             return null;
@@ -539,7 +575,8 @@ class ExternalPlayerController extends BaseAdapterController {
         List<Card> list = new ArrayList<>();
         candidates.forEach(list::add);
         List<Card> chosen = chooseObjects(Decision.Kind.CHOOSE_CARDS,
-                "Tap creatures with total power " + need + " or greater (" + sa.getHostCard().getName() + ")", list, 1, list.size(), true);
+                Decision.Prompt.of("Tap creatures with total power " + need + " or greater (" + sa.getHostCard().getName() + ")", "totalPower",
+                        "n", String.valueOf(need), "card", sa.getHostCard().getName()), list, 1, list.size(), true);
         return chosen == null ? null : new CardCollection(chosen);
     }
 
@@ -548,7 +585,8 @@ class ExternalPlayerController extends BaseAdapterController {
             int amount, boolean isOptional, String prompt) {
         List<Card> candidates = new ArrayList<>();
         optionList.forEach(candidates::add);
-        List<Card> chosen = chooseObjects(Decision.Kind.CHOOSE_CARDS, "Pay cost: " + prompt, candidates, isOptional ? 0 : amount, amount, true);
+        List<Card> chosen = chooseObjects(Decision.Kind.CHOOSE_CARDS, Decision.Prompt.of("Pay cost: " + prompt, "payCost", "cost", prompt,
+                "card", sa.getHostCard().getName()), candidates, isOptional ? 0 : amount, amount, true);
         return chosen == null ? null : new CardCollection(chosen);
     }
 }

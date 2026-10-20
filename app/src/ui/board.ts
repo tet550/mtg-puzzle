@@ -10,6 +10,7 @@ import { h, onTapOrHold } from "./dom";
 import { t, type MessageKey } from "../i18n";
 import { avatarUrl, icon } from "./icons";
 import { displayName } from "./images";
+import { localized } from "./localize";
 import { PHASE_STRIP, passLabel, phaseName } from "./text";
 
 export type Mark = "cand" | "chosen";
@@ -276,7 +277,7 @@ export function stackBody(view: GameView, ui: BoardUi, hooks: BoardHooks, names:
   return h("ol.stack.panel", null,
     casting.map((c) => item(c, c.name, t("stack.casting"), "…", [], ".casting")),
     view.stack.map((it) => item(byId.get(it.sourceId), names.get(it.sourceId) ?? "?",
-      it.description.replace(/\s*\(\d+\)/g, ""), it.index === 0 ? t("stack.top") : String(it.index + 1), it.targets, "")));
+      localized(it.description.replace(/\s*\(\d+\)/g, ""), it.descriptionJa), it.index === 0 ? t("stack.top") : String(it.index + 1), it.targets, "")));
 }
 
 // ---------------------------------------------------------------- カード

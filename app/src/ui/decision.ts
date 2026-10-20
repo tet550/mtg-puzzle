@@ -4,6 +4,7 @@ import type { Decision, GameView, Option } from "../engine/protocol";
 import { t } from "../i18n";
 import type { Mark } from "./board";
 import { displayName } from "./images";
+import { localized } from "./localize";
 
 export interface Interaction {
   decision: Decision;
@@ -53,7 +54,9 @@ export function marksOf(i: Interaction | null, selected: Set<string>): Map<strin
 export function optionLabel(o: Option): string {
   const r = o.ref;
   if (r?.type === "ability") {
-    const desc = o.label.includes(" | ") ? o.label.slice(o.label.indexOf(" | ") + 3).trim() : o.label;
+    // "Name | 説明" の説明の部分（日本語の画面では Forge の訳）
+    const after = (s: string) => (s.includes(" | ") ? s.slice(s.indexOf(" | ") + 3).trim() : s);
+    const desc = localized(after(o.label), o.labelJa ? after(o.labelJa) : null);
     if (r.abilityKind === "land") return t("opt.land");
     if (r.abilityKind === "spell") return shorten(desc) ? t("opt.castWith", { desc: shorten(desc) }) : t("opt.cast");
     return t("opt.activate", { desc: shorten(desc) });
@@ -62,7 +65,9 @@ export function optionLabel(o: Option): string {
     return t(`opt.${r.value}`);
   }
   if (r?.type === "player") return r.player === "p1" ? t("player.you") : t("player.opponent");
-  return displayName(o.label.replace(/\s*\((Battlefield|Hand|Graveyard|Exile|Stack|Library), p\d\)$/, ""));
+  if (r?.type === "card" && o.labelJa) return localized(o.label, o.labelJa); // マナ源（"名前: {T}：…を加える。"）
+  if (r?.type === "card") return displayName(o.label.replace(/\s*\((Battlefield|Hand|Graveyard|Exile|Stack|Library), p\d\)$/, ""));
+  return localized(o.label, o.labelJa); // モード・色・二択・効果の順など
 }
 
 function shorten(s: string): string {

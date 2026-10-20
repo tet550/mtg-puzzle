@@ -81,7 +81,7 @@ public final class ForgeSession implements AutoCloseable {
 
     /** index 0 が一番上。targets はインスタンス ID かプレイヤー ID */
     public record StackState(int index, String sourceId, String controller, String description, boolean spell,
-                             List<String> targets) { }
+                             List<String> targets, String descriptionJa) { }
 
     /** defender はプレイヤー ID か、プレインズウォーカー・バトルのインスタンス ID */
     public record AttackState(String attackerId, String defender, List<String> blockers) { }
@@ -254,7 +254,7 @@ public final class ForgeSession implements AutoCloseable {
                 si.getTargetChoices().getTargetPlayers().forEach(pl -> targets.add(pl.getName()));
             }
             stack.add(new StackState(index++, instanceIdOf(si.getSourceCard().getId()), si.getActivatingPlayer().getName(),
-                    si.getStackDescription(), si.isSpell(), targets));
+                    si.getStackDescription(), si.isSpell(), targets, Ja.stackDescription(si.getSpellAbility())));
         }
         List<AttackState> combat = new ArrayList<>();
         Combat cb = g.getCombat();
@@ -389,7 +389,8 @@ public final class ForgeSession implements AutoCloseable {
             GameState state = new GameState();
             state.parse(puzzle.toGameStateLines());
             match.startGame(g, () -> {
-                state.applyToGame(g); // ゲームスレッド上なので同期実行される
+                // ゲームスレッド上なので同期実行される。カードを作るときに日本語の訳の対応表ができるよう、日本語にしておく
+                Ja.run(() -> state.applyToGame(g));
                 startTurn = g.getPhaseHandler().getTurn();
                 mapInstances(g);
                 setupDone = true;
