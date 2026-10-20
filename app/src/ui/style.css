@@ -279,6 +279,7 @@ body.nosel, body.nosel * { user-select: none !important; -webkit-user-select: no
 
 /* ---- 操作パネル（mtgtable の「p1 として操作」）: 右下に浮かぶ ---- */
 .playpanel { position: fixed; z-index: var(--z-play); right: 12px; bottom: 12px; width: 360px; max-height: 60vh; }
+.playpanel > .fbody { flex: 1; min-height: 0; overflow: auto; }
 .actions { padding: 8px 10px; display: flex; flex-direction: column; gap: 8px; }
 .actions .prompt { font-weight: 600; font-size: 13px; display: flex; gap: 8px; align-items: center; }
 .actions .btns { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -312,14 +313,17 @@ body.nosel, body.nosel * { user-select: none !important; -webkit-user-select: no
   .side.opp { flex: none; --h: clamp(64px, 13vh, 120px); }
   .side.mine { flex: 1 1 0; min-height: 0; container-type: size; overflow: hidden; display: flex; flex-direction: column;
     /* 見出し・すき間・行の余白の分（約 44px）を引いた残りを 27 : 17 : 27 で分ける（戦場の行はカードの 1.12 倍。合わせて 74 単位） */
-    --u: calc((100cqh - 44px) / 74); --ph: min(calc((100cqh - 60px) / 3), 120px); }
+    /* 見出し（約 30px）と、戦場・土地の行の余白（カードの余白・枠 8px と、ハイライトの枠と影の分 12px。各行 20px）を
+       引いた残りを 27 : 17 : 27 で分ける（戦場の行はカードの 1.12 倍。合わせて 74 単位） */
+    --u: calc((100cqh - 74px) / 74); --ph: min(calc((100cqh - 60px) / 3), 120px); }
   .side.mine .phead { flex: none; }
   .side.mine .sidegrid { flex: 1; min-height: 0; }
   .side.mine .piles { gap: 6px; justify-content: space-between; overflow: hidden; }
+  /* 行ははみ出しを切る（横はスクロール）ので、カードの余白・枠（8px）とハイライトの枠と影（上下左右 6px）の分の高さと余白を取る */
   .side.mine .bfrow:not(.lands) { --h: min(calc(var(--u) * 27), 151px); flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
-    height: calc(var(--h) * 1.12 + 4px); flex: none; }
+    height: calc(var(--h) * 1.12 + 20px); padding: 6px; flex: none; }
   .side.mine .lands { --h: min(calc(var(--u) * 17), 106px); flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
-    height: calc(var(--h) + 4px); flex: none; }
+    height: calc(var(--h) + 20px); padding: 6px; flex: none; }
   .side.mine .field { justify-content: flex-start; gap: 2px; }
   .side.mine .sidemain { min-height: 0; }
   .side.mine .sidemain > .field { flex: 1; min-height: 0; justify-content: flex-end; }  /* 余りは見出しの側へ（土地と手札を離さない） */
@@ -342,7 +346,10 @@ body.nosel, body.nosel * { user-select: none !important; -webkit-user-select: no
 }
 /* 画面の高さに収めるときは、操作パネルを盤面の下の段に置く（盤面をパネルの分だけ縮め、手札を隠さない） */
 @media (max-width: 899px) and (orientation: portrait), (max-width: 899px) and (min-height: 560px) {
-  .play > .playpanel { position: relative; left: auto; right: auto; bottom: auto; flex: none; margin: 0 6px 6px; max-height: 34vh; }
+  /* 高さは中身で変えない（変わると盤面の高さが変わり、カードの大きさが変わって画面が動く）。入らない分はパネルの中でスクロール */
+  .play > .playpanel { position: relative; left: auto; right: auto; bottom: auto; flex: none; margin: 0 6px 6px;
+    height: clamp(124px, 18vh, 200px); max-height: none; }
+  .play > .playpanel.min { height: auto; }
   .play > .layout { padding-bottom: 6px; }
 }
 @media (max-width: 700px) {
