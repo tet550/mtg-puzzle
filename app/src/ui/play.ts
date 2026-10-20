@@ -38,7 +38,8 @@ export class PlayPage {
   /** 進行中のおまかせ（ドラッグ・ダブルクリックで唱えて解決まで進める。quick.ts） */
   private macro: Macro | null = null;
   /** 手札のドラッグ */
-  private drag: { id: string; el: HTMLElement; x: number; y: number; ghost: HTMLElement | null; over: HTMLElement | null; dx: number; dy: number } | null = null;
+  private drag: { id: string; el: HTMLElement; x: number; y: number; ghost: HTMLElement | null; over: HTMLElement | null;
+    dx: number; dy: number; note: HTMLElement | null } | null = null;
   private suppressClick = false;
   /**
    * 直前に押したカード。ダブルクリックは自前で判定する: 1 回目のクリックで唱え始めるとカードが手札から
@@ -169,7 +170,7 @@ export class PlayPage {
       const card = (ev.target as HTMLElement).closest<HTMLElement>(".hand .card[data-id]");
       if (!card) return;
       const r = card.getBoundingClientRect();
-      this.drag = { id: card.dataset.id!, el: card, x: ev.clientX, y: ev.clientY, ghost: null, over: null, dx: ev.clientX - r.left, dy: ev.clientY - r.top };
+      this.drag = { id: card.dataset.id!, el: card, x: ev.clientX, y: ev.clientY, ghost: null, over: null, dx: ev.clientX - r.left, dy: ev.clientY - r.top, note: null };
     });
     window.addEventListener("pointermove", this.onDragMove);
     window.addEventListener("pointerup", this.onDragEnd);
@@ -194,11 +195,15 @@ export class PlayPage {
       const r = g.el.getBoundingClientRect();
       const ghost = g.el.cloneNode(true) as HTMLElement;
       ghost.classList.add("dragghost");
+      ghost.classList.remove("cand", "chosen", "flash");
+      // カードの大きさは手札の欄の --h から決めているので、欄の外（body の直下）に置く写しには値を写す
+      ghost.style.setProperty("--h", getComputedStyle(g.el).getPropertyValue("--h"));
       Object.assign(ghost.style, { width: `${r.width}px`, height: `${r.height}px` });
       document.body.append(ghost);
       g.ghost = ghost;
       g.el.classList.add("dragging");
       document.body.classList.add("nosel");
+      g.note = this.el.querySelector<HTMLElement>(".playpanel .actions")?.insertAdjacentElement("afterbegin", h("div.dragnote")) as HTMLElement ?? null;
     }
     ev.preventDefault();
     g.ghost.style.transform = `translate(${ev.clientX - g.dx}px, ${ev.clientY - g.dy}px)`;
@@ -208,7 +213,26 @@ export class PlayPage {
       target?.classList.add("dropover");
       g.over = target;
     }
+    // 離すとどうなるかを操作パネルに出す
+    const onBoard = !!(document.elementFromPoint(ev.clientX, ev.clientY) as HTMLElement | null)?.closest(".board");
+    if (g.note) g.note.textContent = this.dropText(g.id, target, onBoard);
   };
+
+  /** ドラッグ中の案内: 離したときに何をするか */
+  private dropText(cardId: string, target: HTMLElement | null, onBoard: boolean): string {
+    if (!onBoard) return t("drag.cancel");
+    const card = displayName(this.names.get(cardId) ?? "");
+    const opts = this.session.state.step?.pending?.options.filter((o) => o.ref?.type === "ability" && o.ref.cardId === cardId) ?? [];
+    if (opts.some((o) => o.ref?.type === "ability" && o.ref.abilityKind === "land") && !opts.some((o) => o.ref?.type === "ability" && o.ref.abilityKind === "spell")) {
+      return t("drag.land", { card });
+    }
+    if (target) {
+      const key = target.dataset.player ?? target.dataset.id ?? "";
+      const name = target.dataset.player ? (key === VIEWER ? t("player.you") : t("player.opponent")) : displayName(this.names.get(key) ?? "");
+      return t("drag.toTarget", { card, target: name });
+    }
+    return t("drag.noTarget", { card });
+  }
 
   /** 指の下の落とし先: 盤面のカード・プレイヤーの見出し（自分の手札は除く） */
   private dropTarget(x: number, y: number): HTMLElement | null {
@@ -239,6 +263,7 @@ export class PlayPage {
 
   private endDrag(g: NonNullable<PlayPage["drag"]>) {
     g.ghost?.remove();
+    g.note?.remove();
     g.over?.classList.remove("dropover");
     g.el.classList.remove("dragging");
     document.body.classList.remove("nosel");
