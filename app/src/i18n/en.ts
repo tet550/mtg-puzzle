@@ -154,6 +154,7 @@ export const en: Messages = {
   "drag.noTarget": "Release to cast {card} and resolve it (choose targets afterwards if needed)",
   "drag.land": "Release to play {card} as a land",
   "drag.cancel": "Release outside the board to cancel",
+  "menu.cancel": "Cancel",
   "quick.running": "Auto: casting {card} and resolving it (choose targets etc. when asked)",
   "quick.stop": "Stop",
   "status.preparing": "Preparing the engine… ({status})",

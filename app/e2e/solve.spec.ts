@@ -44,7 +44,10 @@ async function clickOption(page: Page, opt: Opt, onBoard: boolean, menuIndex: nu
   if (onBoard) {
     const key = ref?.cardId ?? ref?.player;
     await page.locator(`.board [data-id="${key}"], .board [data-player="${key}"]`).first().click();
-    if (menuIndex >= 0) await page.locator(".menu button").nth(menuIndex).click();
+    // 同じカードに選択肢が複数あるとき・起動型能力のときはメニューが出る（並びは選択肢の順）
+    if (menuIndex >= 0 || (opt.ref?.type === "ability" && opt.ref.abilityKind === "activated")) {
+      await page.locator(".menu button").nth(Math.max(0, menuIndex)).click();
+    }
     return;
   }
   await page.locator(".actions .listed .opt").nth(listIndex).click();

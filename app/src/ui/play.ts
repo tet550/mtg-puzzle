@@ -331,7 +331,7 @@ export class PlayPage {
     );
 
     const panel = this.playPanel(s, interaction);
-    const menu = this.menu ? optionMenu(this.menu, (o) => this.choose(o, interaction)) : null;
+    const menu = this.menu ? optionMenu(this.menu, (o) => this.choose(o, interaction), () => { this.menu = null; this.render(); }) : null;
     this.el.classList.toggle("withpanelmin", this.minimized.has("play"));
 
     this.el.replaceChildren(header, main, panel, ...(detail ? [detail] : []), ...(menu ? [menu] : []));
@@ -460,7 +460,9 @@ export class PlayPage {
 
   /** 1 つの盤面の要素に複数の選択肢があればメニューを出す */
   private pick(opts: Option[], i: Interaction, key: string) {
-    if (opts.length === 1) {
+    // 起動型能力は、1 つしか無くてもメニューから選ぶ（プレインズウォーカーの能力と同じ。押しただけで起動しない）
+    const activated = i.decision.kind === "PRIORITY" && opts.some((o) => o.ref?.type === "ability" && o.ref.abilityKind === "activated");
+    if (opts.length === 1 && !activated) {
       this.choose(opts[0], i);
       return;
     }
@@ -510,11 +512,12 @@ function logList(history: GameEvent[], names: Map<string, string>): HTMLElement 
   return h("div.log", null, lines.length ? lines.map((l) => h("div.ev" + (l.startsWith("──") ? ".turnline" : ""), null, l)) : h("div.muted", null, t("log.empty")));
 }
 
-function optionMenu(m: { x: number; y: number; options: Option[] }, choose: (o: Option) => void): HTMLElement {
+function optionMenu(m: { x: number; y: number; options: Option[] }, choose: (o: Option) => void, close: () => void): HTMLElement {
   const x = Math.min(m.x, window.innerWidth - 300);
-  const y = Math.min(m.y, window.innerHeight - 60 * m.options.length - 20);
+  const y = Math.min(m.y, window.innerHeight - 60 * (m.options.length + 1) - 20);
   return h("div.menu", { role: "menu", style: `left:${Math.max(8, x)}px;top:${Math.max(8, y)}px` } as never,
-    m.options.map((o) => h("button", { type: "button", role: "menuitem", onclick: () => choose(o) }, optionLabel(o))));
+    m.options.map((o) => h("button", { type: "button", role: "menuitem", onclick: () => choose(o) }, optionLabel(o))),
+    h("button.mcancel", { type: "button", role: "menuitem", onclick: close }, t("menu.cancel")));
 }
 
 /** 出来事で変わったカード */

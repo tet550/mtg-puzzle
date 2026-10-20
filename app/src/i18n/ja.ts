@@ -159,6 +159,7 @@ export const ja = {
   "drag.noTarget": "離すと: {card} を唱えて解決まで進めます（対象が必要なら、そのあと選びます）",
   "drag.land": "離すと: {card} を土地として出します",
   "drag.cancel": "盤面の外で離すと、取りやめます",
+  "menu.cancel": "やめる",
   "quick.running": "おまかせ中: {card} を唱えて解決まで進めます（対象などは選んでください）",
   "quick.stop": "やめる",
   "status.preparing": "エンジンを準備しています…（{status}）",
