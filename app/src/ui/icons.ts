@@ -20,6 +20,7 @@ export const ICON = {
   pass: "M12 20V5M6 11l6-6 6 6", // 相手に渡す（↑）
   attack: "M4 4l11 11M15 15l-2 3M15 15l3-2M20 4L9 15M9 15l2 3M9 15l-3-2M3 21l3-3M21 21l-3-3",
   resolve: "M12 2l2.5 6.5L21 9l-5 4.5L17.5 21 12 17l-5.5 4L8 13.5 3 9l6.5-.5z", // 星
+  stack: "M12 3l9 5-9 5-9-5zM3 12.5l9 5 9-5M3 17l9 5 9-5", // 積み重ね（スタックに積む）
 } as const;
 
 export type IconName = keyof typeof ICON;

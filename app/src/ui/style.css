@@ -309,7 +309,17 @@ body.nosel, body.nosel * { user-select: none !important; -webkit-user-select: no
   box-shadow: 0 8px 24px rgba(0, 0, 0, .2); display: flex; flex-direction: column; min-width: 200px; max-width: 320px; overflow: hidden; }
 .menu button { border: 0; border-radius: 0; text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); }
 .menu button:hover { background: var(--hl); }
-.menu button.mcancel { color: var(--muted); border-bottom: 0; }
+.menu > :last-child, .menu > :last-child > button { border-bottom: 0; }
+/* メニューの外を押すと閉じる（透明の幕。下のカードは押したことにしない） */
+.menuback { position: fixed; inset: 0; z-index: calc(var(--z-menu) - 1); }
+/* 1 つの行を 2 つに分けたボタン: 左が「起動して解決まで」、右が「積む（スタックに積むだけ）」 */
+.menu .mrow { display: flex; align-items: stretch; border-bottom: 1px solid var(--line); }
+.menu .mrow > button { border-bottom: 0; }
+.menu .mrow .mmain { flex: 1; min-width: 0; }
+.menu .mrow .mstack { flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  padding: 6px 10px; border-left: 1px solid var(--line); font-size: 10px; font-weight: 700; color: var(--accent); white-space: nowrap; }
+.menu .mrow .mstack svg { width: 16px; height: 16px; }
+.menu .mrow .mstack:hover { background: var(--accent); color: var(--on-accent); }
 
 /* ---- 画面の高さに収める（高さが 560px 以上か縦長のとき）: ページはスクロールしない。
    カードの大きさは自分の欄の高さから決める（mtgtable と同じく、戦場 27・土地 17・手札 27 の割合） ---- */

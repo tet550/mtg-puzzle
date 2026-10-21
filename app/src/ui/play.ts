@@ -169,10 +169,10 @@ export class PlayPage {
     if (ans) void this.session.answer(ans);
   }
 
-  private startQuick(cardId: string, targetKey: string | null) {
+  private startQuick(cardId: string, targetKey: string | null, optionId: string | null = null) {
     this.menu = null;
     this.selected.clear();
-    this.macro = startMacro(cardId, targetKey);
+    this.macro = startMacro(cardId, targetKey, optionId);
     this.render();
     this.stepMacro();
   }
@@ -252,9 +252,15 @@ export class PlayPage {
       g.over = target;
     }
     // 離すとどうなるかを操作パネルに出す
-    const onBoard = !!(document.elementFromPoint(ev.clientX, ev.clientY) as HTMLElement | null)?.closest(".board");
+    const onBoard = this.dropOnBoard(ev.clientX, ev.clientY);
     if (g.note) g.note.textContent = this.dropText(g.id, target, onBoard);
   };
+
+  /** 盤面の上で離したか。手札の上（手札に戻した）と盤面の外は取りやめ */
+  private dropOnBoard(x: number, y: number): boolean {
+    const hit = document.elementFromPoint(x, y) as HTMLElement | null;
+    return !!hit?.closest(".board") && !hit.closest(".handbox");
+  }
 
   /** ドラッグ中の案内: 離したときに何をするか */
   private dropText(cardId: string, target: HTMLElement | null, onBoard: boolean): string {
@@ -285,11 +291,11 @@ export class PlayPage {
     this.drag = null;
     if (!g?.ghost) return;
     const target = this.dropTarget(ev.clientX, ev.clientY);
-    const onBoard = !!(document.elementFromPoint(ev.clientX, ev.clientY) as HTMLElement | null)?.closest(".board");
+    const onBoard = this.dropOnBoard(ev.clientX, ev.clientY);
     this.endDrag(g);
     this.suppressClick = true;
     window.setTimeout(() => { this.suppressClick = false; }, 0);
-    if (!onBoard) return; // 盤面の外で離したら取りやめ
+    if (!onBoard) return; // 盤面の外・手札の上で離したら取りやめ
     const key = target ? (target.dataset.player ?? target.dataset.id ?? null) : null;
     this.startQuick(g.id, key);
   };
@@ -377,10 +383,12 @@ export class PlayPage {
     );
 
     const panel = this.playPanel(s, interaction);
-    const menu = this.menu ? optionMenu(this.menu, (o) => this.choose(o, interaction), () => { this.menu = null; this.render(); }) : null;
+    const menu = this.menu ? optionMenu(this.menu, (o) => this.choose(o, interaction),
+      interaction?.decision.kind === "PRIORITY" ? (o) => { if (o.ref?.type === "ability") this.startQuick(o.ref.cardId, null, o.id); } : null,
+      () => { this.menu = null; this.render(); }) : null;
     this.el.classList.toggle("withpanelmin", this.minimized.has("play"));
 
-    this.el.replaceChildren(header, main, panel, ...(detail ? [detail] : []), ...(menu ? [menu] : []));
+    this.el.replaceChildren(header, main, panel, ...(detail ? [detail] : []), ...(menu ?? []));
     // 小窓は見出しのドラッグで動かせる（位置は小窓ごとに覚える）。手札は扇に整える
     for (const [sel, key] of [[".cdetail", "detail"], [".stackbox", "stack"], [".combatbox", "combat"]] as const) {
       const f = this.el.querySelector<HTMLElement>(sel);
@@ -558,12 +566,27 @@ function logList(history: GameEvent[], names: Map<string, string>): HTMLElement 
   return h("div.log", null, lines.length ? lines.map((l) => h("div.ev" + (l.startsWith("──") ? ".turnline" : ""), null, l)) : h("div.muted", null, t("log.empty")));
 }
 
-function optionMenu(m: { x: number; y: number; options: Option[] }, choose: (o: Option) => void, close: () => void): HTMLElement {
-  const x = Math.min(m.x, window.innerWidth - 300);
-  const y = Math.min(m.y, window.innerHeight - 60 * (m.options.length + 1) - 20);
-  return h("div.menu", { role: "menu", style: `left:${Math.max(8, x)}px;top:${Math.max(8, y)}px` } as never,
-    m.options.map((o) => h("button", { type: "button", role: "menuitem", onclick: () => choose(o) }, manaNodes(optionLabel(o)))),
-    h("button.mcancel", { type: "button", role: "menuitem", onclick: close }, t("menu.cancel")));
+/**
+ * 同じカードの選択肢のメニュー。外（下に敷いた透明の幕）を押すと閉じる。
+ * スタックを使う能力・呪文の項目は 2 つに分かれた 1 つの行: 左（能力の文）を押すと起動して解決まで進め、
+ * 右の「積む」はスタックに積むだけ（相手の対応を待つ・さらに積むとき）
+ */
+function optionMenu(m: { x: number; y: number; options: Option[] }, choose: (o: Option) => void,
+  quick: ((o: Option) => void) | null, close: () => void): HTMLElement[] {
+  const x = Math.min(m.x, window.innerWidth - 328); // メニューの幅は最大 320px
+  const y = Math.min(m.y, window.innerHeight - 52 * m.options.length - 20);
+  const usesStack = (o: Option) => o.ref?.type === "ability" && (o.ref.abilityKind === "activated" || o.ref.abilityKind === "spell");
+  const back = h("div.menuback", { "aria-hidden": "true" });
+  // 押した所の下のカードを押したことにしない（閉じるだけ）
+  back.addEventListener("pointerdown", (ev) => { ev.preventDefault(); ev.stopPropagation(); close(); });
+  const menu = h("div.menu", { role: "menu", style: `left:${Math.max(8, x)}px;top:${Math.max(8, y)}px` } as never,
+    m.options.map((o) => quick && usesStack(o)
+      ? h("div.mrow", null,
+        h("button.mmain", { type: "button", role: "menuitem", title: t("menu.resolve.title"), onclick: () => quick(o) }, manaNodes(optionLabel(o))),
+        h("button.mstack", { type: "button", role: "menuitem", title: t("menu.stack.title"), "aria-label": t("menu.stack.title"), onclick: () => choose(o) },
+          icon("stack"), h("span", null, t("menu.stack"))))
+      : h("button", { type: "button", role: "menuitem", onclick: () => choose(o) }, manaNodes(optionLabel(o)))));
+  return [back, menu];
 }
 
 /** 出来事で変わったカード */

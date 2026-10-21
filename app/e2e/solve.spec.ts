@@ -46,7 +46,8 @@ async function clickOption(page: Page, opt: Opt, onBoard: boolean, menuIndex: nu
     await page.locator(`.board [data-id="${key}"], .board [data-player="${key}"]`).first().click();
     // 同じカードに選択肢が複数あるとき・起動型能力のときはメニューが出る（並びは選択肢の順）
     if (menuIndex >= 0 || (opt.ref?.type === "ability" && opt.ref.abilityKind === "activated")) {
-      await page.locator(".menu button").nth(Math.max(0, menuIndex)).click();
+      // 解答手順は 1 つずつ答えるので、能力の行は右の「積む」（.mstack）を押す。左（.mmain）は解決まで進めてしまう（並びは選択肢の順）
+      await page.locator(".menu > button, .menu .mrow > .mstack").nth(Math.max(0, menuIndex)).click();
     }
     return;
   }

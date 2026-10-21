@@ -50,4 +50,17 @@ describe("おまかせ（ドラッグ・ダブルクリック）", () => {
     macroAnswer(m, priority, view());
     expect(macroAnswer(m, { ...priority, seq: 6 }, view(["t9", "c1"]))).toBe("end");
   });
+
+  it("メニューで選んだ起動型能力を起動して、解決まで進める（能力が複数あっても選んだものを使う）", () => {
+    const abilities: Decision = { seq: 6, kind: "PRIORITY", prompt: "", min: 1, max: 1, options: [
+      { id: "pass", label: "Pass", ref: { type: "special", value: "pass" } },
+      { id: "a0", label: "Card | first", ref: { type: "ability", cardId: "c9", abilityKind: "activated" } },
+      { id: "a1", label: "Card | second", ref: { type: "ability", cardId: "c9", abilityKind: "activated" } },
+    ] };
+    expect(macroAnswer(startMacro("c9", null), abilities, view())).toBe("end"); // 選んでいなければ、どれか決められない
+    const m = startMacro("c9", null, "a1");
+    expect(macroAnswer(m, abilities, view())).toEqual(["a1"]);
+    expect(macroAnswer(m, { ...abilities, seq: 7 }, view(["c9"]))).toEqual(["pass"]);
+    expect(macroAnswer(m, { ...abilities, seq: 8 }, view())).toBe("end");
+  });
 });
