@@ -41,12 +41,25 @@ describe("buildInteraction", () => {
     expect(marksOf(i, new Set(["a1"])).get("c1")).toBe("chosen");
     expect(marksOf(i, new Set()).get("c1")).toBe("cand");
   });
+
+  it("マナ能力しか無いカードは押せるが、候補の印を付けない", () => {
+    const d: Decision = { seq: 3, kind: "PRIORITY", prompt: "", min: 1, max: 1, options: [
+      { id: "pass", label: "Pass priority", ref: { type: "special", value: "pass" } },
+      { id: "a0", label: "Kolaghan's Command | Choose two", ref: { type: "ability", cardId: "c1", abilityKind: "spell" } },
+      { id: "a1", label: "Mountain | {T}: Add {R}.", ref: { type: "ability", cardId: "m0", abilityKind: "mana" } },
+    ] };
+    const i = buildInteraction(d, view);
+    expect(i.onBoard.get("m0")?.map((o) => o.id)).toEqual(["a1"]);
+    expect(marksOf(i, new Set()).has("m0")).toBe(false);
+    expect(marksOf(i, new Set()).get("c1")).toBe("cand");
+  });
 });
 
 describe("optionLabel", () => {
   it("能力の種類ごとの短い文", () => {
     expect(optionLabel({ id: "a", label: "Mountain | Play land", ref: { type: "ability", cardId: "m", abilityKind: "land" } })).toBe("土地として出す");
     expect(optionLabel({ id: "a", label: "X | Deal 2", ref: { type: "ability", cardId: "m", abilityKind: "activated" } })).toBe("起動: Deal 2");
+    expect(optionLabel({ id: "a", label: "Mountain | {T}: Add {R}.", ref: { type: "ability", cardId: "m", abilityKind: "mana" } })).toBe("マナを出す: {T}：{R}を加える。");
     expect(optionLabel({ id: "c", label: "Ornithopter (Battlefield, p2)", ref: { type: "card", cardId: "o1" } })).toBe("Ornithopter");
     expect(optionLabel({ id: "auto", label: "Auto pay", ref: { type: "special", value: "auto" } })).toBe("自動で支払う");
   });

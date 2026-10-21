@@ -159,7 +159,7 @@ export type SpecialValue = "pass" | "auto" | "cancel" | "yes" | "no";
 export type Ref =
   | { type: "card"; cardId: InstanceId }
   | { type: "player"; player: PlayerId }
-  | { type: "ability"; cardId: InstanceId; abilityKind: "spell" | "activated" | "land" }
+  | { type: "ability"; cardId: InstanceId; abilityKind: "spell" | "activated" | "mana" | "land" }
   | { type: "stack"; index: number }
   | { type: "special"; value: SpecialValue };
 

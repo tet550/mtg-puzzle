@@ -79,6 +79,42 @@ class ScenarioTest {
         }
     }
 
+    /** マナ能力は優先権でも起動できる。出したマナはマナプールに残り、呪文の支払いに使われる（PAY_MANA は出ない） */
+    @Test
+    void manaAbilityAtPriority() throws Exception {
+        try (ForgeSession s = ForgeSession.load(puzzle("s1-bolt"))) {
+            Decision d = expect(s, Decision.Kind.PRIORITY);
+            Decision.Option mountain = d.findByLabelPrefix("Mountain");
+            assertEquals("mana", mountain.ref().abilityKind());
+            StepResult r = s.submit(mountain.id());
+            log("mana at priority", r);
+            GameSnapshot st = s.getState();
+            assertTrue(card(st, "c2").tapped());
+            assertEquals(1, st.players().get(0).manaPool().get("R"));
+            s.submit(expect(s, Decision.Kind.PRIORITY).findByLabelPrefix("Lightning Bolt").id());
+            r = s.submit(expect(s, Decision.Kind.TARGETS).findByLabelPrefix("player:p2").id());
+            assertEquals(Decision.Kind.PRIORITY, r.pending().kind(), "マナプールで払えたので支払いの選択は出ない");
+            assertEquals(Status.CLEARED, s.submit("pass").status());
+        }
+    }
+
+    /** 優先権で起動した「好きな色 1 色」のマナ能力は色を問い合わせる。生け贄などのコストも払われる */
+    @Test
+    void manaAbilityAtPriorityAsksColor() throws Exception {
+        String json = java.nio.file.Files.readString(new File(System.getProperty("puzzles.dir", "../puzzles"), "s1-bolt.json").toPath())
+                .replace("\"cardId\": \"Mountain\"", "\"cardId\": \"Lotus Petal\"");
+        try (ForgeSession s = ForgeSession.load(PuzzleDefinition.fromJson(json))) {
+            s.submit(expect(s, Decision.Kind.PRIORITY).findByLabelPrefix("Lotus Petal").id());
+            Decision color = expect(s, Decision.Kind.CHOOSE_MODE);
+            StepResult r = s.submit(color.findByLabelPrefix("green").id());
+            log("petal", r);
+            GameSnapshot st = s.getState();
+            assertEquals(1, st.players().get(0).manaPool().get("G"));
+            assertEquals("GRAVEYARD", card(st, "c2").zone().toUpperCase());
+            assertTrue(s.fallbackLog().isEmpty(), s.fallbackLog().toString());
+        }
+    }
+
     @Test
     void s2_attackWins() throws Exception {
         try (ForgeSession s = ForgeSession.load(puzzle("s2-attack"))) {

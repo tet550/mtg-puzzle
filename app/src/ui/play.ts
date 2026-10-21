@@ -177,11 +177,11 @@ export class PlayPage {
     this.stepMacro();
   }
 
-  /** 今そのカードで唱える・起動することができるか（優先権の選択肢にあるか） */
+  /** 今そのカードで唱える・起動することができるか（優先権の選択肢にあるか。マナ能力は除く） */
   private castable(cardId: string): boolean {
     const d = this.session.state.step?.pending;
     return this.session.state.phase === "playing" && d?.kind === "PRIORITY"
-      && d.options.some((o) => o.ref?.type === "ability" && o.ref.cardId === cardId);
+      && d.options.some((o) => o.ref?.type === "ability" && o.ref.cardId === cardId && o.ref.abilityKind !== "mana");
   }
 
   private setupQuickActions() {
@@ -514,8 +514,9 @@ export class PlayPage {
 
   /** 1 つの盤面の要素に複数の選択肢があればメニューを出す */
   private pick(opts: Option[], i: Interaction, key: string) {
-    // 起動型能力は、1 つしか無くてもメニューから選ぶ（プレインズウォーカーの能力と同じ。押しただけで起動しない）
-    const activated = i.decision.kind === "PRIORITY" && opts.some((o) => o.ref?.type === "ability" && o.ref.abilityKind === "activated");
+    // 起動型能力・マナ能力は、1 つしか無くてもメニューから選ぶ（プレインズウォーカーの能力と同じ。押しただけで起動しない）
+    const activated = i.decision.kind === "PRIORITY"
+      && opts.some((o) => o.ref?.type === "ability" && (o.ref.abilityKind === "activated" || o.ref.abilityKind === "mana"));
     if (opts.length === 1 && !activated) {
       this.choose(opts[0], i);
       return;

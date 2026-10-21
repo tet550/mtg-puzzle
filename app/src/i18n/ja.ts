@@ -181,6 +181,7 @@ export const ja = {
   "opt.cast": "唱える",
   "opt.castWith": "唱える: {desc}",
   "opt.activate": "起動: {desc}",
+  "opt.mana": "マナを出す: {desc}",
   "opt.pass": "パス",
   "opt.auto": "自動で支払う",
   "opt.cancel": "取りやめ",

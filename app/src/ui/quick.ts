@@ -45,7 +45,8 @@ export function macroAnswer(m: Macro, d: Decision, view: GameView): string[] | n
       // 解決した・取りやめた・ほかの物が一番上に来た（誘発など）: ここから先は人が進める
       if (m.started || m.cast || onStack) return "end";
       // まだ唱えていない: そのカードの呪文（無ければ、ただ 1 つの起動型能力）を選ぶ
-      const opts = d.options.filter((o) => o.ref?.type === "ability" && o.ref.cardId === m.cardId);
+      // マナ能力は数えない（マナは支払いのときに自動で出す）
+      const opts = d.options.filter((o) => o.ref?.type === "ability" && o.ref.cardId === m.cardId && o.ref.abilityKind !== "mana");
       const pick = m.optionId
         ? opts.find((o) => o.id === m.optionId) ?? null
         : opts.find((o) => o.ref?.type === "ability" && o.ref.abilityKind === "spell") ?? (opts.length === 1 ? opts[0] : null);

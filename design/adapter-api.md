@@ -170,13 +170,14 @@ interface Option { id: string; label: string; labelJa: string | null; ref: Ref |
 type Ref =
   | { type: "card"; cardId: InstanceId }
   | { type: "player"; player: PlayerId }
-  | { type: "ability"; cardId: InstanceId; abilityKind: "spell" | "activated" | "land" }
+  | { type: "ability"; cardId: InstanceId; abilityKind: "spell" | "activated" | "mana" | "land" }
   | { type: "stack"; index: number }
   | { type: "special"; value: "pass" | "auto" | "cancel" | "yes" | "no" };
 ```
 
 - `id` は選択要求の中だけで意味を持つ（次の選択要求では同じ ID が別のものを指しうる）。UI は `ref` で盤面のカードと結び付ける。
 - PRIORITY では、1 枚のカードに複数の選択肢（呪文として唱える／起動型能力など）が付くことがある。
+- PRIORITY にはマナ能力（`abilityKind: "mana"`）も入る。起動するとスタックを使わずに解決し、出たマナはマナプールに残って、同じ優先権で続けて問い合わせる（ステップの終わりに消える）。好きな色を出す能力は色を CHOOSE_MODE で問い合わせる。呪文の支払いでは、まずマナプールのマナを使い、足りない分だけ PAY_MANA を出す。
 
 ### 出来事（GameEvent）
 

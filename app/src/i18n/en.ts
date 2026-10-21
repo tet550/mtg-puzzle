@@ -175,6 +175,7 @@ export const en: Messages = {
   "opt.cast": "Cast",
   "opt.castWith": "Cast: {desc}",
   "opt.activate": "Activate: {desc}",
+  "opt.mana": "Add mana: {desc}",
   "opt.pass": "Pass",
   "opt.auto": "Pay automatically",
   "opt.cancel": "Cancel",

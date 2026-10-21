@@ -55,6 +55,10 @@ class ExternalPlayerController extends BaseAdapterController {
     private final Map<SpellAbility, Boolean> autoPay = new IdentityHashMap<>();
     /** 最初の優先権は、どのステップでも問い合わせる（問題の開始時点） */
     private boolean askedPriority;
+    /** 優先権でマナ能力を起動した。マナ能力はスタックを使わず優先権が戻るので、次も問い合わせる */
+    private boolean keepPriority;
+    /** 優先権で起動したマナ能力。これが出すマナの色はプレイヤーに問い合わせる（支払いのときは ManaPayer が色を絞る） */
+    private SpellAbility manaFromPriority;
 
     ExternalPlayerController(Game game, Player p, LobbyPlayer lp, DecisionChannel channel, FallbackLog fallbackLog) {
         super(game, p, lp, fallbackLog);
@@ -97,6 +101,9 @@ class ExternalPlayerController extends BaseAdapterController {
     private static String abilityKind(SpellAbility sa) {
         if (sa.isLandAbility()) {
             return "land";
+        }
+        if (sa.isManaAbility()) {
+            return "mana";
         }
         return sa.isSpell() ? "spell" : "activated";
     }
@@ -141,24 +148,39 @@ class ExternalPlayerController extends BaseAdapterController {
         List<Decision.Option> options = new ArrayList<>();
         options.add(special("pass", "Pass priority"));
         for (Card c : getGame().getCardsInGame()) {
+            // マナ能力も選べる（先にマナを出しておく・生け贄などの副作用を使う）。支払いのときにも PAY_MANA で起動できる
             for (SpellAbility sa : c.getAllPossibleAbilities(player, true)) {
-                if (sa.isManaAbility()) {
-                    continue; // マナ能力は支払いのときに起動する
-                }
                 playable.add(sa);
                 String ja = Ja.with(sa::toString);
                 options.add(new Decision.Option("a" + (playable.size() - 1), c.getName() + " | " + sa,
                         Decision.Ref.ability(c.getId(), abilityKind(sa)), ja == null ? null : Ja.name(c.getName()) + " | " + ja));
             }
         }
-        if (askedPriority && getGame().getStack().isEmpty() && !isStop()) {
+        if (askedPriority && !keepPriority && getGame().getStack().isEmpty() && !isStop()) {
             return null;
         }
         askedPriority = true;
         List<String> answer = channel.ask(Decision.Kind.PRIORITY,
                 Decision.Prompt.of(getGame().getPhaseHandler().debugPrintState(true), "priority"), options, 1, 1);
         String id = answer.get(0);
-        return id.equals("pass") ? null : List.of(playable.get(Integer.parseInt(id.substring(1))));
+        SpellAbility chosen = id.equals("pass") ? null : playable.get(Integer.parseInt(id.substring(1)));
+        keepPriority = chosen != null && chosen.isManaAbility();
+        return chosen == null ? null : List.of(chosen);
+    }
+
+    @Override
+    public boolean playChosenSpellAbility(SpellAbility sa) {
+        manaFromPriority = sa.isManaAbility() ? sa : null;
+        try {
+            return super.playChosenSpellAbility(sa);
+        } finally {
+            manaFromPriority = null;
+        }
+    }
+
+    /** 優先権で起動したマナ能力から呼ばれたとき（支払いの外）は、色を問い合わせる */
+    private boolean asksManaColor(SpellAbility sa) {
+        return sa == null || !sa.isManaAbility() || (manaFromPriority != null && sa.getRootAbility() == manaFromPriority);
     }
 
     private boolean isStop() {
@@ -273,9 +295,9 @@ class ExternalPlayerController extends BaseAdapterController {
     // ---------- 色・コストの順 ----------
 
     /**
-     * 色を選ぶ。マナ能力から呼ばれたとき（2 色以上を出せる土地など）は、ManaPayer が候補を「支払いに使える色」に
+     * 色を選ぶ。支払いの中でマナ能力から呼ばれたとき（2 色以上を出せる土地など）は、ManaPayer が候補を「支払いに使える色」に
      * 絞ってから呼ばれるので、どれを出しても支払える。先頭を返し、未対応の選択として記録しない。
-     * それ以外（「色を 1 つ選ぶ」効果）はプレイヤーに問い合わせる
+     * それ以外（「色を 1 つ選ぶ」効果、優先権で起動したマナ能力）はプレイヤーに問い合わせる
      */
     @Override
     public byte chooseColor(String message, SpellAbility sa, ColorSet colors) {
@@ -284,7 +306,7 @@ class ExternalPlayerController extends BaseAdapterController {
         }
         List<Byte> options = new ArrayList<>();
         colors.iterator().forEachRemaining(c -> options.add(c.getColorMask()));
-        if (options.size() == 1 || (sa != null && sa.isManaAbility())) {
+        if (options.size() == 1 || !asksManaColor(sa)) {
             return options.get(0);
         }
         List<Decision.Option> opts = new ArrayList<>();
@@ -295,7 +317,25 @@ class ExternalPlayerController extends BaseAdapterController {
         return options.get(Integer.parseInt(id.substring(1)));
     }
 
-    private static final Map<String, String> COLOR_JA = Map.of("white", "白", "blue", "青", "black", "黒", "red", "赤", "green", "緑");
+    /**
+     * 2 つ以上のマナの色の組み合わせ（「好きな色の組み合わせのマナ 2 点」など）。支払いでは ManaPayer が色を決めるので、
+     * 呼ばれるのは優先権で起動したときだけ。1 点ずつ色を問い合わせる（different なら選んだ色は候補から外す）
+     */
+    @Override
+    public Map<Byte, Integer> specifyManaCombo(SpellAbility sa, ColorSet colorSet, int manaAmount, boolean different) {
+        Map<Byte, Integer> out = new java.util.LinkedHashMap<>();
+        ColorSet left = colorSet;
+        for (int i = 0; i < manaAmount && !left.isColorless(); i++) {
+            byte c = chooseColor("Choose a color (" + (i + 1) + "/" + manaAmount + ")", sa, left);
+            out.merge(c, 1, Integer::sum);
+            if (different) {
+                left = ColorSet.fromMask(left.getColor() & ~c);
+            }
+        }
+        return out;
+    }
+
+    private static final Map<String, String> COLOR_JA =Map.of("white", "白", "blue", "青", "black", "黒", "red", "赤", "green", "緑");
 
     /** 同時に当てはまる置換効果・常在型能力のうち、どれを先に適用するか */
     @Override

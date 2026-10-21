@@ -40,11 +40,15 @@ export function refKey(o: Option): string | null {
   return null;
 }
 
-/** 盤面の印: 候補は cand、選んだものは chosen */
+/**
+ * 盤面の印: 候補は cand、選んだものは chosen。
+ * マナ能力しか無いもの（優先権のときの土地など）は印を付けない（押せば起動できるが、毎回すべての土地が光るとうるさい）
+ */
 export function marksOf(i: Interaction | null, selected: Set<string>): Map<string, Mark> {
   const m = new Map<string, Mark>();
   if (!i) return m;
   for (const [key, opts] of i.onBoard) {
+    if (opts.every((o) => o.ref?.type === "ability" && o.ref.abilityKind === "mana")) continue;
     m.set(key, opts.some((o) => selected.has(o.id)) ? "chosen" : "cand");
   }
   return m;
@@ -59,6 +63,7 @@ export function optionLabel(o: Option): string {
     const desc = localized(after(o.label), o.labelJa ? after(o.labelJa) : null);
     if (r.abilityKind === "land") return t("opt.land");
     if (r.abilityKind === "spell") return shorten(desc) ? t("opt.castWith", { desc: shorten(desc) }) : t("opt.cast");
+    if (r.abilityKind === "mana") return t("opt.mana", { desc: shorten(desc) });
     return t("opt.activate", { desc: shorten(desc) });
   }
   if (r?.type === "special") {

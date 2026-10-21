@@ -69,7 +69,7 @@ public record Decision(int seq, Kind kind, String prompt, List<Option> options, 
 
     /**
      * 選択肢が指すもの。
-     * type: card（forgeId）/ player（player）/ ability（forgeId のカードの能力。abilityKind は spell / activated / land）
+     * type: card（forgeId）/ player（player）/ ability（forgeId のカードの能力。abilityKind は spell / activated / mana / land）
      *       / stack（stackIndex。0 が一番上）/ special（pass / auto / cancel / yes / no）
      */
     public record Ref(String type, int forgeId, String player, String abilityKind, int stackIndex, String special) {
