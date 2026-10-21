@@ -15,6 +15,13 @@
         <!-- Forge の res ディレクトリ（cardsfolder, editions など） -->
         <forge.res>${project.basedir}/../forge/forge-gui/res</forge.res>
         <extraArgLine></extraArgLine>
+        <!-- CheerpJ で止まらない形に書き換えた Forge のクラス（design/forge-overlay.md）。ビルドのたびに Forge のソースから作る -->
+        <forge.src>${project.basedir}/../forge</forge.src>
+        <forge.overlay.dir>${project.build.directory}/generated-sources/forge-overlay</forge.overlay.dir>
+        <!-- off で上書きなし（CheerpJ の不具合が直ったかを確かめるとき。ForgeOverlayTest は失敗する） -->
+        <forge.overlay>on</forge.overlay>
+        <!-- Windows で python3 が無ければ -Dpython=python など -->
+        <python>python3</python>
     </properties>
 
     <dependencies>
@@ -34,6 +41,49 @@
 
     <build>
         <plugins>
+            <!-- Forge のクラスの上書きを生成する（tools/forge-overlay/generate.py）。形が想定と違えばビルドを止める -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <execution>
+                        <id>forge-overlay</id>
+                        <phase>generate-sources</phase>
+                        <goals><goal>exec</goal></goals>
+                        <configuration>
+                            <executable>${python}</executable>
+                            <arguments>
+                                <argument>${project.basedir}/../../tools/forge-overlay/generate.py</argument>
+                                <argument>--forge</argument>
+                                <argument>${forge.src}</argument>
+                                <argument>--version</argument>
+                                <argument>${forge.version}</argument>
+                                <argument>--out</argument>
+                                <argument>${forge.overlay.dir}</argument>
+                                <argument>--overlay</argument>
+                                <argument>${forge.overlay}</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- 生成したソースを、forge-adapter のソースとしてコンパイルする（jar で forge-game の同じクラスより前に来る） -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.6.0</version>
+                <executions>
+                    <execution>
+                        <id>forge-overlay-source</id>
+                        <phase>generate-sources</phase>
+                        <goals><goal>add-source</goal></goals>
+                        <configuration>
+                            <sources><source>${forge.overlay.dir}</source></sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>

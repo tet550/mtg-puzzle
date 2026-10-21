@@ -451,6 +451,7 @@ public final class ForgeSession implements AutoCloseable {
         } else if (s instanceof DecisionChannel.Failed f) {
             finish(Status.ERROR, "エンジン異常: " + f.error());
             f.error().printStackTrace();
+            printGameThreadStack();
         }
         List<Map<String, Object>> ev;
         synchronized (eventBuffer) {
@@ -458,6 +459,32 @@ public final class ForgeSession implements AutoCloseable {
             eventBuffer.clear();
         }
         return new StepResult(status, reason, pending, ev, (System.nanoTime() - t0) / 1_000_000);
+    }
+
+    /** 直近の Forge のイベント（応答しないときに、どこまで進んだかを出すため） */
+    private final java.util.ArrayDeque<GameEvent> recentEvents = new java.util.ArrayDeque<>();
+    private long eventCount;
+
+    /** 応答しないときに、ゲームスレッドがどこで止まっているかを出す（ブラウザではコンソールに出る） */
+    private void printGameThreadStack() {
+        Thread t = gameThread;
+        if (t == null || !t.isAlive()) {
+            return;
+        }
+        synchronized (recentEvents) {
+            System.err.println("ゲームスレッド " + t.getName() + " (" + t.getState() + ") events=" + eventCount + " 直近:");
+            for (GameEvent e : recentEvents) {
+                String s = e.getClass().getSimpleName() + " " + e;
+                System.err.println("\t" + (s.length() > 160 ? s.substring(0, 160) : s));
+            }
+        }
+        try {
+            for (StackTraceElement e : t.getStackTrace()) {
+                System.err.println("\tat " + e);
+            }
+        } catch (RuntimeException e) {
+            System.err.println("\t（スタックを取れない: " + e + "）"); // CheerpJ は別スレッドのスタックを取れない
+        }
     }
 
     private void judgeGameOver() {
@@ -513,6 +540,13 @@ public final class ForgeSession implements AutoCloseable {
     public final class EventListener {
         @Subscribe
         public void on(GameEvent e) {
+            synchronized (recentEvents) {
+                eventCount++;
+                if (recentEvents.size() == 40) {
+                    recentEvents.removeFirst();
+                }
+                recentEvents.addLast(e);
+            }
             boolean wasExceeded = deadlineExceeded;
             if (e instanceof GameEventTurnBegan tb) {
                 if (startTurn > 0 && tb.turnNumber() > startTurn) {

@@ -10,6 +10,7 @@
 | JDK | 21 以上（Forge の要件は 17 以上）。`JAVA_HOME` で指定する |
 | Maven | 3.9 以上 |
 | Node.js | 24（検証ページのサーバーと計測スクリプト） |
+| Python | 3（forge-adapter のビルドで、Forge のクラスの上書きを生成する。[../design/forge-overlay.md](../design/forge-overlay.md)） |
 
 導入の例:
 - macOS: `brew install openjdk@21 maven node@24`。`JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home`
@@ -42,6 +43,8 @@ mvn -B -f prototype/forge/pom.xml -pl forge-ai -am install -DskipTests -Dcheckst
 ## forge-adapter（V1）
 
 GUI なしで Forge を外部から操作する Adapter と、検証シナリオのテスト。問題データは [puzzles/](puzzles/) にある。
+
+ビルドのときに、Forge の `Card` を CheerpJ で止まらない形に書き換えたものを生成し、forge-game の `Card` を上書きする。理由と、Forge を更新するときの手順は [../design/forge-overlay.md](../design/forge-overlay.md)。
 
 ```bash
 mvn -B -f prototype/forge-adapter/pom.xml test
