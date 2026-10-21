@@ -27,17 +27,9 @@ public final class WebApi {
         return run(() -> {
             Map<String, Object> r = new LinkedHashMap<>();
             long t0 = System.currentTimeMillis();
-            // 展開済み（同じサイズの zip）なら展開を省く。CheerpJ の /files は IndexedDB に永続化されるため 2 回目以降に効く
-            Path marker = Path.of(extractDir, ".bundle-size");
-            String size = String.valueOf(Files.size(Path.of(zipPath)));
-            boolean cached = Files.exists(marker) && Files.readString(marker).equals(size);
-            if (!cached) {
-                deleteRecursively(Path.of(extractDir)); // 古いバンドルのファイルが残らないように
-            }
-            int files = cached ? 0 : unzip(Path.of(zipPath), Path.of(extractDir));
-            if (!cached) {
-                Files.writeString(marker, size);
-            }
+            int n = extract(zipPath, extractDir);
+            boolean cached = n < 0;
+            int files = Math.max(n, 0);
             r.put("extractMs", System.currentTimeMillis() - t0);
             r.put("extractCached", cached);
             r.put("files", files);
@@ -48,6 +40,87 @@ public final class WebApi {
             r.put("heapUsedMB", (rt.totalMemory() - rt.freeMemory()) / (1024 * 1024));
             return r;
         });
+    }
+
+    /**
+     * 共通の res バンドル（カードを含まない zip。CardData が作る）を展開する。Forge の初期化は useCards で行う。
+     * 展開済みなら省く（init と同じ）
+     */
+    public static String prepare(String zipPath, String extractDir) {
+        return run(() -> {
+            Map<String, Object> r = new LinkedHashMap<>();
+            long t0 = System.currentTimeMillis();
+            r.put("extractCached", extract(zipPath, extractDir) < 0);
+            r.put("extractMs", System.currentTimeMillis() - t0);
+            resDir = extractDir;
+            cardsKey = null;
+            return r;
+        });
+    }
+
+    /**
+     * 問題で使うカードのデータ（ブラウザがカードデータから抜き出したもの）を res に書き、Forge を初期化し直す。
+     * 引数: {"key": カードの組の識別子, "cards": [{"f": ファイル名, "s": スクリプト}], "editions": {ファイル名: 中身},
+     *        "tokens": {トークン名: スクリプト}, "ja": 訳の行}
+     * key が前回と同じなら何もしない（同じ問題のやり直し）
+     */
+    @SuppressWarnings("unchecked")
+    public static String useCards(String cardsJson) {
+        return run(() -> {
+            if (resDir == null) {
+                throw new ApiException("NOT_LOADED", "prepare が呼ばれていません");
+            }
+            Map<String, Object> data = Json.parseObject(cardsJson);
+            String key = String.valueOf(data.get("key"));
+            Map<String, Object> r = new LinkedHashMap<>();
+            if (key.equals(cardsKey)) {
+                r.put("reused", true);
+                return r;
+            }
+            if (session != null) {
+                session.close();
+                session = null;
+            }
+            long t0 = System.currentTimeMillis();
+            Path res = Path.of(resDir);
+            for (String dir : new String[] {"cardsfolder", "editions", "tokenscripts"}) {
+                deleteRecursively(res.resolve(dir));
+                Files.createDirectories(res.resolve(dir));
+            }
+            List<Map<String, Object>> cards = (List<Map<String, Object>>) data.get("cards");
+            for (Map<String, Object> c : cards) {
+                Files.writeString(safe(res.resolve("cardsfolder"), String.valueOf(c.get("f"))), String.valueOf(c.get("s")));
+            }
+            for (Map.Entry<String, Object> e : ((Map<String, Object>) data.get("editions")).entrySet()) {
+                Files.writeString(safe(res.resolve("editions"), e.getKey()), String.valueOf(e.getValue()));
+            }
+            for (Map.Entry<String, Object> e : ((Map<String, Object>) data.getOrDefault("tokens", Map.of())).entrySet()) {
+                Files.writeString(safe(res.resolve("tokenscripts"), e.getKey() + ".txt"), String.valueOf(e.getValue()));
+            }
+            Files.createDirectories(res.resolve("languages"));
+            Files.writeString(res.resolve("languages").resolve("cardnames-ja-JP.txt"), String.valueOf(data.getOrDefault("ja", "")));
+            r.put("writeMs", System.currentTimeMillis() - t0);
+            cardsKey = null; // 初期化に失敗したら、次は必ずやり直す
+            ForgeRuntime.reload(resDir);
+            cardsKey = key;
+            r.put("reused", false);
+            r.put("cards", cards.size());
+            r.put("initMs", ForgeRuntime.getInitMillis());
+            r.put("initPhases", new java.util.TreeMap<>(ForgeRuntime.getInitPhases()));
+            return r;
+        });
+    }
+
+    private static String resDir;
+    private static String cardsKey;
+
+    /** dir の直下のファイル（名前に区切りや .. を含むものは受け付けない） */
+    private static Path safe(Path dir, String name) {
+        Path p = dir.resolve(name).normalize();
+        if (!p.getParent().equals(dir.normalize())) {
+            throw new PuzzleValidationException("ファイル名が不正です: " + name);
+        }
+        return p;
     }
 
     /** API と Forge のバージョン。UI は api が想定と違えば読み込みをやめる */
@@ -101,7 +174,7 @@ public final class WebApi {
         return run(() -> view(loaded()));
     }
 
-    static final int API_VERSION = 1;
+    static final int API_VERSION = 2;
     static final String FORGE_VERSION = "2.0.15";
 
     private static ForgeSession loaded() {
@@ -323,6 +396,22 @@ public final class WebApi {
             return "INVALID_ANSWER";
         }
         return "INTERNAL";
+    }
+
+    /**
+     * zip を展開する（展開したファイル数）。展開済み（同じサイズの zip）なら省いて -1。
+     * CheerpJ の /files は IndexedDB に永続化されるため 2 回目以降に効く
+     */
+    private static int extract(String zipPath, String extractDir) throws IOException {
+        Path marker = Path.of(extractDir, ".bundle-size");
+        String size = String.valueOf(Files.size(Path.of(zipPath)));
+        if (Files.exists(marker) && Files.readString(marker).equals(size)) {
+            return -1;
+        }
+        deleteRecursively(Path.of(extractDir)); // 古いバンドルのファイルが残らないように
+        int n = unzip(Path.of(zipPath), Path.of(extractDir));
+        Files.writeString(marker, size);
+        return n;
     }
 
     private static void deleteRecursively(Path dir) throws IOException {

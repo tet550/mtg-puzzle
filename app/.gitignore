@@ -1,8 +1,9 @@
 node_modules/
 dist/
-# tools/build-engine.sh が作る（jar・res バンドル・プリロード一覧）
+# tools/build-engine.sh が作る（jar・res バンドル・カードデータ・プリロード一覧）
 public/engine/*.jar
 public/engine/*.zip
+public/engine/*.json.gz
 public/engine/preload.json
 public/engine/manifest.json
 test-results/

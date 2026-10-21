@@ -37,7 +37,7 @@ public final class Solver {
 
     public static void main(String[] args) throws Exception {
         if (args[0].equals("--verify")) {
-            System.exit(verify(args[1], args[2], Path.of(args[3])));
+            System.exit(verify(args[1], args[2], Path.of(args[3]), args.length > 4 ? Path.of(args[4]) : null));
         }
         ForgeRuntime.init(args[0], true);
         Path dir = Path.of(args[1]);
@@ -79,10 +79,18 @@ public final class Solver {
     /**
      * --verify: res バンドル（zip）で初期化し、解答手順のある問題を WebApi 経由で解き直す。
      * 縮めた jar と、問題のカードだけの res で解けることを確かめる（tools/build-engine.sh から呼ぶ）。
+     * カードデータ（CardData）を渡したときは、zip を共通の res として、問題ごとにカードを抜き出して
+     * WebApi.useCards で初期化し直す（ブラウザと同じ流れ。問題を続けて読むので、初期化し直しの確かめにもなる）。
      */
     @SuppressWarnings("unchecked")
-    private static int verify(String zip, String extractDir, Path dir) throws Exception {
-        System.out.println(WebApi.init(zip, extractDir));
+    private static int verify(String zip, String extractDir, Path dir, Path cardData) throws Exception {
+        Map<String, Object> cards = null;
+        if (cardData == null) {
+            System.out.println(WebApi.init(zip, extractDir));
+        } else {
+            System.out.println(WebApi.prepare(zip, extractDir));
+            cards = CardData.load(cardData);
+        }
         List<Path> files;
         try (Stream<Path> s = Files.list(dir)) {
             files = s.filter(f -> f.toString().endsWith(".solution.json")).sorted().toList();
@@ -91,7 +99,17 @@ public final class Solver {
         for (Path f : files) {
             Map<String, Object> sol = Json.parseObject(Files.readString(f));
             String name = String.valueOf(sol.get("puzzle"));
-            Map<String, Object> step = Json.parseObject(WebApi.load(Files.readString(dir.resolve(name + ".json"))));
+            String puzzle = Files.readString(dir.resolve(name + ".json"));
+            if (cards != null) {
+                Map<String, Object> used = Json.parseObject(WebApi.useCards(
+                        CardData.select(cards, CardData.cardNames(PuzzleDefinition.fromJson(puzzle)))));
+                if (used.containsKey("error")) {
+                    failed++;
+                    System.out.println("NG   " + name + " -> " + used.get("error"));
+                    continue;
+                }
+            }
+            Map<String, Object> step = Json.parseObject(WebApi.load(puzzle));
             String why = null;
             for (Map<String, Object> st : (List<Map<String, Object>>) sol.get("steps")) {
                 if (step.containsKey("error")) {

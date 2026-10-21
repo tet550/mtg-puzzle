@@ -34,6 +34,18 @@ public final class ForgeRuntime {
         if (initialized) {
             return;
         }
+        initNow(resDir, lazyCards);
+    }
+
+    /**
+     * res の中身（cardsfolder・editions・日本語の訳）を差し替えた後に、静的データを作り直す。
+     * URL の問題では問題ごとにカードが違うので、問題を開くたびに呼ぶ（WebApi.useCards）
+     */
+    public static synchronized void reload(String resDir) {
+        initNow(resDir, false);
+    }
+
+    private static void initNow(String resDir, boolean lazyCards) {
         long start = System.currentTimeMillis();
         phases.clear();
         lastMark = start;
@@ -86,7 +98,7 @@ public final class ForgeRuntime {
             CardType.Constant.LOADED.set();
         }
         for (String s : FileUtil.readFile(res + "lists" + File.separator + "NonStackingKWList.txt")) {
-            if (s.length() > 1) {
+            if (s.length() > 1 && !CardUtil.NON_STACKING_LIST.contains(s)) {
                 CardUtil.NON_STACKING_LIST.add(s);
             }
         }

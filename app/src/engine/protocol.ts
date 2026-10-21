@@ -1,6 +1,6 @@
-// Forge Adapter API v1 の型（design/adapter-api.md と同じ）。Java の WebApi が返す JSON の形。
+// Forge Adapter API v2 の型（design/adapter-api.md と同じ）。Java の WebApi が返す JSON の形。
 
-export const API_VERSION = 1;
+export const API_VERSION = 2;
 
 export type PlayerId = string;
 /** 問題のカードのインスタンス ID。問題に無いカード（トークンなど）は "f" + Forge の ID */
@@ -29,6 +29,23 @@ export interface InitResult {
   initMs: number;
   initPhases: Record<string, number>;
   heapUsedMB: number;
+}
+
+export interface PrepareResult {
+  extractMs: number;
+  extractCached: boolean;
+}
+
+/** 問題のカードで Forge を初期化し直した結果（reused: 前回と同じカードの組なので何もしなかった） */
+export interface UseCardsResult {
+  reused: boolean;
+  cards?: number;
+  writeMs?: number;
+  initMs?: number;
+  initPhases?: Record<string, number>;
+  /** Worker での計測: カードデータの読み込み（初回だけ）と全体 */
+  fetchMs?: number;
+  totalMs?: number;
 }
 
 export type EngineState =
@@ -160,7 +177,7 @@ export type GameEvent =
   | { type: "gameOver"; winner: PlayerId | null };
 
 /** Worker とメインスレッドの間のメッセージ */
-export type WorkerMethod = "boot" | "init" | "version" | "load" | "submit" | "reset" | "state" | "heap";
+export type WorkerMethod = "boot" | "init" | "prepare" | "useCards" | "version" | "load" | "submit" | "reset" | "state" | "heap";
 
 export interface WorkerRequest {
   id: number;

@@ -1,4 +1,4 @@
-# Forge Adapter API v1
+# Forge Adapter API v2
 
 対象: [phase1-plan.md](phase1-plan.md) の M1（Phase 0 の A7）
 実装: `prototype/forge-adapter`（Java の `WebApi`）。TS 側のクライアントは `app/src/engine/` に置く。
@@ -12,7 +12,9 @@
 | メソッド | 引数 | 戻り値 |
 |---|---|---|
 | `version()` | なし | `VersionInfo` |
-| `init(zipPath, extractDir)` | res バンドルの zip（`/app/...`）と展開先（`/files/...`） | `InitResult` |
+| `prepare(zipPath, extractDir)` | 共通の res バンドル（カードを含まない zip。`/app/...`）と展開先（`/files/...`）。Forge の初期化はしない | `PrepareResult` |
+| `useCards(cardsJson)` | 問題のカードのデータ（下記）。res に書いて Forge を初期化し直す。前回と同じ `key` なら何もしない | `UseCardsResult` |
+| `init(zipPath, extractDir)` | 問題のカードを含む res バンドル（`ResBundler`）で初期化する。v1 の方式。JVM の確かめ・プロトタイプ用 | `InitResult` |
 | `load(puzzleJson)` | 問題データ（schemaVersion 1）の JSON | `StepResult` |
 | `submit(optionIdsJson)` | 選んだ選択肢の ID の配列（JSON） | `StepResult` |
 | `reset()` | なし | `StepResult`（初期盤面から作り直す） |
@@ -36,7 +38,23 @@ type ErrorCode =
   | "NOT_LOADED"       // load の前に submit / reset / state を呼んだ
   | "INTERNAL";        // それ以外（Java の例外）
 
-interface VersionInfo { api: 1; forge: string }
+interface VersionInfo { api: 2; forge: string }
+
+interface PrepareResult { extractMs: number; extractCached: boolean }
+
+// useCards の引数。ブラウザ（Worker）がカードデータから抜き出して作る（carddata-runtime.md）
+interface CardsInput {
+  key: string;                       // カードの組の識別子（問題のカード名を小文字にして並べたもの）
+  cards: { f: string; s: string }[]; // cardsfolder のファイル名とスクリプト
+  editions: Record<string, string>;  // editions のファイル名と中身
+  tokens: Record<string, string>;    // トークン名とスクリプト
+  ja: string;                        // cardnames-ja-JP.txt の、これらのカードの行
+}
+
+interface UseCardsResult {
+  reused: boolean;                   // true なら前回と同じカードの組なので何もしなかった
+  cards?: number; writeMs?: number; initMs?: number; initPhases?: Record<string, number>;
+}
 
 interface InitResult {
   extractMs: number; extractCached: boolean; files: number;

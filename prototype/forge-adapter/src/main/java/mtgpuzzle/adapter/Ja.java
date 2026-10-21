@@ -20,9 +20,12 @@ final class Ja {
 
     private Ja() { }
 
-    /** 日本語の訳を読み込む（res/languages/cardnames-ja-JP.txt が無ければ何もしない。日本語の文は null になる） */
+    /**
+     * 日本語の訳を読み込む（res/languages/cardnames-ja-JP.txt が無ければ何もしない。日本語の文は null になる）。
+     * カードを差し替えて初期化し直すときは、訳も読み直す
+     */
     static synchronized void init(String languagesDir) {
-        if (language != null || !new File(languagesDir, "cardnames-ja-JP.txt").exists()) {
+        if (!new File(languagesDir, "cardnames-ja-JP.txt").exists()) {
             return;
         }
         try {
