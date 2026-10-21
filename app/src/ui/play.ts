@@ -1,6 +1,6 @@
 // パズルを遊ぶ画面。PuzzleSession の状態を描き、盤面と操作の欄からの入力を回答にして送る。
 
-import type { EngineStatus, ForgeEngine } from "../engine/client";
+import { puzzleCardNames, type EngineStatus, type ForgeEngine } from "../engine/client";
 import type { CardView, GameEvent, GameView, Option } from "../engine/protocol";
 import { markCleared } from "../puzzle/catalog";
 import { verdictText } from "../puzzle/judge";
@@ -13,7 +13,7 @@ import { manaNodes } from "./mana";
 import { icon, type IconName } from "./icons";
 import { buildInteraction, marksOf, optionLabel, type Interaction } from "./decision";
 import { h } from "./dom";
-import { cardImage, displayName, imagesEnabled, printedText, setImagesEnabled } from "./images";
+import { cardImage, displayName, ensureCardImages, imagesEnabled, printedText, setImagesEnabled } from "./images";
 import { t, type MessageKey } from "../i18n";
 import { langSwitch } from "./lang";
 import { decisionPrompt, eventText, passLabel, phaseName } from "./text";
@@ -57,6 +57,7 @@ export class PlayPage {
   private playing = false;
   private dirty = false;
   private lastStep: SessionState["step"] = null;
+  private disposed = false;
 
   constructor(engine: ForgeEngine, private readonly puzzleId: string, private readonly onBack: () => void) {
     this.el = h("div.play");
@@ -68,6 +69,8 @@ export class PlayPage {
   }
 
   async load(data: unknown) {
+    // 画像の一覧に無いカードは Scryfall で引く（問題の読み込みと並行。分かったら描き直す）
+    void ensureCardImages(puzzleCardNames(data)).then((changed) => { if (changed && !this.disposed) this.render(); });
     await this.session.open(data);
   }
 
@@ -83,6 +86,7 @@ export class PlayPage {
   }
 
   dispose() {
+    this.disposed = true;
     this.unsubs.forEach((u) => u());
     document.removeEventListener("keydown", this.onKey);
     window.removeEventListener("pointermove", this.onDragMove);
