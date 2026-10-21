@@ -17,6 +17,7 @@ import { cardImage, displayName, imagesEnabled, printedText, setImagesEnabled } 
 import { t, type MessageKey } from "../i18n";
 import { langSwitch } from "./lang";
 import { decisionPrompt, eventText, passLabel, phaseName } from "./text";
+import { capture, motionEnabled, play, setMotionEnabled, skip, verdictStamp } from "./motion";
 
 const VIEWER = "p1";
 
@@ -32,6 +33,8 @@ export class PlayPage {
   private logOpen = window.matchMedia("(min-width: 901px)").matches;
   private menu: { x: number; y: number; options: Option[] } | null = null;
   private readonly names = new Map<string, string>();
+  /** 最後に見えていたカードの姿（スタックに積んだ呪文のカードを出すため） */
+  private readonly known = new Map<string, CardView>();
   private readonly unsubs: (() => void)[] = [];
   private flashTimer = 0;
   private lastHistoryLength = 0;
@@ -49,6 +52,11 @@ export class PlayPage {
   private lastPress: { id: string; at: number; x: number; y: number } | null = null;
   /** 畳んでいる小窓（"stack" / "combat" / "play"）。選択要求が変わると開き直す（操作パネルは除く） */
   private minimized = new Set<string>();
+  /** 出来事の演出（motion.ts）。再生中は描き直しを待たせる */
+  private motion = motionEnabled();
+  private playing = false;
+  private dirty = false;
+  private lastStep: SessionState["step"] = null;
 
   constructor(engine: ForgeEngine, private readonly puzzleId: string, private readonly onBack: () => void) {
     this.el = h("div.play");
@@ -82,6 +90,7 @@ export class PlayPage {
     window.removeEventListener("pointercancel", this.onDragCancel);
     if (this.drag) this.endDrag(this.drag);
     window.clearTimeout(this.flashTimer);
+    skip();
   }
 
   private readonly onKey = (e: KeyboardEvent) => {
@@ -91,7 +100,7 @@ export class PlayPage {
 
   private onSession(s: SessionState) {
     if (s.step) {
-      for (const p of s.step.view.players) for (const c of p.cards) this.names.set(c.instanceId, c.name);
+      for (const p of s.step.view.players) for (const c of p.cards) { this.names.set(c.instanceId, c.name); this.known.set(c.instanceId, c); }
       for (const it of s.step.view.stack) if (!this.names.has(it.sourceId)) this.names.set(it.sourceId, it.description);
     }
     if (s.step?.pending?.seq !== this.decisionSeq) {
@@ -101,19 +110,43 @@ export class PlayPage {
       this.minimized.delete("stack");
       this.minimized.delete("combat");
     }
-    // 新しい出来事で変わったカードを短く光らせる（イベントの再生の最小限）
     if (s.history.length < this.lastHistoryLength) this.lastHistoryLength = 0;
     const fresh = s.history.slice(this.lastHistoryLength);
     this.lastHistoryLength = s.history.length;
-    this.flash = changedCards(fresh);
-    if (this.flash.size) {
-      window.clearTimeout(this.flashTimer);
-      this.flashTimer = window.setTimeout(() => { this.flash.clear(); this.render(); }, 900);
+    const prev = this.lastStep;
+    this.lastStep = s.step;
+    // 演出: 前の盤面があって、新しい出来事が来たときだけ（開いた・やり直したときは描くだけ）
+    const animate = this.motion && !!prev && !!s.step && s.step !== prev && fresh.length > 0;
+    if (!animate) {
+      // 演出を切っているときは、新しい出来事で変わったカードを短く光らせるだけ
+      this.flash = this.motion ? new Set() : changedCards(fresh);
+      if (this.flash.size) {
+        window.clearTimeout(this.flashTimer);
+        this.flashTimer = window.setTimeout(() => { this.flash.clear(); this.render(); }, 900);
+      }
     }
     if (s.phase === "finished" && s.verdict.result === "CLEARED") markCleared(this.puzzleId);
     if (s.phase === "finished" || s.phase === "error" || s.phase === "loading") this.macro = null;
+    const before = animate ? capture(this.el) : null;
+    this.playing = false;
     this.render();
-    if (this.macro && s.phase === "playing") queueMicrotask(() => this.stepMacro());
+    const after = () => {
+      if (s.phase === "finished" && prev?.engine.state !== "GAME_OVER") verdictStamp(s.verdict.result === "CLEARED");
+      if (this.macro && s.phase === "playing") queueMicrotask(() => this.stepMacro());
+    };
+    if (!before || !prev || !s.step) {
+      after();
+      return;
+    }
+    this.playing = true;
+    void play({ root: this.el, before, prev: prev.view, next: s.step.view, events: fresh, viewer: VIEWER, known: this.known })
+      .catch((e) => console.error(e))
+      .finally(() => {
+        if (this.session.state !== s) return; // 再生中に次の状態が来た（その状態の描画が済んでいる）
+        this.playing = false;
+        if (this.dirty) this.render();
+        after();
+      });
   }
 
   // ---------------------------------------------------------------- 手早く唱える（ドラッグ・ダブルクリック）
@@ -273,6 +306,12 @@ export class PlayPage {
   // ---------------------------------------------------------------- 描画
 
   private render() {
+    // 演出の再生中は描き直さない（動かしている要素が入れ替わってしまう）。終わってから描く
+    if (this.playing) {
+      this.dirty = true;
+      return;
+    }
+    this.dirty = false;
     const s = this.session.state;
     const view = s.step?.view ?? (s.puzzle ? previewView(s.puzzle) : null);
     const interaction = s.phase === "playing" && s.step?.pending && s.step ? buildInteraction(s.step.pending, s.step.view) : null;
@@ -305,6 +344,8 @@ export class PlayPage {
       h("button", { type: "button", onclick: () => void this.session.reset(), disabled: !s.puzzle || s.phase === "loading" || s.phase === "busy", title: t("header.reset.title") }, t("header.reset")),
       h("button" + (this.images ? ".on" : ""), { type: "button", "aria-pressed": String(this.images), title: t("header.images.title"),
         onclick: () => { this.images = !this.images; setImagesEnabled(this.images); this.render(); } }, t("header.images")),
+      h("button" + (this.motion ? ".on" : ""), { type: "button", "aria-pressed": String(this.motion), title: t("header.motion.title"),
+        onclick: () => { this.motion = !this.motion; setMotionEnabled(this.motion); this.render(); } }, t("header.motion")),
       h("button" + (this.logOpen ? ".on" : ""), { type: "button", onclick: () => { this.logOpen = !this.logOpen; this.render(); }, title: t("header.log.title") }, "Log"),
       langSwitch(),
     );
@@ -312,7 +353,7 @@ export class PlayPage {
     // 盤面の上に浮かぶ小窓（mtgtable と同じ）: スタックは右上、戦闘は右の中ほど、カードの詳細は左上
     const board = view ? renderBoard(view, ui, hooks) : h("section.board");
     if (view && (view.stack.length || view.players.some((p) => p.cards.some((c) => c.zone === "Stack")))) {
-      board.append(this.floatBox("stack", t("stack.title", { n: view.stack.length }), stackBody(view, ui, hooks, this.names)));
+      board.append(this.floatBox("stack", t("stack.title", { n: view.stack.length }), stackBody(view, ui, hooks, this.names, this.known)));
     }
     if (view && view.combat.length) board.append(this.floatBox("combat", t("combat.title"), combatBody(view, ui, hooks)));
     // カードの詳細は盤面の外（画面の一番上の層）に置く。盤面の中だと、狭い画面の下からのシートが操作パネルに隠れる

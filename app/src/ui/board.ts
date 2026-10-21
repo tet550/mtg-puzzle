@@ -119,11 +119,11 @@ function opponentSide(view: GameView, p: PlayerView, ui: BoardUi, hooks: BoardHo
 
   const untapped = lands.filter((c) => !c.tapped).length;
   const summary = h("div.osum", null,
-    summaryChip(t("opp.lands", { n: lands.length, untapped }), "lands", isOpen("lands", lands), lands.length > 0, hooks),
-    h("span.chip", { title: t("opp.hand.title") }, t("opp.hand", { n: p.handCount })),
-    h("span.chip", { title: t("opp.library.title") }, t("opp.library", { n: p.libraryCount })),
-    summaryChip(t("opp.graveyard", { n: gy.length }), "graveyard", isOpen("graveyard", gy), gy.length > 0, hooks),
-    summaryChip(t("opp.exile", { n: ex.length }), "exile", isOpen("exile", ex), ex.length > 0, hooks),
+    summaryChip(t("opp.lands", { n: lands.length, untapped }), "lands", isOpen("lands", lands), lands.length > 0, hooks, p.id),
+    h("span.chip", { title: t("opp.hand.title"), "data-pile": "hand", "data-owner": p.id }, t("opp.hand", { n: p.handCount })),
+    h("span.chip", { title: t("opp.library.title"), "data-pile": "library", "data-owner": p.id }, t("opp.library", { n: p.libraryCount })),
+    summaryChip(t("opp.graveyard", { n: gy.length }), "graveyard", isOpen("graveyard", gy), gy.length > 0, hooks, p.id),
+    summaryChip(t("opp.exile", { n: ex.length }), "exile", isOpen("exile", ex), ex.length > 0, hooks, p.id),
   );
   side.append(summary);
   // 土地以外のパーマネントは自分の側と同じ大きさ（ブロッカー・対象・除去の対象になるため）
@@ -134,9 +134,9 @@ function opponentSide(view: GameView, p: PlayerView, ui: BoardUi, hooks: BoardHo
   return side;
 }
 
-function summaryChip(text: string, key: string, open: boolean, enabled: boolean, hooks: BoardHooks): HTMLElement {
+function summaryChip(text: string, key: string, open: boolean, enabled: boolean, hooks: BoardHooks, owner: string): HTMLElement {
   return h("button.chip.sumchip" + (open ? ".on" : ""), {
-    type: "button", disabled: !enabled, "aria-expanded": String(open),
+    type: "button", disabled: !enabled, "aria-expanded": String(open), "data-pile": key, "data-owner": owner,
     onclick: (ev: Event) => { ev.stopPropagation(); hooks.toggle(key); },
   }, text);
 }
@@ -154,28 +154,29 @@ function mySide(view: GameView, p: PlayerView, ui: BoardUi, hooks: BoardHooks): 
   const hand = p.cards.filter((c) => c.zone === "Hand");
 
   const piles = h("div.piles", null,
-    pile(t("pile.library"), p.libraryCount, null, false, null, ui),
-    pile(t("pile.graveyard"), gy.length, gy[gy.length - 1] ?? null, ui.open.has("my-graveyard") || gy.some((c) => ui.marks.has(c.instanceId)), () => hooks.toggle("my-graveyard"), ui),
-    ex.length ? pile(t("pile.exile"), ex.length, ex[ex.length - 1], ui.open.has("my-exile") || ex.some((c) => ui.marks.has(c.instanceId)), () => hooks.toggle("my-exile"), ui) : null,
+    pile(t("pile.library"), p.libraryCount, null, false, null, ui, "library", p.id),
+    pile(t("pile.graveyard"), gy.length, gy[gy.length - 1] ?? null, ui.open.has("my-graveyard") || gy.some((c) => ui.marks.has(c.instanceId)), () => hooks.toggle("my-graveyard"), ui, "graveyard", p.id),
+    ex.length ? pile(t("pile.exile"), ex.length, ex[ex.length - 1], ui.open.has("my-exile") || ex.some((c) => ui.marks.has(c.instanceId)), () => hooks.toggle("my-exile"), ui, "exile", p.id) : null,
   );
   const field = h("div.field", null,
     h("div.row.bfrow", null, kindGroups(others, p, ui, hooks)),
     h("div.row.bfrow.lands", null, landGroups(lands, ui, hooks)),
   );
   // 手札は土地に少し重ね、欄の下の端で切る（mtgtable と同じ。押すと浮かせて全体を見せる）
-  const handRow = h("div.handbox", null, h("div.hand.fan", { "data-zone": "hand" }, hand.map((c) => cardTile(c, ui, hooks, ".inhand"))));
+  const handRow = h("div.handbox", { "data-pile": "hand", "data-owner": p.id }, h("div.hand.fan", { "data-zone": "hand" }, hand.map((c) => cardTile(c, ui, hooks, ".inhand"))));
   side.append(h("div.sidegrid", null, piles, h("div.sidemain", null, field, handRow)));
   if ((ui.open.has("my-graveyard") || gy.some((c) => ui.marks.has(c.instanceId))) && gy.length) side.append(opened(t("opened.myGraveyard"), gy, ui, hooks));
   if ((ui.open.has("my-exile") || ex.some((c) => ui.marks.has(c.instanceId))) && ex.length) side.append(opened(t("opened.myExile"), ex, ui, hooks));
   return side;
 }
 
-function pile(label: string, count: number, top: CardView | null, open: boolean, onclick: (() => void) | null, ui: BoardUi): HTMLElement {
+function pile(label: string, count: number, top: CardView | null, open: boolean, onclick: (() => void) | null, ui: BoardUi, key: string, owner: string): HTMLElement {
   const url = top ? ui.art(top.name) : null;
   const face = top
-    ? h("div.face", null, url ? h("img", { src: url, alt: displayName(top.name), loading: "lazy" }) : h("div.ftext", null, displayName(top.name)))
+    ? h("div.face", { "data-top": top.instanceId }, url ? h("img", { src: url, alt: displayName(top.name), loading: "lazy" }) : h("div.ftext", null, displayName(top.name)))
     : count ? h("div.face.back") : null;
   return h("div.pile" + (count ? "" : ".empty") + (open ? ".open" : ""), {
+    "data-pile": key, "data-owner": owner,
     onclick: onclick && count ? (ev: Event) => { ev.stopPropagation(); onclick(); } : null,
     title: t("pile.title", { label, n: count }),
   }, h("div.pstack", null, h("div.plabel", null, label), face, h("span.chip.strong.pcount", null, count)));
@@ -262,13 +263,15 @@ export function combatBody(view: GameView, ui: BoardUi, hooks: BoardHooks): HTML
 }
 
 /** スタック: 上から順に、呪文はそのカード、能力は発生源のカードを小さく出し、横に名前・文・対象を並べる */
-export function stackBody(view: GameView, ui: BoardUi, hooks: BoardHooks, names: Map<string, string>): HTMLElement {
+export function stackBody(view: GameView, ui: BoardUi, hooks: BoardHooks, names: Map<string, string>, known: Map<string, CardView>): HTMLElement {
   const byId = new Map(view.players.flatMap((p) => p.cards).map((c) => [c.instanceId, c]));
+  // 唱えた呪文のカードは、エンジンの盤面のどの領域にも出てこない。最後に見えていた姿（手札のカード）で出す
+  const spellCard = (id: string): CardView | undefined => byId.get(id) ?? (known.has(id) ? { ...known.get(id)!, zone: "Stack", tapped: false } : undefined);
   const onStack = new Set(view.stack.map((it) => it.sourceId));
   // 唱えている途中（対象・支払いを選んでいる間）の呪文も、まだスタックに載っていない項目として出す
   const casting = view.players.flatMap((p) => p.cards).filter((c) => c.zone === "Stack" && !onStack.has(c.instanceId));
-  const item = (c: CardView | undefined, name: string, text: string, top: string, targets: string[], cls: string) =>
-    h("li.sitem" + cls + (c && ui.marks.has(c.instanceId) ? ".cand" : ""), null,
+  const item = (c: CardView | undefined, name: string, text: string, top: string, targets: string[], cls: string, source: string) =>
+    h("li.sitem" + cls + (c && ui.marks.has(c.instanceId) ? ".cand" : ""), { "data-source": source },
       c ? cardTile(c, ui, hooks, ".instack" + (c.zone === "Stack" ? "" : ".src")) : null,
       h("div.sbody", null,
         h("div.shead", null, h("span.chip", null, top), h("span.sname", null, displayName(name))),
@@ -276,9 +279,9 @@ export function stackBody(view: GameView, ui: BoardUi, hooks: BoardHooks, names:
         targets.length ? h("div.stargets.muted", null, "→ ", targets.map((x) =>
           view.players.some((p) => p.id === x) ? (x === ui.viewer ? t("player.you") : t("player.opponent")) : displayName(byId.get(x)?.name ?? names.get(x) ?? x)).join(t("log.sep"))) : null));
   return h("ol.stack.panel", null,
-    casting.map((c) => item(c, c.name, t("stack.casting"), "…", [], ".casting")),
-    view.stack.map((it) => item(byId.get(it.sourceId), names.get(it.sourceId) ?? "?",
-      localized(it.description.replace(/\s*\(\d+\)/g, ""), it.descriptionJa), it.index === 0 ? t("stack.top") : String(it.index + 1), it.targets, "")));
+    casting.map((c) => item(c, c.name, t("stack.casting"), "…", [], ".casting", c.instanceId)),
+    view.stack.map((it) => item(it.spell ? spellCard(it.sourceId) : byId.get(it.sourceId), names.get(it.sourceId) ?? "?",
+      localized(it.description.replace(/\s*\(\d+\)/g, ""), it.descriptionJa), it.index === 0 ? t("stack.top") : String(it.index + 1), it.targets, "", it.sourceId)));
 }
 
 // ---------------------------------------------------------------- カード
