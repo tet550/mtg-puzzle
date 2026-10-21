@@ -193,6 +193,8 @@ img.ms { width: 1.05em; height: 1.05em; vertical-align: -0.15em; margin: 0 1px; 
 .lgroup.overlap > .card + .card { margin-left: calc(var(--h) * -.7176 + 12px); }
 .lgroup.overlap > .card.tapped + .card.tapped { margin-left: calc(var(--h) * -1 + 14px); }
 .lgroup .gcount { position: absolute; left: 6px; bottom: 4px; z-index: 2; }
+/* 土地以外の束: 左下はカウンター・ダメージの札、右下は P/T なので、×N は左上に */
+.pgroup .gcount { top: 6px; bottom: auto; }
 /* 付いているもの・追放したカードを下に差し込む */
 .tuck { position: relative; padding-top: calc(var(--n) * var(--h) * .12); }
 .tuck > .card.under { position: absolute; left: 6px; z-index: 0; filter: brightness(.85); }
@@ -213,7 +215,8 @@ body.nosel, body.nosel * { user-select: none !important; -webkit-user-select: no
 
 /* 手札: 扇（mtgtable と同じ）。中央からの位置（--off。端で ±3 になるよう JS が決める）で少し傾け、端ほど少し下げる。
    横にスクロールさせず、重なり（--ov。fitHand が決める）を詰めて幅に収める。ホバーでまっすぐ浮かせる */
-.handbox { position: relative; z-index: 1; }
+/* 手札は戦場・土地に重ねるので、戦場のカードの札（土地の ×N・付けたカードなど。z-index 1〜2）より上に置く */
+.handbox { position: relative; z-index: 3; }
 .hand { display: flex; gap: 6px; padding: 14px 4px 4px; }
 .hand.fan { flex-wrap: nowrap; overflow: visible; align-items: flex-start; }
 /* カードの高さは絵の高さのまま（行の高さに縮めると、ハイライトの枠が絵の途中で切れてずれて見える） */

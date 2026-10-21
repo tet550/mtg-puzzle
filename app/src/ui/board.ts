@@ -205,14 +205,38 @@ function kindOf(c: CardView): number {
 /** 土地以外: 種類ごとに左から（クリーチャー → アーティファクト → エンチャント → PW → バトル）。付いているものは下に差し込む */
 function kindGroups(cards: CardView[], p: PlayerView, ui: BoardUi, hooks: BoardHooks): HTMLElement[] {
   const sorted = cards.map((c, i) => ({ c, i })).sort((a, b) => kindOf(a.c) - kindOf(b.c) || a.i - b.i);
-  let prev = -1;
-  return sorted.map(({ c }) => {
+  // 同じ見た目のパーマネントは 1 つの束にまとめて ×N（mtgtable と同じ）。付いているものがあるカードはまとめない
+  const groups: { key: string; cards: CardView[]; under: CardView[] }[] = [];
+  for (const { c } of sorted) {
     const under = p.cards.filter((o) => o.attachedTo === c.instanceId || (o.zone === "Exile" && o.exiledBy === c.instanceId));
-    const tile = under.length ? tuck(c, under, ui, hooks) : cardTile(c, ui, hooks, "");
+    const key = under.length ? `#${c.instanceId}` : lookKey(c, ui);
+    const g = groups.find((x) => x.key === key);
+    if (g) g.cards.push(c);
+    else groups.push({ key, cards: [c], under });
+  }
+  let prev = -1;
+  return groups.map((g) => {
+    const c = g.cards[0];
+    let tile: HTMLElement;
+    if (g.under.length) tile = tuck(c, g.under, ui, hooks);
+    else if (g.cards.length === 1) tile = cardTile(c, ui, hooks, "");
+    else {
+      // 選択の候補・選んだものを含む束は重ねずに広げる（1 枚ずつ選べるように）
+      const spread = g.cards.some((x) => ui.marks.has(x.instanceId));
+      tile = h("div.lgroup.pgroup" + (spread ? "" : ".overlap"), null, g.cards.map((x) => cardTile(x, ui, hooks, "")));
+      if (!spread) tile.append(h("span.chip.strong.gcount", null, `×${g.cards.length}`));
+    }
     if (prev >= 0 && kindOf(c) !== prev) tile.classList.add("kgap");
     prev = kindOf(c);
     return tile;
   });
+}
+
+/** 見た目が同じかどうかの鍵: 名前と、カードの上に出す状態（タップ・P/T・ダメージ・カウンター・攻撃・ブロックなど）がすべて同じ */
+function lookKey(c: CardView, ui: BoardUi): string {
+  const counters = Object.entries(c.counters).sort(([a], [b]) => a.localeCompare(b));
+  return JSON.stringify([c.name, c.tapped, c.power, c.toughness, c.basePower, c.baseToughness, c.damage, counters, c.token, c.faceDown,
+    c.sick && c.kinds.includes("creature"), c.controller !== c.owner ? c.owner : "", ui.attacking.has(c.instanceId), ui.blocking.has(c.instanceId)]);
 }
 
 function tuck(c: CardView, under: CardView[], ui: BoardUi, hooks: BoardHooks): HTMLElement {
