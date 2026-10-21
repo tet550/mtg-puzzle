@@ -149,6 +149,7 @@ interface Decision {
   prompt: string;              // 英語の説明
   promptKey: string | null;    // 説明の種類（targets / mode / payMana / totalPower / assignDamage など）。null は Forge が作った説明
   promptArgs: Record<string, string>; // 種類ごとの値（card: 英語のカード名、cost、n、desc / descJa など）
+  source: InstanceId | null;   // 唱えている・起動している呪文や能力の持ち主のカード（TARGETS。画面はスタックに出して、そこから矢印を出す）
   min: number;                 // 選ぶ数の範囲。submit には min〜max 個の ID を渡す
   max: number;
   options: Option[];
@@ -170,14 +171,19 @@ interface Option { id: string; label: string; labelJa: string | null; ref: Ref |
 type Ref =
   | { type: "card"; cardId: InstanceId }
   | { type: "player"; player: PlayerId }
-  | { type: "ability"; cardId: InstanceId; abilityKind: "spell" | "activated" | "mana" | "land" }
+  | { type: "ability"; cardId: InstanceId; abilityKind: "spell" | "activated" | "mana" | "land"; color?: ManaColor }
+  | { type: "color"; color: ManaColor; cardId: InstanceId | null }   // 色の問い合わせの 1 色。cardId は能力の持ち主
   | { type: "stack"; index: number }
   | { type: "special"; value: "pass" | "auto" | "cancel" | "yes" | "no" };
+
+type ManaColor = "W" | "U" | "B" | "R" | "G";
 ```
 
 - `id` は選択要求の中だけで意味を持つ（次の選択要求では同じ ID が別のものを指しうる）。UI は `ref` で盤面のカードと結び付ける。
 - PRIORITY では、1 枚のカードに複数の選択肢（呪文として唱える／起動型能力など）が付くことがある。
-- PRIORITY にはマナ能力（`abilityKind: "mana"`）も入る。起動するとスタックを使わずに解決し、出たマナはマナプールに残って、同じ優先権で続けて問い合わせる（ステップの終わりに消える）。好きな色を出す能力は色を CHOOSE_MODE で問い合わせる。呪文の支払いでは、まずマナプールのマナを使い、足りない分だけ PAY_MANA を出す。
+- PRIORITY にはマナ能力（`abilityKind: "mana"`）も入る。起動するとスタックを使わずに解決し、出たマナはマナプールに残って、同じ優先権で続けて問い合わせる（ステップの終わりに消える）。呪文の支払いでは、まずマナプールのマナを使い、足りない分だけ PAY_MANA を出す。
+- 1 回の選択で 1 色に決まるマナ能力（好きな色 1 色、`{U}` か `{B}`、好きな色 1 色の X 点）は、PRIORITY で色ごとの選択肢になる（`ref.color`。ラベルの末尾に ` [G]`）。選べばその色で起動し、起動のあとに色を聞かない。画面は能力のメニューの行に色の記号を並べ、選ぶまでは取りやめられる（外を押せば閉じる）。
+- それ以外の色の選択（違う色・組み合わせのマナ、「色を 1 つ選ぶ」効果）は、起動・解決の途中で CHOOSE_MODE で問い合わせる。`promptKey: "color"`、`promptArgs` は `card`（と、マナを 1 点ずつ聞くときは `n` / `of`）、選択肢の `ref` は `{ type: "color" }`。取りやめはできない。画面は `cardId` のカードの上に色の記号を出し、外を押しても閉じない。
 
 ### 出来事（GameEvent）
 

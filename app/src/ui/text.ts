@@ -77,6 +77,7 @@ function askText(key: string, d: Decision): string | null {
     case "protection": return t("ask.protection");
     case "replacementOrder": return t("ask.replacementOrder");
     case "staticOrder": return t("ask.staticOrder");
+    case "color": return a.n ? t("ask.color.n", { card, n: a.n, of: a.of ?? "" }) : t("ask.color", { card });
     default: return null;
   }
 }

@@ -248,6 +248,7 @@ public final class WebApi {
         m.put("prompt", d.prompt());
         m.put("promptKey", d.promptKey());
         m.put("promptArgs", d.promptArgs() == null ? Map.of() : new LinkedHashMap<>(d.promptArgs()));
+        m.put("source", d.source() < 0 ? null : s.instanceIdOf(d.source()));
         m.put("min", d.min());
         m.put("max", d.max());
         List<Map<String, Object>> options = new ArrayList<>();
@@ -275,6 +276,13 @@ public final class WebApi {
             case "ability" -> {
                 m.put("cardId", s.instanceIdOf(ref.forgeId()));
                 m.put("abilityKind", ref.abilityKind());
+                if (ref.color() != null) {
+                    m.put("color", ref.color());
+                }
+            }
+            case "color" -> {
+                m.put("color", ref.color());
+                m.put("cardId", ref.forgeId() < 0 ? null : s.instanceIdOf(ref.forgeId()));
             }
             case "stack" -> m.put("index", ref.stackIndex());
             default -> m.put("value", ref.special());

@@ -250,6 +250,16 @@ body.nosel, body.nosel * { user-select: none !important; -webkit-user-select: no
 .sitem:last-child { border-bottom: none; }
 .sitem.cand { outline: 3px solid var(--cand); border-radius: 6px; }
 .sitem.casting { opacity: .7; }
+/* 対象を選んでいる呪文・能力: 矢印の元。薄くせず、縁で示す */
+.sitem.targeting { opacity: 1; outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 6px; }
+/* スタックからカーソルへの矢印（arrow.ts）。押せない層。候補の上では吸い付いて、色を変える */
+.targetarrow { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: calc(var(--z-menu) - 2); overflow: visible; }
+.targetarrow.off { display: none; }
+.targetarrow .line { fill: none; stroke: var(--accent); stroke-width: 4; stroke-linecap: round; stroke-dasharray: 10 8; animation: arrowmarch .6s linear infinite; }
+.targetarrow .head { fill: var(--accent); }
+.targetarrow.snap .line { stroke: var(--cand); stroke-dasharray: none; animation: none; }
+.targetarrow.snap .head { fill: var(--cand); }
+@keyframes arrowmarch { to { stroke-dashoffset: -18; } }
 .sbody { min-width: 0; flex: 1; font-size: 12px; }
 .shead .chip:first-child { min-width: 4.3em; text-align: center; margin-left: 0; }
 .sname { font-weight: 600; }
@@ -320,6 +330,16 @@ body.nosel, body.nosel * { user-select: none !important; -webkit-user-select: no
   padding: 6px 10px; border-left: 1px solid var(--line); font-size: 10px; font-weight: 700; color: var(--accent); white-space: nowrap; }
 .menu .mrow .mstack svg { width: 16px; height: 16px; }
 .menu .mrow .mstack:hover { background: var(--accent); color: var(--on-accent); }
+/* マナの色: 能力の行（マナを出す: …）の右か、色の問い合わせの行に、色の記号を並べる。記号を押すとその色に決まる */
+.menu .mcolor { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+.menu .mcolor .mlabel { flex: 1 1 140px; min-width: 0; }
+.menu .mpips { display: flex; gap: 6px; }
+.menu button.mpip { padding: 3px; border: 0; border-radius: 50%; line-height: 0; transition: transform .1s; }
+.menu button.mpip:hover { background: var(--hl); transform: scale(1.15); }
+.menu button.mpip img.ms { width: 26px; height: 26px; margin: 0; vertical-align: 0; }
+/* 取りやめられない選択（色の問い合わせ）: 外を押しても閉じない。説明を上に出し、縁を目立たせる */
+.menu.locked { border: 2px solid var(--accent); }
+.menu .mtitle { padding: 8px 12px; font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--line); }
 
 /* ---- 画面の高さに収める（高さが 560px 以上か縦長のとき）: ページはスクロールしない。
    カードの大きさは自分の欄の高さから決める（mtgtable と同じく、戦場 27・土地 17・手札 27 の割合） ---- */

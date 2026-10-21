@@ -1,17 +1,19 @@
 // パズルを遊ぶ画面。PuzzleSession の状態を描き、盤面と操作の欄からの入力を回答にして送る。
 
 import { puzzleCardNames, type EngineStatus, type ForgeEngine } from "../engine/client";
-import type { CardView, GameEvent, GameView, Option } from "../engine/protocol";
+import type { CardView, Decision, GameEvent, GameView, Option } from "../engine/protocol";
 import { markCleared } from "../puzzle/catalog";
 import { verdictText } from "../puzzle/judge";
 import type { PuzzleJson } from "../puzzle/schema";
 import { PuzzleSession, type SessionState } from "../puzzle/session";
-import { combatBody, combatSets, detailBody, renderBoard, stackBody, type BoardHooks, type BoardUi } from "./board";
+import { combatBody, combatSets, detailBody, renderBoard, stackBody, type BoardHooks, type BoardUi, type Targeting } from "./board";
+import { TargetArrow } from "./arrow";
+import { localized } from "./localize";
 import { fitHands, setupFloat } from "./float";
 import { macroAnswer, startMacro, type Macro } from "./quick";
 import { manaNodes } from "./mana";
 import { icon, type IconName } from "./icons";
-import { buildInteraction, marksOf, optionLabel, type Interaction } from "./decision";
+import { buildInteraction, colorName, isColorAsk, manaLabel, marksOf, optionLabel, type Interaction } from "./decision";
 import { h } from "./dom";
 import { cardImage, displayName, ensureCardImages, imagesEnabled, printedText, setImagesEnabled } from "./images";
 import { t, type MessageKey } from "../i18n";
@@ -31,7 +33,10 @@ export class PlayPage {
   private flash = new Set<string>();
   private detail: CardView | null = null;
   private logOpen = window.matchMedia("(min-width: 901px)").matches;
-  private menu: { x: number; y: number; options: Option[] } | null = null;
+  /** カードの上のメニュー。locked は取りやめられない選択（色の問い合わせ）で、外を押しても閉じない */
+  private menu: OptionMenu | null = null;
+  /** 対象を選んでいる間の、スタックからカーソルへの矢印 */
+  private arrow: TargetArrow | null = null;
   private readonly names = new Map<string, string>();
   /** 最後に見えていたカードの姿（スタックに積んだ呪文のカードを出すため） */
   private readonly known = new Map<string, CardView>();
@@ -85,7 +90,13 @@ export class PlayPage {
     return { phase: s.phase, pending: s.step?.pending ?? null, verdict: s.verdict, errors: s.errors, engine: this.engineStatus };
   }
 
+  private dropArrow() {
+    this.arrow?.dispose();
+    this.arrow = null;
+  }
+
   dispose() {
+    this.dropArrow();
     this.disposed = true;
     this.unsubs.forEach((u) => u());
     document.removeEventListener("keydown", this.onKey);
@@ -98,7 +109,7 @@ export class PlayPage {
   }
 
   private readonly onKey = (e: KeyboardEvent) => {
-    if (e.key === "Escape") { this.menu = null; this.detail = null; this.render(); }
+    if (e.key === "Escape") { if (!this.menu?.locked) this.menu = null; this.detail = null; this.render(); }
     if (e.key === "l" && !(e.target instanceof HTMLInputElement)) { this.logOpen = !this.logOpen; this.render(); }
   };
 
@@ -362,8 +373,9 @@ export class PlayPage {
 
     // 盤面の上に浮かぶ小窓（mtgtable と同じ）: スタックは右上、戦闘は右の中ほど、カードの詳細は左上
     const board = view ? renderBoard(view, ui, hooks) : h("section.board");
-    if (view && (view.stack.length || view.players.some((p) => p.cards.some((c) => c.zone === "Stack")))) {
-      board.append(this.floatBox("stack", t("stack.title", { n: view.stack.length }), stackBody(view, ui, hooks, this.names, this.known)));
+    const targeting = targetingOf(s.step?.pending ?? null);
+    if (view && (view.stack.length || targeting || view.players.some((p) => p.cards.some((c) => c.zone === "Stack")))) {
+      board.append(this.floatBox("stack", t("stack.title", { n: view.stack.length }), stackBody(view, ui, hooks, this.names, this.known, targeting)));
     }
     if (view && view.combat.length) board.append(this.floatBox("combat", t("combat.title"), combatBody(view, ui, hooks)));
     // カードの詳細は盤面の外（画面の一番上の層）に置く。盤面の中だと、狭い画面の下からのシートが操作パネルに隠れる
@@ -389,6 +401,10 @@ export class PlayPage {
     this.el.classList.toggle("withpanelmin", this.minimized.has("play"));
 
     this.el.replaceChildren(header, main, panel, ...(detail ? [detail] : []), ...(menu ?? []));
+    if (!this.menu && interaction) queueMicrotask(() => this.openColorMenu(interaction));
+    // 対象を選んでいる間は、スタックのその呪文・能力からカーソルへ矢印を出す
+    if (targeting) (this.arrow ??= new TargetArrow()).setOrigin(this.el.querySelector<HTMLElement>(".stackbox [data-targeting]"));
+    else this.dropArrow();
     // 小窓は見出しのドラッグで動かせる（位置は小窓ごとに覚える）。手札は扇に整える
     for (const [sel, key] of [[".cdetail", "detail"], [".stackbox", "stack"], [".combatbox", "combat"]] as const) {
       const f = this.el.querySelector<HTMLElement>(sel);
@@ -514,6 +530,7 @@ export class PlayPage {
 
   /** 1 つの盤面の要素に複数の選択肢があればメニューを出す */
   private pick(opts: Option[], i: Interaction, key: string) {
+    if (this.menu?.locked) return; // 色を選ぶまでは、ほかのカードを押しても変えない
     // 起動型能力・マナ能力は、1 つしか無くてもメニューから選ぶ（プレインズウォーカーの能力と同じ。押しただけで起動しない）
     const activated = i.decision.kind === "PRIORITY"
       && opts.some((o) => o.ref?.type === "ability" && (o.ref.abilityKind === "activated" || o.ref.abilityKind === "mana"));
@@ -523,7 +540,21 @@ export class PlayPage {
     }
     const el = this.el.querySelector<HTMLElement>(`[data-id="${CSS.escape(key)}"], [data-player="${CSS.escape(key)}"]`);
     const r = el?.getBoundingClientRect();
-    this.menu = { x: r ? r.left : 20, y: r ? r.bottom + 4 : 80, options: opts };
+    this.menu = { x: r ? r.left : 20, y: r ? r.bottom + 4 : 80, options: opts, locked: false, title: null };
+    this.render();
+  }
+
+  /**
+   * 色の問い合わせは、能力の持ち主のカードの上（能力のメニューと同じ場所）に色の記号を出す。
+   * 取りやめられないので、外を押しても閉じない。カードが盤面に見えなければ、操作の欄のボタンだけで選ぶ
+   */
+  private openColorMenu(i: Interaction | null) {
+    if (this.menu || !i || !isColorAsk(i.decision)) return;
+    const key = i.decision.options[0].ref?.type === "color" ? i.decision.options[0].ref.cardId : null;
+    const el = key ? this.el.querySelector<HTMLElement>(`.board [data-id="${CSS.escape(key)}"]`) : null;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    this.menu = { x: r.left, y: r.bottom + 4, options: i.decision.options, locked: true, title: decisionPrompt(i.decision) };
     this.render();
   }
 
@@ -572,21 +603,52 @@ function logList(history: GameEvent[], names: Map<string, string>): HTMLElement 
  * スタックを使う能力・呪文の項目は 2 つに分かれた 1 つの行: 左（能力の文）を押すと起動して解決まで進め、
  * 右の「積む」はスタックに積むだけ（相手の対応を待つ・さらに積むとき）
  */
-function optionMenu(m: { x: number; y: number; options: Option[] }, choose: (o: Option) => void,
+interface OptionMenu {
+  x: number;
+  y: number;
+  options: Option[];
+  /** 取りやめられない選択（外を押しても閉じない） */
+  locked: boolean;
+  /** 一番上に出す説明（色の問い合わせ） */
+  title: string | null;
+}
+
+function optionMenu(m: OptionMenu, choose: (o: Option) => void,
   quick: ((o: Option) => void) | null, close: () => void): HTMLElement[] {
   const x = Math.min(m.x, window.innerWidth - 328); // メニューの幅は最大 320px
-  const y = Math.min(m.y, window.innerHeight - 52 * m.options.length - 20);
+  const y = Math.min(m.y, window.innerHeight - 52 * (m.options.length + (m.title ? 1 : 0)) - 20);
   const usesStack = (o: Option) => o.ref?.type === "ability" && (o.ref.abilityKind === "activated" || o.ref.abilityKind === "spell");
+  // 色ごとに分けたマナ能力（同じ能力）と、色の問い合わせの選択肢は、1 行の色の記号にまとめる
+  const colorOf = (o: Option) => (o.ref?.type === "color" ? o.ref.color : o.ref?.type === "ability" && o.ref.abilityKind === "mana" ? o.ref.color ?? null : null);
+  const pip = (o: Option) => h("button.mpip", { type: "button", role: "menuitem", title: colorName(colorOf(o)!), "aria-label": colorName(colorOf(o)!),
+    "data-option": o.id, onclick: () => choose(o) }, manaNodes(`{${colorOf(o)}}`));
+  const rows: HTMLElement[] = [];
+  const pipRows = new Map<string, HTMLElement>(); // 能力のラベル（色の問い合わせは ""）→ 色の記号を並べる所
+  for (const o of m.options) {
+    if (colorOf(o)) {
+      const label = o.ref?.type === "color" ? "" : manaLabel(o);
+      let pips = pipRows.get(label);
+      if (!pips) {
+        pips = h("div.mpips");
+        pipRows.set(label, pips);
+        rows.push(h("div.mcolor", null, label ? h("span.mlabel", null, manaNodes(label)) : null, pips));
+      }
+      pips.append(pip(o));
+      continue;
+    }
+    rows.push(quick && usesStack(o)
+      ? h("div.mrow", null,
+        h("button.mmain", { type: "button", role: "menuitem", title: t("menu.resolve.title"), "data-quick": o.id, onclick: () => quick(o) }, manaNodes(optionLabel(o))),
+        h("button.mstack", { type: "button", role: "menuitem", title: t("menu.stack.title"), "aria-label": t("menu.stack.title"), "data-option": o.id, onclick: () => choose(o) },
+          icon("stack"), h("span", null, t("menu.stack"))))
+      : h("button", { type: "button", role: "menuitem", "data-option": o.id, onclick: () => choose(o) }, manaNodes(optionLabel(o))));
+  }
+  const menu =h("div.menu" + (m.locked ? ".locked" : ""), { role: "menu", style: `left:${Math.max(8, x)}px;top:${Math.max(8, y)}px` } as never,
+    m.title ? h("div.mtitle", null, manaNodes(m.title)) : null, ...rows);
+  if (m.locked) return [menu]; // 外を押しても閉じない（下の盤面はそのまま見られる）
   const back = h("div.menuback", { "aria-hidden": "true" });
   // 押した所の下のカードを押したことにしない（閉じるだけ）
   back.addEventListener("pointerdown", (ev) => { ev.preventDefault(); ev.stopPropagation(); close(); });
-  const menu = h("div.menu", { role: "menu", style: `left:${Math.max(8, x)}px;top:${Math.max(8, y)}px` } as never,
-    m.options.map((o) => quick && usesStack(o)
-      ? h("div.mrow", null,
-        h("button.mmain", { type: "button", role: "menuitem", title: t("menu.resolve.title"), onclick: () => quick(o) }, manaNodes(optionLabel(o))),
-        h("button.mstack", { type: "button", role: "menuitem", title: t("menu.stack.title"), "aria-label": t("menu.stack.title"), onclick: () => choose(o) },
-          icon("stack"), h("span", null, t("menu.stack"))))
-      : h("button", { type: "button", role: "menuitem", onclick: () => choose(o) }, manaNodes(optionLabel(o)))));
   return [back, menu];
 }
 
@@ -645,4 +707,11 @@ export function previewView(p: PuzzleJson): GameView {
         }))),
     })),
   };
+}
+
+/** 対象の選択なら、選んでいる呪文・能力（Adapter が source を返したとき） */
+function targetingOf(d: Decision | null): Targeting | null {
+  if (!d || d.kind !== "TARGETS" || !d.source) return null;
+  const a = d.promptArgs ?? {};
+  return { cardId: d.source, text: localized(a.desc ?? "", a.descJa ?? null) };
 }

@@ -98,20 +98,70 @@ class ScenarioTest {
         }
     }
 
-    /** 優先権で起動した「好きな色 1 色」のマナ能力は色を問い合わせる。生け贄などのコストも払われる */
+    /** s1-bolt の Mountain（c2）を別のカードに替えた問題 */
+    static PuzzleDefinition s1With(String cardName) throws Exception {
+        return PuzzleDefinition.fromJson(java.nio.file.Files.readString(new File(System.getProperty("puzzles.dir", "../puzzles"), "s1-bolt.json").toPath())
+                .replace("\"cardId\": \"Mountain\"", "\"cardId\": \"" + cardName + "\""));
+    }
+
+    /** 「好きな色 1 色」のマナ能力は、優先権で色ごとの選択肢になる。選べば起動のあとに色を聞かない。生け贄などのコストも払われる */
     @Test
-    void manaAbilityAtPriorityAsksColor() throws Exception {
-        String json = java.nio.file.Files.readString(new File(System.getProperty("puzzles.dir", "../puzzles"), "s1-bolt.json").toPath())
-                .replace("\"cardId\": \"Mountain\"", "\"cardId\": \"Lotus Petal\"");
-        try (ForgeSession s = ForgeSession.load(PuzzleDefinition.fromJson(json))) {
-            s.submit(expect(s, Decision.Kind.PRIORITY).findByLabelPrefix("Lotus Petal").id());
-            Decision color = expect(s, Decision.Kind.CHOOSE_MODE);
-            StepResult r = s.submit(color.findByLabelPrefix("green").id());
+    void manaAbilityColorChosenBeforeActivation() throws Exception {
+        try (ForgeSession s = ForgeSession.load(s1With("Lotus Petal"))) {
+            Decision d = expect(s, Decision.Kind.PRIORITY);
+            List<Decision.Option> petal = d.options().stream().filter(o -> o.label().startsWith("Lotus Petal")).toList();
+            assertEquals(List.of("W", "U", "B", "R", "G"), petal.stream().map(o -> o.ref().color()).toList());
+            assertTrue(petal.stream().allMatch(o -> "mana".equals(o.ref().abilityKind())));
+            StepResult r = s.submit(petal.get(4).id());
             log("petal", r);
+            assertEquals(Decision.Kind.PRIORITY, r.pending().kind(), "色は先に選んだので聞かない");
             GameSnapshot st = s.getState();
             assertEquals(1, st.players().get(0).manaPool().get("G"));
             assertEquals("GRAVEYARD", card(st, "c2").zone().toUpperCase());
             assertTrue(s.fallbackLog().isEmpty(), s.fallbackLog().toString());
+        }
+    }
+
+    /** 色を先に決められないマナ能力（違う色のマナ 2 点）は、起動のあとに 1 点ずつ色を聞く。選択肢にはカードと色が付く */
+    @Test
+    void manaAbilityAsksColorsAfterActivation() throws Exception {
+        try (ForgeSession s = ForgeSession.load(s1With("Firemind Vessel"))) {
+            Decision.Option vessel = expect(s, Decision.Kind.PRIORITY).findByLabelPrefix("Firemind Vessel");
+            assertEquals(null, vessel.ref().color());
+            s.submit(vessel.id());
+            Decision first = expect(s, Decision.Kind.CHOOSE_MODE);
+            assertEquals("color", first.promptKey());
+            assertEquals("1", first.promptArgs().get("n"));
+            assertEquals("2", first.promptArgs().get("of"));
+            Decision.Option red = first.options().stream().filter(o -> "R".equals(o.ref().color())).findFirst().orElseThrow();
+            assertEquals("color", red.ref().type());
+            assertEquals(vessel.ref().forgeId(), red.ref().forgeId(), "色の選択肢に、能力の持ち主のカードが付く");
+            s.submit(red.id());
+            Decision second = expect(s, Decision.Kind.CHOOSE_MODE);
+            assertTrue(second.options().stream().noneMatch(o -> "R".equals(o.ref().color())), "違う色なので赤は出ない");
+            s.submit(second.options().stream().filter(o -> "G".equals(o.ref().color())).findFirst().orElseThrow().id());
+            GameSnapshot st = s.getState();
+            assertEquals(1, st.players().get(0).manaPool().get("R"));
+            assertEquals(1, st.players().get(0).manaPool().get("G"));
+            assertTrue(s.fallbackLog().isEmpty(), s.fallbackLog().toString());
+        }
+    }
+
+    /** 対象の選択には、唱えている呪文・起動している能力の持ち主のカード（source）が付く（画面はスタックに出して、そこから矢印を出す） */
+    @Test
+    void targetsCarryTheSourceCard() throws Exception {
+        try (ForgeSession s = ForgeSession.load(puzzle("s1-bolt"))) {
+            s.submit(expect(s, Decision.Kind.PRIORITY).findByLabelPrefix("Lightning Bolt").id());
+            assertEquals("c1", s.instanceIdOf(expect(s, Decision.Kind.TARGETS).source()), "呪文");
+        }
+        try (ForgeSession s = ForgeSession.load(puzzle("s6-activated"))) {
+            s.submit(expect(s, Decision.Kind.PRIORITY).findByLabelPrefix("Prodigal Pyromancer").id());
+            Decision t = expect(s, Decision.Kind.TARGETS);
+            String id = s.instanceIdOf(t.source());
+            assertEquals("Prodigal Pyromancer", card(s.getState(), id).name(), "起動型能力");
+        }
+        try (ForgeSession s = ForgeSession.load(puzzle("s1-bolt"))) {
+            assertEquals(-1, expect(s, Decision.Kind.PRIORITY).source(), "優先権には付かない");
         }
     }
 

@@ -141,6 +141,8 @@ export interface Decision {
   prompt: string;
   promptKey?: string | null;
   promptArgs?: Record<string, string>;
+  /** 唱えている・起動している呪文や能力の持ち主のカード（対象の選択など。無ければ null） */
+  source?: InstanceId | null;
   min: number;
   max: number;
   options: Option[];
@@ -159,7 +161,10 @@ export type SpecialValue = "pass" | "auto" | "cancel" | "yes" | "no";
 export type Ref =
   | { type: "card"; cardId: InstanceId }
   | { type: "player"; player: PlayerId }
-  | { type: "ability"; cardId: InstanceId; abilityKind: "spell" | "activated" | "mana" | "land" }
+  /** 色ごとに分けたマナ能力（1 色を選んで出すもの）は color が付く。選べばその色で起動する */
+  | { type: "ability"; cardId: InstanceId; abilityKind: "spell" | "activated" | "mana" | "land"; color?: ManaColor }
+  /** 色の問い合わせの 1 色。cardId は能力の持ち主のカード（分からなければ null） */
+  | { type: "color"; color: ManaColor; cardId: InstanceId | null }
   | { type: "stack"; index: number }
   | { type: "special"; value: SpecialValue };
 

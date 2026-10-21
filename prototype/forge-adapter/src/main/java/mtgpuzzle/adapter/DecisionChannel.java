@@ -39,7 +39,7 @@ final class DecisionChannel {
     }
 
     List<String> ask(Decision.Kind kind, Decision.Prompt prompt, List<Decision.Option> options, int min, int max) {
-        Decision d = new Decision(++seq, kind, prompt.text(), List.copyOf(options), min, max, prompt.key(), Map.copyOf(prompt.args()));
+        Decision d = new Decision(++seq, kind, prompt.text(), List.copyOf(options), min, max, prompt.key(), Map.copyOf(prompt.args()), prompt.source());
         try {
             toCaller.put(new Pending(d));
             List<String> answer = toGame.take();

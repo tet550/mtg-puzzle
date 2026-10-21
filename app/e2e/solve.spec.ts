@@ -32,8 +32,9 @@ async function waitFor(page: Page, pred: (s: Snapshot) => boolean, what: string)
 type Opt = NonNullable<Snapshot["pending"]>["options"][number];
 
 /**
- * 1 つの選択肢を画面で押す。盤面にあるものはカード・プレイヤーを押し、同じカードに選択肢が複数あれば
- * メニューの menuIndex 番目を押す。盤面に無いものは操作の欄の listIndex 番目のボタン
+ * 1 つの選択肢を画面で押す。盤面にあるものはカード・プレイヤーを押し、メニューが出れば（同じカードに選択肢が複数・
+ * 起動型能力・マナ能力）その選択肢の項目を押す。色の問い合わせは、カードの上に開いている色の記号を押す。
+ * 盤面に無いものは操作の欄の listIndex 番目のボタン
  */
 async function clickOption(page: Page, opt: Opt, onBoard: boolean, menuIndex: number, listIndex: number) {
   const ref = opt.ref;
@@ -41,13 +42,17 @@ async function clickOption(page: Page, opt: Opt, onBoard: boolean, menuIndex: nu
     await page.locator(`.actions [data-special="${ref.value}"]`).click();
     return;
   }
+  if (onBoard && ref?.type === "color") {
+    await page.locator(`.menu [data-option="${opt.id}"]`).click();
+    return;
+  }
   if (onBoard) {
     const key = ref?.cardId ?? ref?.player;
     await page.locator(`.board [data-id="${key}"], .board [data-player="${key}"]`).first().click();
-    // 同じカードに選択肢が複数あるとき・起動型能力のときはメニューが出る（並びは選択肢の順）
-    if (menuIndex >= 0 || (opt.ref?.type === "ability" && opt.ref.abilityKind === "activated")) {
-      // 解答手順は 1 つずつ答えるので、能力の行は右の「積む」（.mstack）を押す。左（.mmain）は解決まで進めてしまう（並びは選択肢の順）
-      await page.locator(".menu > button, .menu .mrow > .mstack").nth(Math.max(0, menuIndex)).click();
+    const ability = ref?.type === "ability" && (ref.abilityKind === "activated" || ref.abilityKind === "mana");
+    if (menuIndex >= 0 || ability) {
+      // 解答手順は 1 つずつ答えるので、能力の行は右の「積む」を押す（data-option。左の data-quick は解決まで進めてしまう）
+      await page.locator(`.menu [data-option="${opt.id}"]`).click();
     }
     return;
   }

@@ -287,23 +287,35 @@ export function combatBody(view: GameView, ui: BoardUi, hooks: BoardHooks): HTML
 }
 
 /** スタック: 上から順に、呪文はそのカード、能力は発生源のカードを小さく出し、横に名前・文・対象を並べる */
-export function stackBody(view: GameView, ui: BoardUi, hooks: BoardHooks, names: Map<string, string>, known: Map<string, CardView>): HTMLElement {
+/** 対象を選んでいる呪文・能力（スタックに出して、そこからカーソルへ矢印を出す）。text は能力の文 */
+export interface Targeting {
+  cardId: string;
+  text: string;
+}
+
+export function stackBody(view: GameView, ui: BoardUi, hooks: BoardHooks, names: Map<string, string>, known: Map<string, CardView>,
+  targeting: Targeting | null = null): HTMLElement {
   const byId = new Map(view.players.flatMap((p) => p.cards).map((c) => [c.instanceId, c]));
   // 唱えた呪文のカードは、エンジンの盤面のどの領域にも出てこない。最後に見えていた姿（手札のカード）で出す
   const spellCard = (id: string): CardView | undefined => byId.get(id) ?? (known.has(id) ? { ...known.get(id)!, zone: "Stack", tapped: false } : undefined);
   const onStack = new Set(view.stack.map((it) => it.sourceId));
   // 唱えている途中（対象・支払いを選んでいる間）の呪文も、まだスタックに載っていない項目として出す
   const casting = view.players.flatMap((p) => p.cards).filter((c) => c.zone === "Stack" && !onStack.has(c.instanceId));
-  const item = (c: CardView | undefined, name: string, text: string, top: string, targets: string[], cls: string, source: string) =>
-    h("li.sitem" + cls + (c && ui.marks.has(c.instanceId) ? ".cand" : ""), { "data-source": source },
+  const item = (c: CardView | undefined, name: string, text: string, top: string, targets: string[], cls: string, source: string, aiming = false) =>
+    h("li.sitem" + cls + (aiming ? ".targeting" : "") + (c && ui.marks.has(c.instanceId) ? ".cand" : ""),
+      aiming ? { "data-source": source, "data-targeting": "1" } : { "data-source": source },
       c ? cardTile(c, ui, hooks, ".instack" + (c.zone === "Stack" ? "" : ".src")) : null,
       h("div.sbody", null,
         h("div.shead", null, h("span.chip", null, top), h("span.sname", null, displayName(name))),
         h("div.stext", null, manaNodes(text)),
         targets.length ? h("div.stargets.muted", null, "→ ", targets.map((x) =>
           view.players.some((p) => p.id === x) ? (x === ui.viewer ? t("player.you") : t("player.opponent")) : displayName(byId.get(x)?.name ?? names.get(x) ?? x)).join(t("log.sep"))) : null));
+  // 対象を選び終わるまで、呪文・能力はスタックに出てこない（唱えている呪文のカードは盤面のどこにも無い）。
+  // 対象を選んでいる間は、まだ載っていない項目として出す（呪文は最後に見えていた姿、能力は持ち主のカード）
+  const aiming = targeting && !casting.some((c) => c.instanceId === targeting.cardId) ? spellCard(targeting.cardId) : undefined;
   return h("ol.stack.panel", null,
-    casting.map((c) => item(c, c.name, t("stack.casting"), "…", [], ".casting", c.instanceId)),
+    aiming ? item(aiming, aiming.name, targeting!.text, "…", [], ".casting", targeting!.cardId, true) : null,
+    casting.map((c) => item(c, c.name, t("stack.casting"), "…", [], ".casting", c.instanceId, c.instanceId === targeting?.cardId)),
     view.stack.map((it) => item(it.spell ? spellCard(it.sourceId) : byId.get(it.sourceId), names.get(it.sourceId) ?? "?",
       localized(it.description.replace(/\s*\(\d+\)/g, ""), it.descriptionJa), it.index === 0 ? t("stack.top") : String(it.index + 1), it.targets, "", it.sourceId)));
 }

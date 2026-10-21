@@ -3,7 +3,7 @@ import { setLang } from "../i18n";
 
 setLang("ja"); // 文を確かめるテストは日本語で
 import type { Decision, GameView } from "../engine/protocol";
-import { buildInteraction, marksOf, optionLabel } from "./decision";
+import { buildInteraction, isColorAsk, manaLabel, marksOf, optionLabel } from "./decision";
 
 const view: GameView = {
   turn: 1, phase: "MAIN1", activePlayer: "p1", priorityPlayer: "p1", stack: [], combat: [],
@@ -52,6 +52,28 @@ describe("buildInteraction", () => {
     expect(i.onBoard.get("m0")?.map((o) => o.id)).toEqual(["a1"]);
     expect(marksOf(i, new Set()).has("m0")).toBe(false);
     expect(marksOf(i, new Set()).get("c1")).toBe("cand");
+  });
+});
+
+describe("マナの色", () => {
+  it("色ごとに分けたマナ能力は、色を付けたラベル。メニューの行のラベルは色を除く", () => {
+    const o = { id: "a2", label: "Birds | {T}: Add one mana of any color. [G]", labelJa: null,
+      ref: { type: "ability", cardId: "m0", abilityKind: "mana", color: "G" } } as const;
+    expect(optionLabel(o)).toBe("マナを出す: {T}: Add one mana of any color.（緑）");
+    expect(manaLabel(o)).toBe("マナを出す: {T}: Add one mana of any color.");
+  });
+
+  it("色の問い合わせは取りやめられない選択。カードの上で選び、操作の欄にも並べる", () => {
+    const d: Decision = { seq: 4, kind: "CHOOSE_MODE", prompt: "", promptKey: "color", promptArgs: { card: "Mountain" }, min: 1, max: 1, options: [
+      { id: "k0", label: "red", ref: { type: "color", color: "R", cardId: "m0" } },
+      { id: "k1", label: "green", ref: { type: "color", color: "G", cardId: "m0" } },
+    ] };
+    expect(isColorAsk(d)).toBe(true);
+    const i = buildInteraction(d, view);
+    expect(i.onBoard.get("m0")?.map((o) => o.id)).toEqual(["k0", "k1"]);
+    expect(i.listed.map((o) => o.id)).toEqual(["k0", "k1"]);
+    expect(optionLabel(d.options[1])).toBe("緑");
+    expect(isColorAsk({ ...d, options: [{ id: "m0", label: "Destroy", ref: null }] })).toBe(false);
   });
 });
 
