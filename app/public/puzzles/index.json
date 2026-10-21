@@ -30,6 +30,12 @@
     "sourceFile": null
   },
   {
+    "id": "s11-redshift",
+    "title": "S11 Redshift loop",
+    "description": "Win this turn",
+    "sourceFile": null
+  },
+  {
     "id": "PS_ACR1",
     "title": "Possibility Storm - Assassin's Creed #01",
     "description": "Win this turn. Your opponent has five (unknown) cards in their library. Ensure your solution takes all possible opponent decisions into account!",
