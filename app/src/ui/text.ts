@@ -72,11 +72,24 @@ function askText(key: string, d: Decision): string | null {
     case "announce": return a.what === "X" ? t("prompt.X") : t("ask.announce", { what: a.what ?? "", card });
     case "zoneChange": return t("ask.zoneChange", { zone: zoneName(capitalize(a.zone ?? "")) });
     case "sacrifice": return t("ask.sacrifice", { n: countText(d) });
+    case "destroy": return t("ask.destroy", { n: countText(d) });
+    case "discard": return t("ask.discard", { n: countText(d) });
     case "discardHandSize": return t("ask.discardHandSize", { n: a.n ?? "" });
+    case "delve": return t("ask.delve", { n: countText(d) });
+    case "convoke": return t("ask.convoke");
+    case "totalCMC": return t("ask.totalCMC", { n: a.n ?? "" });
+    case "divide": return t("ask.divide", { target: displayName(a.target ?? ""), left: a.left ?? "" });
+    case "putOnTop": return t("ask.putOnTop", { card });
+    case "scryBottom": return t("ask.scryBottom");
+    case "surveilGrave": return t("ask.surveilGrave");
+    case "orderSimultaneous": return t("ask.orderSimultaneous");
+    case "orderBlockers": return t("ask.orderBlockers", { card });
+    case "orderAttackers": return t("ask.orderAttackers", { card });
     case "counterType": return t("ask.counterType");
     case "protection": return t("ask.protection");
     case "replacementOrder": return t("ask.replacementOrder");
     case "staticOrder": return t("ask.staticOrder");
+    case "optionalCost": return t("ask.optionalCost", { card });
     case "color": return a.n ? t("ask.color.n", { card, n: a.n, of: a.of ?? "" }) : t("ask.color", { card });
     default: return null;
   }
@@ -106,12 +119,36 @@ export function eventText(e: GameEvent, name: (id: string) => string, viewer: st
     case "life": return t("log.life", { player: playerName(e.player, viewer), from: e.from, to: e.to });
     case "damage": return t(e.combat ? "log.damageCombat" : "log.damage", { source: card(e.sourceId), target: who(e.target), n: e.amount });
     case "zoneChange":
-      if (e.from === "Library" && e.to === "Hand") return t("log.draw");
+      if (e.from === "Library" && e.to === "Hand") {
+        if (!e.player) return t("log.draw");
+        const resolvedName = name(e.cardId);
+        const knownCard = e.player === viewer && resolvedName && resolvedName !== e.cardId && !/^f\d+$/.test(resolvedName);
+        return knownCard
+          ? t("log.drawCard", { player: playerName(e.player, viewer), card: card(e.cardId) })
+          : t("log.drawPlayer", { player: playerName(e.player, viewer) });
+      }
       return t("log.move", { card: card(e.cardId), from: zoneName(e.from), to: zoneName(e.to) });
     case "tapped": return null;
     case "counters": return t("log.counters", { card: card(e.cardId), counter: e.counter, from: e.from, to: e.to });
     case "attackersDeclared":
       return e.attackers.length ? t("log.attack", { list: e.attackers.map((a) => card(a.cardId)).join(t("log.sep")) }) : null;
-    case "gameOver": return e.winner ? t("log.gameOver", { player: playerName(e.winner, viewer) }) : t("log.gameOverDraw");
+    case "gameOver": {
+      const base = e.winner ? t("log.gameOver", { player: playerName(e.winner, viewer) }) : t("log.gameOverDraw");
+      const reason = outcomeReason(e.winCondition, e.outcomes);
+      return reason ? `${base} — ${reason}` : base;
+    }
   }
+}
+
+function outcomeReason(winCondition?: string | null, outcomes?: string[]): string | null {
+  const joined = (outcomes ?? []).join(" ");
+  if (winCondition === "Milled" || joined.includes("empty library")) return t("log.win.Milled");
+  if (winCondition === "LifeReachedZero" || joined.includes("life total reached 0")) return t("log.win.LifeReachedZero");
+  if (winCondition === "Poisoned" || joined.includes("poison counters")) return t("log.win.Poisoned");
+  if (winCondition === "CommanderDamage" || joined.includes("commander damage")) return t("log.win.CommanderDamage");
+  if (winCondition === "SpellEffect" || joined.includes("effect of a spell")) return t("log.win.SpellEffect");
+  if (winCondition === "Conceded" || joined.includes("conceded")) return t("log.win.Conceded");
+  const wk = winCondition ? (`log.win.${winCondition}` as MessageKey) : null;
+  if (wk && t(wk) !== wk) return t(wk);
+  return outcomes?.length ? outcomes.join(" / ") : null;
 }

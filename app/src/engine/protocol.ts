@@ -58,6 +58,8 @@ export interface StepResult {
   engine: EngineState;
   pending: Decision | null;
   events: GameEvent[];
+  /** エンジン内部の全 GameEvent と GameLogEntry（デバッグ表示用） */
+  debug?: string[];
   view: GameView;
   fallback: string[];
   elapsedMs: number;
@@ -175,11 +177,11 @@ export type GameEvent =
   | { type: "resolved"; sourceId: InstanceId; description: string; fizzled: boolean }
   | { type: "life"; player: PlayerId; from: number; to: number }
   | { type: "damage"; sourceId: InstanceId | null; target: PlayerId | InstanceId; amount: number; combat: boolean }
-  | { type: "zoneChange"; cardId: InstanceId; from: string | null; to: string | null }
+  | { type: "zoneChange"; cardId: InstanceId; from: string | null; to: string | null; player?: PlayerId | null }
   | { type: "tapped"; cardId: InstanceId; tapped: boolean }
   | { type: "counters"; cardId: InstanceId; counter: string; from: number; to: number }
   | { type: "attackersDeclared"; attackers: { cardId: InstanceId; defender: PlayerId | InstanceId }[] }
-  | { type: "gameOver"; winner: PlayerId | null };
+  | { type: "gameOver"; winner: PlayerId | null; outcomes?: string[]; winCondition?: string | null };
 
 /** Worker とメインスレッドの間のメッセージ */
 export type WorkerMethod = "boot" | "init" | "prepare" | "useCards" | "version" | "load" | "submit" | "reset" | "state" | "heap";

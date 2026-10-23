@@ -200,6 +200,7 @@ public final class WebApi {
         m.put("engine", engineState(s, r));
         m.put("pending", toMap(s, r.pending()));
         m.put("events", r.events());
+        m.put("debug", r.debug());
         m.put("elapsedMs", r.elapsedMillis());
         m.put("view", view(s));
         m.put("fallback", s.fallbackLog());

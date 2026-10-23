@@ -1,4 +1,4 @@
-// 同梱のサンプル問題を、解答手順どおりに画面（盤面のカード・操作の欄のボタン）を押して解く。
+// 同梱のサンプル問題を、解答手順どおりに盤面（カード・見出しの盤面の操作・カードの上のメニュー）を押して解く。
 import { expect, test, type Page } from "@playwright/test";
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -31,15 +31,22 @@ async function waitFor(page: Page, pred: (s: Snapshot) => boolean, what: string)
 
 type Opt = NonNullable<Snapshot["pending"]>["options"][number];
 
+/** 決定・パスなどのボタン。盤面に無い選択肢のメニューが開いていればその下の端、無ければ操作の欄 */
+async function clickAction(page: Page, sel: string) {
+  const inMenu = page.locator(`.menu ${sel}`);
+  await (await inMenu.count() ? inMenu : page.locator(`.actions ${sel}`)).click();
+}
+
 /**
  * 1 つの選択肢を画面で押す。盤面にあるものはカード・プレイヤーを押し、メニューが出れば（同じカードに選択肢が複数・
  * 起動型能力・マナ能力）その選択肢の項目を押す。色の問い合わせは、カードの上に開いている色の記号を押す。
- * 盤面に無いものは操作の欄の listIndex 番目のボタン
+ * パス・取りやめなどは盤面の操作のボタン。盤面に無いもの（モード・数など）は、盤面に自分で開くメニューの項目
+ * （優先権のときはメニューを開かないので、操作の欄の listIndex 番目のボタン）
  */
-async function clickOption(page: Page, opt: Opt, onBoard: boolean, menuIndex: number, listIndex: number) {
+async function clickOption(page: Page, kind: string, opt: Opt, onBoard: boolean, menuIndex: number, listIndex: number) {
   const ref = opt.ref;
   if (ref?.type === "special") {
-    await page.locator(`.actions [data-special="${ref.value}"]`).click();
+    await clickAction(page, `[data-special="${ref.value}"]`);
     return;
   }
   if (onBoard && ref?.type === "color") {
@@ -48,15 +55,17 @@ async function clickOption(page: Page, opt: Opt, onBoard: boolean, menuIndex: nu
   }
   if (onBoard) {
     const key = ref?.cardId ?? ref?.player;
-    await page.locator(`.board [data-id="${key}"], .board [data-player="${key}"]`).first().click();
+    // プレイヤーはアバターを押す（見出しには盤面の操作のボタンもある）
+    await page.locator(`.board [data-id="${key}"], .board [data-player="${key}"] .avatar`).first().click();
     const ability = ref?.type === "ability" && (ref.abilityKind === "activated" || ref.abilityKind === "mana");
-    if (menuIndex >= 0 || ability) {
+    if (menuIndex >= 0 || (ability && await page.locator(`.menu [data-option="${opt.id}"]`).count())) {
       // 解答手順は 1 つずつ答えるので、能力の行は右の「積む」を押す（data-option。左の data-quick は解決まで進めてしまう）
       await page.locator(`.menu [data-option="${opt.id}"]`).click();
     }
     return;
   }
-  await page.locator(".actions .listed .opt").nth(listIndex).click();
+  if (kind === "PRIORITY") await page.locator(".actions .listed .opt").nth(listIndex).click();
+  else await page.locator(`.menu [data-option="${opt.id}"]`).click();
 }
 
 // 解答手順のある問題だけを解く（相手のブロックを考えると探索で解けない問題は、解答手順を持たない）
@@ -81,12 +90,12 @@ for (const entry of catalog.filter((e) => existsSync(`${dir}${e.id}.solution.jso
         const key = keyOf(opt);
         const onBoard = !!key && visible.includes(key);
         const same = onBoard ? d.options.filter((o) => keyOf(o) === key) : [];
-        await clickOption(page, opt, onBoard, same.length > 1 ? same.indexOf(opt) : -1, listed.indexOf(opt));
+        await clickOption(page, d.kind, opt, onBoard, same.length > 1 ? same.indexOf(opt) : -1, listed.indexOf(opt));
       }
       const single = d.min === 1 && d.max === 1;
       const special = step.indexes.some((i) => d.options[i].ref?.type === "special");
       if (!single && !special && d.kind !== "PRIORITY") {
-        await page.locator(".actions .btns button.on.big").first().click();
+        await clickAction(page, "[data-confirm]");
       }
     }
     const end = await waitFor(page, (x) => x.phase === "finished", "結果");

@@ -2,8 +2,9 @@ import { describe, expect, it } from "vitest";
 import { setLang } from "../i18n";
 
 setLang("ja"); // 文を確かめるテストは日本語で
-import type { Decision, GameView } from "../engine/protocol";
-import { buildInteraction, isColorAsk, manaLabel, marksOf, optionLabel } from "./decision";
+import type { CardView, Decision, GameView, Option } from "../engine/protocol";
+import { buildInteraction, colorName, isColorAsk, isDirectManaLand, manaLabel, marksOf, optionLabel } from "./decision";
+import { decisionPrompt } from "./text";
 
 const view: GameView = {
   turn: 1, phase: "MAIN1", activePlayer: "p1", priorityPlayer: "p1", stack: [], combat: [],
@@ -84,5 +85,68 @@ describe("optionLabel", () => {
     expect(optionLabel({ id: "a", label: "Mountain | {T}: Add {R}.", ref: { type: "ability", cardId: "m", abilityKind: "mana" } })).toBe("マナを出す: {T}：{R}を加える。");
     expect(optionLabel({ id: "c", label: "Ornithopter (Battlefield, p2)", ref: { type: "card", cardId: "o1" } })).toBe("Ornithopter");
     expect(optionLabel({ id: "auto", label: "Auto pay", ref: { type: "special", value: "auto" } })).toBe("自動で支払う");
+    expect(colorName("C")).toBe("無色");
+  });
+
+  it("スタック参照と新しい選択要求の説明文", () => {
+    const viewWithStack: GameView = {
+      ...view,
+      stack: [{ index: 0, sourceId: "c1", controller: "p1", description: "Spell", spell: true, targets: [] }],
+    };
+    const d: Decision = {
+      seq: 5, kind: "TARGETS", prompt: "", promptKey: "divide",
+      promptArgs: { target: "Mountain", left: "3" }, min: 1, max: 1,
+      options: [{ id: "s0", label: "Kolaghan's Command", ref: { type: "stack", index: 0 } }],
+    };
+    const i = buildInteraction(d, viewWithStack);
+    expect(i.onBoard.get("c1")?.map((o) => o.id)).toEqual(["s0"]);
+    expect(decisionPrompt(d)).toBe("Mountain に割り振る数を選んでください（残り 3）");
+    expect(decisionPrompt({ ...d, promptKey: "scryBottom" })).toBe("占術: ライブラリーの一番下に置くカードを選んでください");
+    expect(decisionPrompt({ ...d, promptKey: "surveilGrave" })).toBe("諜報: 墓地に置くカードを選んでください");
+    expect(decisionPrompt({ ...d, promptKey: "convoke" })).toBe("コストの支払いに使うカードを選んでください");
+  });
+});
+
+describe("isDirectManaLand", () => {
+  const land = (overrides: Partial<CardView> = {}): CardView => ({
+    instanceId: "m0", name: "Mountain", zone: "Battlefield", owner: "p1", controller: "p1",
+    kinds: ["land"], typeLine: "Basic Land — Mountain", manaCost: "", text: "({T}: Add {R}.)",
+    power: null, toughness: null, basePower: null, baseToughness: null, damage: 0,
+    tapped: false, sick: false, token: false, faceDown: false, counters: {}, attachedTo: null, exiledBy: null,
+    ...overrides,
+  });
+  const manaOpt = (label: string, color?: "W" | "U" | "B" | "R" | "G" | "C"): Option => ({
+    id: "a0", label, ref: { type: "ability", cardId: "m0", abilityKind: "mana", ...(color ? { color } : {}) },
+  });
+
+  it("単一マナしか出ず他の起動効果もない戦場の土地は true", () => {
+    expect(isDirectManaLand(land(), [manaOpt("Mountain | {T}: Add {R}.")])).toBe(true);
+    expect(isDirectManaLand(land({
+      name: "Urza's Mine",
+      text: "{T}: Add {C}. If you control an Urza's Power-Plant and an Urza's Tower, add {C}{C} instead.",
+    }), [manaOpt("Urza's Mine | {T}: Add {C}. If you control an Urza's Power-Plant and an Urza's Tower, add {C}{C} instead.")])).toBe(true);
+  });
+
+  it("複数色のマナが出る土地・色を選ぶ土地は false", () => {
+    expect(isDirectManaLand(land({ name: "Submerged Boneyard", text: "{T}: Add {U} or {B}." }), [
+      manaOpt("Submerged Boneyard | {T}: Add {U} or {B}. [U]", "U"),
+      manaOpt("Submerged Boneyard | {T}: Add {U} or {B}. [B]", "B"),
+    ])).toBe(false);
+    expect(isDirectManaLand(land({ name: "Gateway Plaza", text: "{T}: Add one mana of any color." }), [
+      manaOpt("Gateway Plaza | {T}: Add one mana of any color."),
+    ])).toBe(false);
+  });
+
+  it("他の起動型能力を持つ土地・追加コストのある土地・土地以外は false", () => {
+    expect(isDirectManaLand(land({
+      name: "Castle Ardenvale",
+      text: "{T}: Add {W}.\n{2}{W}{W}, {T}: Create a 1/1 white Human creature token.",
+    }), [manaOpt("Castle Ardenvale | {T}: Add {W}.")])).toBe(false);
+    expect(isDirectManaLand(land({ name: "Pain Land", text: "{T}, Pay 1 life: Add {B}." }), [
+      manaOpt("Pain Land | {T}, Pay 1 life: Add {B}."),
+    ])).toBe(false);
+    expect(isDirectManaLand(land({ name: "Llanowar Elves", kinds: ["creature"], text: "{T}: Add {G}." }), [
+      manaOpt("Llanowar Elves | {T}: Add {G}."),
+    ])).toBe(false);
   });
 });

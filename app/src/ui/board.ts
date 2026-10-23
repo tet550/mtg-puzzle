@@ -65,8 +65,7 @@ export function renderBoard(view: GameView, ui: BoardUi, hooks: BoardHooks): HTM
 
 function playerHead(view: GameView, p: PlayerView, ui: BoardUi, hooks: BoardHooks, mine: boolean): HTMLElement {
   const mark = ui.marks.get(p.id);
-  const head = h("div.phead" + (mark ? `.${mark}` : ""), { "data-player": p.id });
-  head.addEventListener("click", () => hooks.player(p.id));
+  const head = h("div.phead" + (mark ? `.${mark}` : ""), { "data-player": p.id, onclick: () => hooks.player(p.id) });
   const who = mine ? t("player.you") : t("player.opponent");
   // 名前は出さずにアイコンで示す（名前は Tip）。あなたは旅の少年、相手（自動でパスする）は石のゴーレム
   const avatar = h("span.avatar" + (mine ? ".me" : ""), { title: who, "aria-label": who },
@@ -183,7 +182,7 @@ function pile(label: string, count: number, top: CardView | null, open: boolean,
 }
 
 function opened(title: string, cards: CardView[], ui: BoardUi, hooks: BoardHooks): HTMLElement {
-  return h("div.zone.opened", null, h("h3", null, t("opened.count", { title, n: cards.length })),
+  return h("div.zone.opened", { "data-zone": title }, h("h3", null, t("opened.count", { title, n: cards.length })),
     h("div.row", null, cards.map((c) => cardTile(c, ui, hooks, ""))));
 }
 
@@ -223,7 +222,7 @@ function kindGroups(cards: CardView[], p: PlayerView, ui: BoardUi, hooks: BoardH
     else {
       // 選択の候補・選んだものを含む束は重ねずに広げる（1 枚ずつ選べるように）
       const spread = g.cards.some((x) => ui.marks.has(x.instanceId));
-      tile = h("div.lgroup.pgroup" + (spread ? "" : ".overlap"), null, g.cards.map((x) => cardTile(x, ui, hooks, "")));
+      tile = h("div.lgroup.pgroup" + (spread ? "" : ".overlap"), { "data-group": g.key }, g.cards.map((x) => cardTile(x, ui, hooks, "")));
       if (!spread) tile.append(h("span.chip.strong.gcount", null, `×${g.cards.length}`));
     }
     if (prev >= 0 && kindOf(c) !== prev) tile.classList.add("kgap");
@@ -240,7 +239,7 @@ function lookKey(c: CardView, ui: BoardUi): string {
 }
 
 function tuck(c: CardView, under: CardView[], ui: BoardUi, hooks: BoardHooks): HTMLElement {
-  const box = h("div.tuck", { style: `--n:${under.length}` } as never);
+  const box = h("div.tuck", { "data-group": `#${c.instanceId}`, style: `--n:${under.length}` } as never);
   under.forEach((u, i) => {
     const t = cardTile(u, ui, hooks, ".under");
     t.style.top = `${i * 18}px`;
@@ -262,7 +261,7 @@ function landGroups(lands: CardView[], ui: BoardUi, hooks: BoardHooks): HTMLElem
   return groups.map((g) => {
     // 選択の候補を含む束は重ねずに広げる（1 枚ずつ選べるように）
     const spread = g.cards.some((c) => ui.marks.has(c.instanceId));
-    const box = h("div.lgroup" + (spread ? "" : ".overlap"), null, g.cards.map((c) => cardTile(c, ui, hooks, ".land")));
+    const box = h("div.lgroup" + (spread ? "" : ".overlap"), { "data-group": g.key }, g.cards.map((c) => cardTile(c, ui, hooks, ".land")));
     if (g.cards.length > 1 && !spread) box.append(h("span.chip.strong.gcount", null, `×${g.cards.length}`));
     return box;
   });
@@ -287,17 +286,22 @@ export function combatBody(view: GameView, ui: BoardUi, hooks: BoardHooks): HTML
 }
 
 /** スタック: 上から順に、呪文はそのカード、能力は発生源のカードを小さく出し、横に名前・文・対象を並べる */
-/** 対象を選んでいる呪文・能力（スタックに出して、そこからカーソルへ矢印を出す）。text は能力の文 */
+/** 唱えている途中・対象を選んでいる呪文・能力（スタックに出し、対象選択中はそこからカーソルへ矢印を出す）。text は能力の文 */
 export interface Targeting {
   cardId: string;
   text: string;
+  targets?: string[];
+  aiming?: boolean;
 }
 
 export function stackBody(view: GameView, ui: BoardUi, hooks: BoardHooks, names: Map<string, string>, known: Map<string, CardView>,
   targeting: Targeting | null = null): HTMLElement {
   const byId = new Map(view.players.flatMap((p) => p.cards).map((c) => [c.instanceId, c]));
   // 唱えた呪文のカードは、エンジンの盤面のどの領域にも出てこない。最後に見えていた姿（手札のカード）で出す
-  const spellCard = (id: string): CardView | undefined => byId.get(id) ?? (known.has(id) ? { ...known.get(id)!, zone: "Stack", tapped: false } : undefined);
+  const spellCard = (id: string): CardView | undefined => {
+    const c = byId.get(id) ?? known.get(id);
+    return c ? (c.zone === "Hand" || !byId.has(id) ? { ...c, zone: "Stack", tapped: false } : c) : undefined;
+  };
   const onStack = new Set(view.stack.map((it) => it.sourceId));
   // 唱えている途中（対象・支払いを選んでいる間）の呪文も、まだスタックに載っていない項目として出す
   const casting = view.players.flatMap((p) => p.cards).filter((c) => c.zone === "Stack" && !onStack.has(c.instanceId));
@@ -310,12 +314,13 @@ export function stackBody(view: GameView, ui: BoardUi, hooks: BoardHooks, names:
         h("div.stext", null, manaNodes(text)),
         targets.length ? h("div.stargets.muted", null, "→ ", targets.map((x) =>
           view.players.some((p) => p.id === x) ? (x === ui.viewer ? t("player.you") : t("player.opponent")) : displayName(byId.get(x)?.name ?? names.get(x) ?? x)).join(t("log.sep"))) : null));
-  // 対象を選び終わるまで、呪文・能力はスタックに出てこない（唱えている呪文のカードは盤面のどこにも無い）。
-  // 対象を選んでいる間は、まだ載っていない項目として出す（呪文は最後に見えていた姿、能力は持ち主のカード）
+  // 対象や支払いを選び終わるまで、呪文・能力はスタックに出てこない（唱えている呪文のカードは盤面のどこにも無い）。
+  // 唱えている・解決の選択を待っている間は、まだ載っていない項目として先頭に出す（呪文は最後に見えていた姿、能力は持ち主のカード）
+  const isAiming = targeting ? (targeting.aiming ?? true) : false;
   const aiming = targeting && !casting.some((c) => c.instanceId === targeting.cardId) ? spellCard(targeting.cardId) : undefined;
   return h("ol.stack.panel", null,
-    aiming ? item(aiming, aiming.name, targeting!.text, "…", [], ".casting", targeting!.cardId, true) : null,
-    casting.map((c) => item(c, c.name, t("stack.casting"), "…", [], ".casting", c.instanceId, c.instanceId === targeting?.cardId)),
+    aiming ? item(aiming, aiming.name, targeting!.text, "…", targeting!.targets ?? [], ".casting", targeting!.cardId, isAiming) : null,
+    casting.map((c) => item(c, c.name, t("stack.casting"), "…", [], ".casting", c.instanceId, isAiming && c.instanceId === targeting?.cardId)),
     view.stack.map((it) => item(it.spell ? spellCard(it.sourceId) : byId.get(it.sourceId), names.get(it.sourceId) ?? "?",
       localized(it.description.replace(/\s*\(\d+\)/g, ""), it.descriptionJa), it.index === 0 ? t("stack.top") : String(it.index + 1), it.targets, "", it.sourceId)));
 }

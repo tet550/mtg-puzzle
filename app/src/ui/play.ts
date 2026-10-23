@@ -6,15 +6,15 @@ import { markCleared } from "../puzzle/catalog";
 import { verdictText } from "../puzzle/judge";
 import type { PuzzleJson } from "../puzzle/schema";
 import { PuzzleSession, type SessionState } from "../puzzle/session";
-import { combatBody, combatSets, detailBody, renderBoard, stackBody, type BoardHooks, type BoardUi, type Targeting } from "./board";
+import { combatBody, combatSets, detailBody, renderBoard, stackBody, type BoardHooks, type BoardUi, type Mark, type Targeting } from "./board";
 import { TargetArrow } from "./arrow";
 import { localized } from "./localize";
 import { fitHands, setupFloat } from "./float";
 import { macroAnswer, startMacro, type Macro } from "./quick";
 import { manaNodes } from "./mana";
 import { icon, type IconName } from "./icons";
-import { buildInteraction, colorName, isColorAsk, manaLabel, marksOf, optionLabel, type Interaction } from "./decision";
-import { h } from "./dom";
+import { buildInteraction, colorName, isColorAsk, isDirectManaLand, manaLabel, marksOf, optionLabel, type Interaction } from "./decision";
+import { h, patchChildren } from "./dom";
 import { cardImage, displayName, ensureCardImages, imagesEnabled, printedText, setImagesEnabled } from "./images";
 import { t, type MessageKey } from "../i18n";
 import { langSwitch } from "./lang";
@@ -32,7 +32,8 @@ export class PlayPage {
   private open = new Set<string>();
   private flash = new Set<string>();
   private detail: CardView | null = null;
-  private logOpen = window.matchMedia("(min-width: 901px)").matches;
+  private logOpen = window.matchMedia("(min-width: 900px) and (orientation: landscape)").matches;
+  private debug = debugEnabled();
   /** カードの上のメニュー。locked は取りやめられない選択（色の問い合わせ）で、外を押しても閉じない */
   private menu: OptionMenu | null = null;
   /** 対象を選んでいる間の、スタックからカーソルへの矢印 */
@@ -57,11 +58,23 @@ export class PlayPage {
   private lastPress: { id: string; at: number; x: number; y: number } | null = null;
   /** 畳んでいる小窓（"stack" / "combat" / "play"）。選択要求が変わると開き直す（操作パネルは除く） */
   private minimized = new Set<string>();
+  /** 盤面に無い選択肢のメニューを閉じた選択要求の seq（同じ選択要求の間は自分では開き直さない） */
+  private menuDismissed = -1;
   /** 出来事の演出（motion.ts）。再生中は描き直しを待たせる */
   private motion = motionEnabled();
   private playing = false;
   private dirty = false;
   private lastStep: SessionState["step"] = null;
+  /** 優先権でプレイヤーが起動した起動型能力の発生源（誘発と区別する） */
+  private activating: string | null = null;
+  /** 唱えている・起動している途中（モード・対象・コスト支払いなど）の呪文・能力 */
+  private casting: { cardId: string; desc: string; descJa: string | null; targets: string[] } | null = null;
+  /** 解決の途中で選択を待っているスタックの項目（Forge は解決開始時にスタックから外すため、resolved まで残す） */
+  private resolving: GameView["stack"][number] | null = null;
+  /** スタックに積む前の選択で既に誘発の演出を出した発生源 */
+  private promptedTriggers = new Set<string>();
+  /** エンジン応答待ち（busy）の間も直前のハイライトを保ち、ちらつきを防ぐ */
+  private lastMarks = new Map<string, Mark>();
   private disposed = false;
 
   constructor(engine: ForgeEngine, private readonly puzzleId: string, private readonly onBack: () => void) {
@@ -69,6 +82,10 @@ export class PlayPage {
     this.session = new PuzzleSession(engine);
     this.unsubs.push(engine.onStatus((s) => { this.engineStatus = s; this.render(); }));
     this.unsubs.push(this.session.subscribe((s) => this.onSession(s)));
+    const wideMq = window.matchMedia("(min-width: 900px) and (orientation: landscape)");
+    const onWideChange = (e: MediaQueryListEvent) => { this.logOpen = e.matches; this.render(); };
+    wideMq.addEventListener("change", onWideChange);
+    this.unsubs.push(() => wideMq.removeEventListener("change", onWideChange));
     document.addEventListener("keydown", this.onKey);
     this.setupQuickActions();
   }
@@ -109,14 +126,33 @@ export class PlayPage {
   }
 
   private readonly onKey = (e: KeyboardEvent) => {
-    if (e.key === "Escape") { if (!this.menu?.locked) this.menu = null; this.detail = null; this.render(); }
+    // Esc: 開いているもの（メニュー・カードの詳細）を閉じる。何も開いていなければ、おまかせをやめるか、取りやめる
+    if (e.key === "Escape") {
+      if (this.menu && !this.menu.locked) this.closeMenu();
+      else if (this.detail) this.detail = null;
+      else if (this.macro) this.macro = null;
+      else if (!this.menu) {
+        const cancel = this.session.state.phase === "playing" && this.session.state.step?.pending?.options.find((o) => o.ref?.type === "special" && o.ref.value === "cancel");
+        if (cancel) { this.send([cancel.id]); return; }
+      }
+      this.render();
+    }
     if (e.key === "l" && !(e.target instanceof HTMLInputElement)) { this.logOpen = !this.logOpen; this.render(); }
   };
 
   private onSession(s: SessionState) {
     if (s.step) {
-      for (const p of s.step.view.players) for (const c of p.cards) { this.names.set(c.instanceId, c.name); this.known.set(c.instanceId, c); }
+      const stepNames: string[] = [];
+      for (const p of s.step.view.players) {
+        for (const c of p.cards) {
+          this.names.set(c.instanceId, c.name);
+          this.known.set(c.instanceId, c);
+          stepNames.push(c.name);
+        }
+      }
       for (const it of s.step.view.stack) if (!this.names.has(it.sourceId)) this.names.set(it.sourceId, it.description);
+      // プレイ中に生成されたトークンなど、初期盤面に無かったカードの画像も Scryfall で引く
+      void ensureCardImages(stepNames).then((changed) => { if (changed && !this.disposed) this.render(); });
     }
     if (s.step?.pending?.seq !== this.decisionSeq) {
       this.decisionSeq = s.step?.pending?.seq ?? -1;
@@ -125,16 +161,55 @@ export class PlayPage {
       this.minimized.delete("stack");
       this.minimized.delete("combat");
     }
-    if (s.history.length < this.lastHistoryLength) this.lastHistoryLength = 0;
+    if (s.history.length < this.lastHistoryLength) {
+      this.lastHistoryLength = 0;
+      this.activating = null;
+      this.casting = null;
+      this.resolving = null;
+      this.promptedTriggers.clear();
+    }
     const fresh = s.history.slice(this.lastHistoryLength);
     this.lastHistoryLength = s.history.length;
     const prev = this.lastStep;
     this.lastStep = s.step;
+    const activated = this.activating;
+    const prompted = new Set(this.promptedTriggers);
+    const triggered = preStackTriggers(prev, s.step, activated, this.promptedTriggers);
+    if (s.phase !== "busy") {
+      const d = s.step?.pending ?? null;
+      if (!s.step || d?.kind === "PRIORITY" || s.phase !== "playing") {
+        this.activating = null;
+        this.casting = null;
+        this.resolving = null;
+        this.promptedTriggers.clear();
+      } else {
+        if (this.casting && fresh.some((e) =>
+          (e.type === "cast" && e.sourceId === this.casting!.cardId)
+          || (e.type === "zoneChange" && e.cardId === this.casting!.cardId && e.from === "Stack"))) {
+          this.casting = null;
+        }
+        if (d?.source && (d.kind === "TARGETS" || d.kind === "CHOOSE_MODE")) {
+          const a = d.promptArgs ?? {};
+          if (!this.casting || this.casting.cardId !== d.source) {
+            this.casting = { cardId: d.source, desc: a.desc ?? "", descJa: a.descJa ?? null, targets: [] };
+          } else if (a.desc) {
+            this.casting.desc = a.desc;
+            this.casting.descJa = a.descJa ?? null;
+          }
+        }
+        if (this.resolving && (
+          fresh.some((e) => e.type === "resolved" && e.sourceId === this.resolving!.sourceId)
+          || s.step.view.stack.some((it) => it.sourceId === this.resolving!.sourceId && it.description === this.resolving!.description)
+        )) {
+          this.resolving = null;
+        }
+      }
+    }
     // 演出: 前の盤面があって、新しい出来事が来たときだけ（開いた・やり直したときは描くだけ）
-    const animate = this.motion && !!prev && !!s.step && s.step !== prev && fresh.length > 0;
+    const animate = this.motion && !!prev && !!s.step && s.step !== prev && (fresh.length > 0 || triggered.length > 0);
     if (!animate) {
       // 演出を切っているときは、新しい出来事で変わったカードを短く光らせるだけ
-      this.flash = this.motion ? new Set() : changedCards(fresh);
+      this.flash = this.motion ? new Set() : changedCards(fresh, triggered);
       if (this.flash.size) {
         window.clearTimeout(this.flashTimer);
         this.flashTimer = window.setTimeout(() => { this.flash.clear(); this.render(); }, 900);
@@ -142,10 +217,16 @@ export class PlayPage {
     }
     if (s.phase === "finished" && s.verdict.result === "CLEARED") markCleared(this.puzzleId);
     if (s.phase === "finished" || s.phase === "error" || s.phase === "loading") this.macro = null;
+    if (s.step === prev && this.playing) {
+      this.dirty = true;
+      return;
+    }
+    if (this.playing) skip();
     const before = animate ? capture(this.el) : null;
     this.playing = false;
     this.render();
     const after = () => {
+      this.arrow?.setOrigin(this.el.querySelector<HTMLElement>(".stackbox [data-targeting]"));
       if (s.phase === "finished" && prev?.engine.state !== "GAME_OVER") verdictStamp(s.verdict.result === "CLEARED");
       if (this.macro && s.phase === "playing") queueMicrotask(() => this.stepMacro());
     };
@@ -154,7 +235,7 @@ export class PlayPage {
       return;
     }
     this.playing = true;
-    void play({ root: this.el, before, prev: prev.view, next: s.step.view, events: fresh, viewer: VIEWER, known: this.known })
+    void play({ root: this.el, before, prev: prev.view, next: s.step.view, events: fresh, viewer: VIEWER, known: this.known, activated, triggered, prompted })
       .catch((e) => console.error(e))
       .finally(() => {
         if (this.session.state !== s) return; // 再生中に次の状態が来た（その状態の描画が済んでいる）
@@ -177,7 +258,7 @@ export class PlayPage {
       this.render();
       return;
     }
-    if (ans) void this.session.answer(ans);
+    if (ans) this.send(ans);
   }
 
   private startQuick(cardId: string, targetKey: string | null, optionId: string | null = null) {
@@ -336,9 +417,14 @@ export class PlayPage {
     const s = this.session.state;
     const view = s.step?.view ?? (s.puzzle ? previewView(s.puzzle) : null);
     const interaction = s.phase === "playing" && s.step?.pending && s.step ? buildInteraction(s.step.pending, s.step.view) : null;
+    if (s.phase === "playing") {
+      this.lastMarks = marksOf(interaction, this.selected);
+    } else if (s.phase !== "busy") {
+      this.lastMarks = new Map();
+    }
     const ui: BoardUi = {
       viewer: VIEWER,
-      marks: marksOf(interaction, this.selected),
+      marks: this.lastMarks,
       open: this.open,
       startTurn: s.startTurn || view?.turn || 1,
       flash: this.flash,
@@ -368,14 +454,18 @@ export class PlayPage {
       h("button" + (this.motion ? ".on" : ""), { type: "button", "aria-pressed": String(this.motion), title: t("header.motion.title"),
         onclick: () => { this.motion = !this.motion; setMotionEnabled(this.motion); this.render(); } }, t("header.motion")),
       h("button" + (this.logOpen ? ".on" : ""), { type: "button", onclick: () => { this.logOpen = !this.logOpen; this.render(); }, title: t("header.log.title") }, "Log"),
+      h("button" + (this.debug ? ".on" : ""), { type: "button", "aria-pressed": String(this.debug), title: t("header.debug.title"),
+        onclick: () => { this.debug = !this.debug; setDebugEnabled(this.debug); if (this.debug) this.logOpen = true; this.render(); } }, t("header.debug")),
       langSwitch(),
     );
 
     // 盤面の上に浮かぶ小窓（mtgtable と同じ）: スタックは右上、戦闘は右の中ほど、カードの詳細は左上
     const board = view ? renderBoard(view, ui, hooks) : h("section.board");
-    const targeting = targetingOf(s.step?.pending ?? null);
-    if (view && (view.stack.length || targeting || view.players.some((p) => p.cards.some((c) => c.zone === "Stack")))) {
-      board.append(this.floatBox("stack", t("stack.title", { n: view.stack.length }), stackBody(view, ui, hooks, this.names, this.known, targeting)));
+    const targeting = this.currentTargeting(s.step?.pending ?? null, s.phase);
+    const castingCards = view ? view.players.flatMap((p) => p.cards).filter((c) => c.zone === "Stack" && !view.stack.some((it) => it.sourceId === c.instanceId)) : [];
+    const stackCount = (view?.stack.length ?? 0) + castingCards.length + (targeting && !castingCards.some((c) => c.instanceId === targeting.cardId) ? 1 : 0);
+    if (view && stackCount > 0) {
+      board.append(this.floatBox("stack", t("stack.title", { n: stackCount }), stackBody(view, ui, hooks, this.names, this.known, targeting)));
     }
     if (view && view.combat.length) board.append(this.floatBox("combat", t("combat.title"), combatBody(view, ui, hooks)));
     // カードの詳細は盤面の外（画面の一番上の層）に置く。盤面の中だと、狭い画面の下からのシートが操作パネルに隠れる
@@ -387,23 +477,35 @@ export class PlayPage {
           h("button", { type: "button", onclick: () => { this.detail = null; this.render(); }, title: t("card.close") }, "×")),
         h("div.fbody", null, detailBody(d, this.images ? cardImage(d.name)?.normal ?? null : null, cardImage(d.name)?.artist ?? null, printedText(d.name)))));
     }
-    const main = h("main.layout" + (this.logOpen ? ".withlog" : ""), null,
+    const main = h("main.layout" + (this.logOpen ? ".withlog" : "") + (this.debug ? ".withdebug" : ""), null,
       board,
-      this.logOpen ? h("aside.logpane", null, h("div.lphead", null, h("span", null, "Log"),
+      this.logOpen ? h("aside.logpane" + (this.debug ? ".debug" : ""), null, h("div.lphead", null, h("span", null, "Log"),
+        h("button.dbgbtn" + (this.debug ? ".on" : ""), { type: "button", "aria-pressed": String(this.debug), title: t("header.debug.title"),
+          onclick: () => { this.debug = !this.debug; setDebugEnabled(this.debug); this.render(); } }, t("header.debug")),
         h("button", { type: "button", onclick: () => { this.logOpen = false; this.render(); }, title: t("card.close") }, "×")),
-        logList(s.history, this.names)) : null,
+        this.debug ? debugLogList(s) : logList(s.history, this.names)) : null,
     );
 
     const panel = this.playPanel(s, interaction);
-    const menu = this.menu ? optionMenu(this.menu, (o) => this.choose(o, interaction),
-      interaction?.decision.kind === "PRIORITY" ? (o) => { if (o.ref?.type === "ability") this.startQuick(o.ref.cardId, null, o.id); } : null,
-      () => { this.menu = null; this.render(); }) : null;
     this.el.classList.toggle("withpanelmin", this.minimized.has("play"));
+    const buildMenu = () => {
+      if (!this.menu) return [];
+      // 盤面に無い選択肢のメニューには、決定・パスなどのボタンも入れる（メニューが見出しの盤面の操作に重なっても答えられるように）
+      const foot = this.menu.soft && interaction && s.phase === "playing" ? this.decisionButtons(s, interaction) : [];
+      return optionMenu(this.menu, this.selected, foot, (o) => this.choose(o, interaction),
+        interaction?.decision.kind === "PRIORITY" ? (o) => { if (o.ref?.type === "ability") this.startQuick(o.ref.cardId, null, o.id); } : null,
+        () => { this.closeMenu(); this.render(); });
+    };
 
-    this.el.replaceChildren(header, main, panel, ...(detail ? [detail] : []), ...(menu ?? []));
-    if (!this.menu && interaction) queueMicrotask(() => this.openColorMenu(interaction));
-    // 対象を選んでいる間は、スタックのその呪文・能力からカーソルへ矢印を出す
-    if (targeting) (this.arrow ??= new TargetArrow()).setOrigin(this.el.querySelector<HTMLElement>(".stackbox [data-targeting]"));
+    patchChildren(this.el, header, main, panel, ...(detail ? [detail] : []), ...buildMenu());
+    if (!this.menu && interaction) {
+      this.computeAutoMenu(interaction);
+      if (this.menu) this.el.append(...buildMenu());
+    }
+    if (this.menu) fitMenu(this.el.querySelector<HTMLElement>(".menu"), this.menu);
+    // 対象を選んでいる間は、スタックのその呪文・能力からカーソルへ矢印を出す（おまかせで対象が自動で決まるときは出さない）
+    const autoTarget = this.macro && !this.macro.targetUsed && !!this.macro.targetKey;
+    if (targeting?.aiming && !autoTarget) (this.arrow ??= new TargetArrow()).setOrigin(this.el.querySelector<HTMLElement>(".stackbox [data-targeting]"));
     else this.dropArrow();
     // 小窓は見出しのドラッグで動かせる（位置は小窓ごとに覚える）。手札は扇に整える
     for (const [sel, key] of [[".cdetail", "detail"], [".stackbox", "stack"], [".combatbox", "combat"]] as const) {
@@ -480,35 +582,40 @@ export class PlayPage {
   }
 
   private decisionBar(bar: HTMLElement, s: SessionState, i: Interaction) {
-    const d = i.decision;
-    const view = s.step!.view;
-    bar.append(h("div.prompt", null, manaNodes(decisionPrompt(d))));
-    const btns = h("div.btns");
+    bar.append(h("div.prompt", null, manaNodes(decisionPrompt(i.decision))));
     // 盤面に無い選択肢（モード・数・見えない領域のカード）はここに並べる
     if (i.listed.length) {
       const list = h("div.listed");
       for (const o of i.listed) {
         const on = this.selected.has(o.id);
-        list.append(h("button.opt" + (on ? ".on" : ""), { type: "button", onclick: () => this.choose(o, i) }, manaNodes(optionLabel(o))));
+        list.append(h("button.opt" + (on ? ".on" : ""), { type: "button", "data-option": o.id, onclick: () => this.choose(o, i) }, manaNodes(optionLabel(o))));
       }
       bar.append(list);
     }
+    bar.append(h("div.btns", null, this.decisionButtons(s, i)));
+  }
+
+  /** 決定（複数を選ぶとき）と、パス・自動で支払う・取りやめ・はい・いいえのボタン */
+  private decisionButtons(s: SessionState, i: Interaction): HTMLElement[] {
+    const d = i.decision;
+    const view = s.step!.view;
+    const btns: HTMLElement[] = [];
     if (!i.single && d.kind !== "PRIORITY") {
       const n = this.selected.size;
       const ok = n >= d.min && n <= d.max;
       const label = d.kind === "ATTACKERS" ? (n ? t("action.attackN", { n }) : t("action.noAttack")) : t("action.confirm", { n });
-      btns.append(h("button.on.big", { type: "button", disabled: !ok, onclick: () => this.send([...this.selected]) }, label));
-      if (n) btns.append(h("button", { type: "button", onclick: () => { this.selected.clear(); this.render(); } }, t("action.clear")));
+      btns.push(h("button.on.big", { type: "button", "data-confirm": "1", disabled: !ok, onclick: () => this.send([...this.selected]) }, label));
+      if (n) btns.push(h("button", { type: "button", "data-clear": "1", onclick: () => { this.selected.clear(); this.render(); } }, t("action.clear")));
     }
     for (const o of i.specials) {
       const value = o.ref?.type === "special" ? o.ref.value : "";
       const text = value === "pass" ? passLabel(view.phase, view.stack.length) : optionLabel(o);
       const ic: IconName | null = value === "pass" ? passIcon(view.phase, view.stack.length) : null;
-      btns.append(h("button.big" + (value === "pass" || value === "yes" ? ".on" : ""), {
-        type: "button", "data-special": value, onclick: () => this.send([o.id]),
+      btns.push(h("button.big" + (value === "pass" || value === "yes" ? ".on" : ""), {
+        type: "button", "data-special": value, title: value === "cancel" ? t("board.cancel.title") : null, onclick: () => this.send([o.id]),
       }, ic ? icon(ic) : null, manaNodes(text)));
     }
-    bar.append(btns);
+    return btns;
   }
 
   // ---------------------------------------------------------------- 入力
@@ -520,7 +627,7 @@ export class PlayPage {
       this.render();
       return;
     }
-    this.pick(opts, i, c.instanceId);
+    this.pick(opts, i, c.instanceId, c);
   }
 
   private onPlayer(id: string, i: Interaction | null) {
@@ -529,48 +636,134 @@ export class PlayPage {
   }
 
   /** 1 つの盤面の要素に複数の選択肢があればメニューを出す */
-  private pick(opts: Option[], i: Interaction, key: string) {
+  private pick(opts: Option[], i: Interaction, key: string, card?: CardView) {
     if (this.menu?.locked) return; // 色を選ぶまでは、ほかのカードを押しても変えない
-    // 起動型能力・マナ能力は、1 つしか無くてもメニューから選ぶ（プレインズウォーカーの能力と同じ。押しただけで起動しない）
+    // 起動型能力・マナ能力は、1 つしか無くてもメニューから選ぶ（単一マナしか出ず他の起動効果もない土地は、タップでそのままマナを出す）
     const activated = i.decision.kind === "PRIORITY"
-      && opts.some((o) => o.ref?.type === "ability" && (o.ref.abilityKind === "activated" || o.ref.abilityKind === "mana"));
+      && opts.some((o) => o.ref?.type === "ability" && (o.ref.abilityKind === "activated" || o.ref.abilityKind === "mana"))
+      && !isDirectManaLand(card, opts);
     if (opts.length === 1 && !activated) {
       this.choose(opts[0], i);
       return;
     }
     const el = this.el.querySelector<HTMLElement>(`[data-id="${CSS.escape(key)}"], [data-player="${CSS.escape(key)}"]`);
     const r = el?.getBoundingClientRect();
-    this.menu = { x: r ? r.left : 20, y: r ? r.bottom + 4 : 80, options: opts, locked: false, title: null };
+    this.menu = { x: r ? r.left : 20, y: r ? r.bottom + 4 : 80, options: opts, locked: false, soft: false, title: null };
     this.render();
   }
 
   /**
-   * 色の問い合わせは、能力の持ち主のカードの上（能力のメニューと同じ場所）に色の記号を出す。
-   * 取りやめられないので、外を押しても閉じない。カードが盤面に見えなければ、操作の欄のボタンだけで選ぶ
+   * 盤面で押せない選択は、選んでいる呪文・能力の近くに自分でメニューを出す（操作パネルを見なくても答えられるように）。
+   * - 色の問い合わせ: 能力の持ち主のカードの上に色の記号。取りやめられないので、外を押しても閉じない
+   * - 盤面に無い選択肢（モード・X の値・見えない領域のカードなど）: 下に幕を敷かないメニュー（盤面のカードも押せる）。
+   *   × か Esc で閉じれば、その選択要求の間は開き直さない（盤面の操作の「選択肢」で開き直す）
    */
-  private openColorMenu(i: Interaction | null) {
-    if (this.menu || !i || !isColorAsk(i.decision)) return;
-    const key = i.decision.options[0].ref?.type === "color" ? i.decision.options[0].ref.cardId : null;
-    const el = key ? this.el.querySelector<HTMLElement>(`.board [data-id="${CSS.escape(key)}"]`) : null;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    this.menu = { x: r.left, y: r.bottom + 4, options: i.decision.options, locked: true, title: decisionPrompt(i.decision) };
-    this.render();
+  private computeAutoMenu(i: Interaction | null) {
+    if (this.menu || !i || this.session.state.phase !== "playing") return;
+    const d = i.decision;
+    const title = decisionPrompt(d);
+    if (isColorAsk(d)) {
+      const key = d.options[0].ref?.type === "color" ? d.options[0].ref.cardId : null;
+      this.menu = { ...this.menuAnchor(key ? [key] : []), options: d.options, locked: true, soft: false, title };
+    } else {
+      const options = autoListed(i);
+      if (!options.length || this.menuDismissed === d.seq) return;
+      const view = this.session.state.step!.view;
+      const casting = view.players.flatMap((p) => p.cards).filter((c) => c.zone === "Stack").map((c) => c.instanceId);
+      const ids = [d.source, this.casting?.cardId, this.resolving?.sourceId, ...casting, view.stack[0]?.sourceId].filter((x): x is string => !!x);
+      this.menu = { ...this.menuAnchor(ids), options, locked: false, soft: true, title };
+    }
+  }
+
+  /**
+   * メニューを出す所: ids の順に、盤面（スタックの小窓を含む）に見えているカード・スタックの項目の下（入らなければ上）。
+   * どれも無ければ盤面の真ん中
+   */
+  private menuAnchor(ids: string[]): { x: number; y: number; above?: number } {
+    for (const id of ids) {
+      const sel = `.board [data-id="${CSS.escape(id)}"], .board [data-source="${CSS.escape(id)}"]`;
+      for (const el of this.el.querySelectorAll<HTMLElement>(sel)) {
+        const r = el.getBoundingClientRect();
+        if (r.width && r.height) return { x: r.left, y: r.bottom + 4, above: r.top - 4 };
+      }
+    }
+    const b = this.el.querySelector<HTMLElement>(".board")?.getBoundingClientRect();
+    return b ? { x: b.left + b.width / 2 - 160, y: b.top + b.height * 0.3 } : { x: 20, y: 80 };
+  }
+
+  private closeMenu() {
+    if (this.menu?.soft) this.menuDismissed = this.decisionSeq;
+    this.menu = null;
   }
 
   private choose(o: Option, i: Interaction | null) {
-    this.menu = null;
-    if (!i) return;
-    if (i.single) {
+    if (!i) {
+      this.menu = null;
+      return;
+    }
+    if (i.single || (i.decision.kind === "CHOOSE_MODE" && i.decision.max === 1)) {
       this.send([o.id]);
       return;
     }
+    if (!this.menu?.soft) this.menu = null;
     if (this.selected.has(o.id)) this.selected.delete(o.id);
     else if (this.selected.size < i.decision.max) this.selected.add(o.id);
     this.render();
   }
 
+  /** 対象選択中・唱えている途中（支払いなど）・解決の選択待ちの項目をスタックに出すための情報 */
+  private currentTargeting(d: Decision | null, phase: SessionState["phase"]): Targeting | null {
+    if (!d || d.kind === "PRIORITY") return null;
+    const direct = targetingOf(d);
+    if (direct) {
+      return {
+        ...direct,
+        targets: this.casting?.cardId === direct.cardId ? this.casting.targets : [],
+        aiming: phase === "playing",
+      };
+    }
+    if (this.casting) {
+      const text = localized(this.casting.desc.replace(/\s*\(\d+\)/g, ""), this.casting.descJa) || t("stack.casting");
+      return { cardId: this.casting.cardId, text, targets: this.casting.targets, aiming: false };
+    }
+    if (this.resolving) {
+      const it = this.resolving;
+      const text = localized(it.description.replace(/\s*\(\d+\)/g, ""), it.descriptionJa);
+      return { cardId: it.sourceId, text, targets: it.targets, aiming: false };
+    }
+    return null;
+  }
+
   private send(ids: string[]) {
+    const s = this.session.state;
+    const d = s.step?.pending;
+    if (d?.kind === "PRIORITY") {
+      const o = d.options.find((x) => ids.includes(x.id));
+      const isCastOrAct = o?.ref?.type === "ability" && (o.ref.abilityKind === "spell" || o.ref.abilityKind === "activated");
+      this.activating = o?.ref?.type === "ability" && o.ref.abilityKind !== "mana" ? o.ref.cardId : null;
+      if (isCastOrAct && o.ref?.type === "ability") {
+        const after = (str: string) => (str.includes(" | ") ? str.slice(str.indexOf(" | ") + 3).trim() : str);
+        this.casting = { cardId: o.ref.cardId, desc: after(o.label), descJa: o.labelJa ? after(o.labelJa) : null, targets: [] };
+      } else {
+        this.casting = null;
+      }
+      const top = s.step?.view.stack[0] ?? null;
+      this.resolving = o?.ref?.type === "special" && o.ref.value === "pass" ? top : null;
+      this.promptedTriggers.clear();
+    } else if (d?.options.some((x) => ids.includes(x.id) && x.ref?.type === "special" && x.ref.value === "cancel")) {
+      this.activating = null;
+      this.casting = null;
+    } else if (d?.kind === "TARGETS") {
+      const picked: string[] = [];
+      for (const id of ids) {
+        const o = d.options.find((x) => x.id === id);
+        if (o?.ref?.type === "card") picked.push(o.ref.cardId);
+        else if (o?.ref?.type === "player") picked.push(o.ref.player);
+      }
+      if (picked.length && this.casting && (!d.source || d.source === this.casting.cardId)) {
+        for (const t of picked) if (!this.casting.targets.includes(t)) this.casting.targets.push(t);
+      }
+    }
     this.selected.clear();
     this.menu = null;
     void this.session.answer(ids);
@@ -598,6 +791,47 @@ function logList(history: GameEvent[], names: Map<string, string>): HTMLElement 
   return h("div.log", null, lines.length ? lines.map((l) => h("div.ev" + (l.startsWith("──") ? ".turnline" : ""), null, l)) : h("div.muted", null, t("log.empty")));
 }
 
+const DEBUG_KEY = "mtg-puzzle.debug";
+
+function debugEnabled(): boolean {
+  try { return localStorage.getItem(DEBUG_KEY) === "1"; } catch { return false; }
+}
+
+function setDebugEnabled(on: boolean): void {
+  try { localStorage.setItem(DEBUG_KEY, on ? "1" : "0"); } catch { /* ignore */ }
+}
+
+function debugLineClass(l: string): string {
+  if (l.startsWith("[Load]") || l.startsWith("[Submit]") || l.startsWith("[Reset]") || l.startsWith("[Restart")) return ".dbg-action";
+  if (l.startsWith("[Step]")) return ".dbg-step";
+  if (l.startsWith("[Decision")) return ".dbg-decision";
+  if (l.startsWith("  [Option")) return ".dbg-option";
+  if (l.startsWith("[GameLog:")) return ".dbg-gamelog";
+  if (l.startsWith("[AdapterEvent]")) return ".dbg-adapter";
+  if (l.startsWith("[Event]")) return ".dbg-event";
+  if (l.startsWith("[Fallback]") || l.startsWith("[Error]") || l.startsWith("[ValidationError]") || l.startsWith("[RestartError]")) return ".dbg-warn";
+  return "";
+}
+
+function debugLogList(s: SessionState): HTMLElement {
+  const stateJson = s.step ? JSON.stringify({
+    phase: s.phase,
+    verdict: s.verdict,
+    engine: s.step.engine,
+    javaJudge: s.step.javaJudge,
+    elapsedMs: s.step.elapsedMs,
+    fallback: s.step.fallback,
+    pending: s.step.pending,
+    view: s.step.view,
+  }, null, 2) : null;
+  return h("div.log.debug", null,
+    stateJson ? h("details.dbgstate", null, h("summary", null, t("log.debugState")), h("pre", null, stateJson)) : null,
+    s.debugHistory.length
+      ? s.debugHistory.map((l) => h("div.ev.dbgev" + debugLineClass(l), null, l))
+      : h("div.muted", null, t("log.empty")),
+  );
+}
+
 /**
  * 同じカードの選択肢のメニュー。外（下に敷いた透明の幕）を押すと閉じる。
  * スタックを使う能力・呪文の項目は 2 つに分かれた 1 つの行: 左（能力の文）を押すと起動して解決まで進め、
@@ -606,17 +840,36 @@ function logList(history: GameEvent[], names: Map<string, string>): HTMLElement 
 interface OptionMenu {
   x: number;
   y: number;
+  /** 下に入らないときに、メニューの下の端を合わせる所（出した元の上の端） */
+  above?: number;
   options: Option[];
   /** 取りやめられない選択（外を押しても閉じない） */
   locked: boolean;
-  /** 一番上に出す説明（色の問い合わせ） */
+  /** 盤面に無い選択肢を自分で出したもの: 幕を敷かず、見出しの × で閉じる */
+  soft: boolean;
+  /** 一番上に出す説明（色の問い合わせ・盤面に無い選択肢） */
   title: string | null;
 }
 
-function optionMenu(m: OptionMenu, choose: (o: Option) => void,
+/** 盤面に無い選択肢のうち、メニューに出すもの（優先権のときは出さない。色は色の問い合わせのメニューで出す） */
+function autoListed(i: Interaction): Option[] {
+  if (i.decision.kind === "PRIORITY") return [];
+  return i.listed.filter((o) => o.ref?.type !== "color");
+}
+
+/** 描いたメニューが画面の下にはみ出すなら、出した元の上に出す（それでも入らなければ画面の上の端から） */
+function fitMenu(el: HTMLElement | null, m: OptionMenu) {
+  if (!el || m.above === undefined) return;
+  const r = el.getBoundingClientRect();
+  if (r.bottom <= window.innerHeight - 8) return;
+  el.style.top = `${Math.max(8, Math.min(m.above - r.height, window.innerHeight - 8 - r.height))}px`;
+}
+
+function optionMenu(m: OptionMenu, selected: Set<string>, foot: HTMLElement[], choose: (o: Option) => void,
   quick: ((o: Option) => void) | null, close: () => void): HTMLElement[] {
   const x = Math.min(m.x, window.innerWidth - 328); // メニューの幅は最大 320px
-  const y = Math.min(m.y, window.innerHeight - 52 * (m.options.length + (m.title ? 1 : 0)) - 20);
+  // 出した元が分かるときは、はみ出しを描いた後に直す（fitMenu）。分からなければ高さを見積もって収める
+  const y = m.above !== undefined ? m.y : Math.min(m.y, window.innerHeight - 52 * (m.options.length + (m.title ? 1 : 0)) - 20);
   const usesStack = (o: Option) => o.ref?.type === "ability" && (o.ref.abilityKind === "activated" || o.ref.abilityKind === "spell");
   // 色ごとに分けたマナ能力（同じ能力）と、色の問い合わせの選択肢は、1 行の色の記号にまとめる
   const colorOf = (o: Option) => (o.ref?.type === "color" ? o.ref.color : o.ref?.type === "ability" && o.ref.abilityKind === "mana" ? o.ref.color ?? null : null);
@@ -641,24 +894,55 @@ function optionMenu(m: OptionMenu, choose: (o: Option) => void,
         h("button.mmain", { type: "button", role: "menuitem", title: t("menu.resolve.title"), "data-quick": o.id, onclick: () => quick(o) }, manaNodes(optionLabel(o))),
         h("button.mstack", { type: "button", role: "menuitem", title: t("menu.stack.title"), "aria-label": t("menu.stack.title"), "data-option": o.id, onclick: () => choose(o) },
           icon("stack"), h("span", null, t("menu.stack"))))
-      : h("button", { type: "button", role: "menuitem", "data-option": o.id, onclick: () => choose(o) }, manaNodes(optionLabel(o))));
+      : h("button" + (selected.has(o.id) ? ".on" : ""), { type: "button", role: "menuitem", "data-option": o.id, "aria-checked": selected.has(o.id) ? "true" : null,
+        onclick: () => choose(o) }, manaNodes(optionLabel(o))));
   }
-  const menu =h("div.menu" + (m.locked ? ".locked" : ""), { role: "menu", style: `left:${Math.max(8, x)}px;top:${Math.max(8, y)}px` } as never,
-    m.title ? h("div.mtitle", null, manaNodes(m.title)) : null, ...rows);
-  if (m.locked) return [menu]; // 外を押しても閉じない（下の盤面はそのまま見られる）
-  const back = h("div.menuback", { "aria-hidden": "true" });
+  const title = m.title ? h("div.mtitle", null, h("span", null, manaNodes(m.title)),
+    m.soft ? h("button.mclose", { type: "button", title: t("card.close"), "aria-label": t("card.close"), onclick: close }, "×") : null) : null;
+  const menu = h("div.menu" + (m.locked ? ".locked" : "") + (m.soft ? ".soft" : ""), { role: "menu", style: `left:${Math.max(8, x)}px;top:${Math.max(8, y)}px` } as never,
+    title, ...rows, foot.length ? h("div.mfoot", null, foot) : null);
+  if (m.locked || m.soft) return [menu]; // 外を押しても閉じない（下の盤面はそのまま見られ、押せる）
   // 押した所の下のカードを押したことにしない（閉じるだけ）
-  back.addEventListener("pointerdown", (ev) => { ev.preventDefault(); ev.stopPropagation(); close(); });
+  const back = h("div.menuback", {
+    "aria-hidden": "true",
+    onpointerdown: (ev: Event) => { ev.preventDefault(); ev.stopPropagation(); close(); },
+  });
   return [back, menu];
 }
 
 /** 出来事で変わったカード */
-function changedCards(events: GameEvent[]): Set<string> {
-  const out = new Set<string>();
+function changedCards(events: GameEvent[], triggered: string[] = []): Set<string> {
+  const out = new Set<string>(triggered);
   for (const e of events) {
     if (e.type === "zoneChange" || e.type === "tapped" || e.type === "counters") out.add(e.cardId);
     if (e.type === "damage") out.add(e.target);
     if (e.type === "life") out.add(e.player);
+    if (e.type === "cast") out.add(e.sourceId);
+  }
+  return out;
+}
+
+/** スタックに積む前の選択（対象・モード・同時誘発の順・任意誘発）で今誘発した発生源を返す */
+function preStackTriggers(prev: SessionState["step"], next: SessionState["step"], activating: string | null, prompted: Set<string>): string[] {
+  const d = next?.pending;
+  if (!prev || !next || !d || d.seq === prev.pending?.seq) return [];
+  const out: string[] = [];
+  if (d.promptKey === "orderSimultaneous") {
+    for (const o of d.options) {
+      if (o.ref?.type === "card" && !prompted.has(o.ref.cardId) && !out.includes(o.ref.cardId)) {
+        prompted.add(o.ref.cardId);
+        out.push(o.ref.cardId);
+      }
+    }
+    return out;
+  }
+  const src = d.source;
+  if (!src || src === activating || prompted.has(src)) return [];
+  const onBoard = next.view.players.some((p) => p.cards.some((c) => c.instanceId === src && c.zone !== "Stack" && c.zone !== "Hand"));
+  if (!onBoard) return [];
+  if (d.kind === "TARGETS" || d.promptKey === "mode" || d.promptKey === "optionalTrigger") {
+    prompted.add(src);
+    out.push(src);
   }
   return out;
 }

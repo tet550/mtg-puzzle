@@ -1,6 +1,6 @@
 // 選択要求（Decision）を、盤面で押せるもの（候補）と操作の欄のボタンに振り分ける。
 
-import type { Decision, GameView, ManaColor, Option } from "../engine/protocol";
+import type { CardView, Decision, GameView, ManaColor, Option } from "../engine/protocol";
 import { t, type MessageKey } from "../i18n";
 import type { Mark } from "./board";
 import { displayName } from "./images";
@@ -24,7 +24,7 @@ export function buildInteraction(d: Decision, view: GameView): Interaction {
   const listed: Option[] = [];
   const specials: Option[] = [];
   for (const o of d.options) {
-    const key = refKey(o);
+    const key = refKey(o, view);
     if (o.ref?.type === "special") specials.push(o);
     else if (key && visible.has(key)) onBoard.set(key, [...(onBoard.get(key) ?? []), o]);
     else listed.push(o);
@@ -34,12 +34,13 @@ export function buildInteraction(d: Decision, view: GameView): Interaction {
   return { decision: d, onBoard, listed, specials, single: d.min === 1 && d.max === 1 };
 }
 
-export function refKey(o: Option): string | null {
+export function refKey(o: Option, view?: GameView): string | null {
   const r = o.ref;
   if (!r) return null;
   if (r.type === "card" || r.type === "ability") return r.cardId;
   if (r.type === "color") return r.cardId;
   if (r.type === "player") return r.player;
+  if (r.type === "stack") return view?.stack.find((s) => s.index === r.index)?.sourceId ?? null;
   return null;
 }
 
@@ -91,7 +92,7 @@ export function colorName(c: ManaColor): string {
 
 /** 色ごとに分けたマナ能力のラベルの末尾の " [G]" */
 function stripColor(s: string): string {
-  return s.replace(/\s*\[[WUBRG]\]$/, "");
+  return s.replace(/\s*\[[WUBRGC]\]$/, "");
 }
 
 /** 色ごとに分けたマナ能力の、色を除いたラベル（メニューで 1 行にまとめるとき） */
@@ -103,4 +104,24 @@ export function manaLabel(o: Option): string {
 /** 色の問い合わせ（起動したマナ能力の色・「色を 1 つ選ぶ」効果）。取りやめはできない */
 export function isColorAsk(d: Decision): boolean {
   return d.options.length > 0 && d.options.every((o) => o.ref?.type === "color");
+}
+
+/**
+ * 優先権のときに押しただけでマナを出す土地かどうか。
+ * - 戦場の土地で、選択肢が 1 つのマナ能力だけ（色を選ぶマナ能力や、他に起動できる能力が無い）
+ * - コストが {T} のみで、出すマナが単一の種類（{W}/{U}/{B}/{R}/{G}/{C} のどれか 1 種類）
+ * - カードのオラクル文（注釈文を除く）に他の起動型能力（:）を持たない
+ */
+export function isDirectManaLand(c: CardView | undefined, opts: Option[]): boolean {
+  if (!c || c.zone !== "Battlefield" || !c.kinds.includes("land") || opts.length !== 1) return false;
+  const o = opts[0];
+  if (o.ref?.type !== "ability" || o.ref.abilityKind !== "mana" || o.ref.color) return false;
+  const desc = (o.label.includes(" | ") ? o.label.slice(o.label.indexOf(" | ") + 3) : o.label).trim();
+  if (!/^\{T\}:\s*Add\b/i.test(desc) || /\bcolor\b/i.test(desc)) return false;
+  const rest = desc.replace(/^\{T\}:\s*/i, "");
+  const mana = new Set(rest.match(/\{[WUBRGC]\}/g) ?? []);
+  if (mana.size !== 1) return false;
+  const oracle = (c.text ?? "").replace(/\([^)]*\)/g, "");
+  if ((oracle.match(/:/g)?.length ?? 0) > 1) return false;
+  return true;
 }

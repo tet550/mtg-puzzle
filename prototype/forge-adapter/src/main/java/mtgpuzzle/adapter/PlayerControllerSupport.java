@@ -128,22 +128,53 @@ abstract class PlayerControllerSupport extends PlayerController {
         return out;
     }
 
+    /**
+     * マナ総量の合計が need 以上（exact ならちょうど need）になるようにカードを選ぶ（証拠収集など）。
+     * 既定はマナ総量の大きい順に、足りるまで選ぶ。外部コントローラーは UI に問い合わせる
+     */
+    protected forge.game.card.CardCollectionView chooseCardsForTotalCMC(forge.game.card.CardCollectionView candidates, SpellAbility sa,
+            int need, boolean exact) {
+        List<Card> sorted = new ArrayList<>();
+        candidates.forEach(sorted::add);
+        sorted.sort((a, b) -> Integer.compare(b.getCMC(), a.getCMC()));
+        forge.game.card.CardCollection out = new forge.game.card.CardCollection();
+        int sum = 0;
+        for (Card c : sorted) {
+            if (sum >= need) {
+                break;
+            }
+            if (exact && sum + c.getCMC() > need) {
+                continue;
+            }
+            out.add(c);
+            sum += c.getCMC();
+        }
+        return out;
+    }
+
     /** マナ源を選ぶ。既定は先頭（自動支払い）。外部コントローラーは UI に問い合わせる */
     protected ManaPayer.Source chooseManaSource(SpellAbility saPaidFor, String remaining, List<ManaPayer.Source> sources) {
         return sources.get(0);
     }
 
-    /** 1 つの能力について、対象の候補（プレイヤーとカード） */
+    /** 1 つの能力について、対象の候補（プレイヤー・カード・スタック上の呪文や能力） */
     protected static List<GameObject> targetCandidates(SpellAbility sa) {
         List<GameObject> out = new ArrayList<>();
-        for (Player p : sa.getHostCard().getGame().getPlayers()) {
+        Game game = sa.getHostCard().getGame();
+        for (Player p : game.getPlayers()) {
             if (sa.canTarget(p)) {
                 out.add(p);
             }
         }
-        for (Card c : sa.getHostCard().getGame().getCardsInGame()) {
-            if (sa.canTarget(c)) {
+        for (Card c : game.getCardsInGame()) {
+            if (!c.isInZone(ZoneType.Stack) && sa.canTarget(c)) {
                 out.add(c);
+            }
+        }
+        for (forge.game.spellability.SpellAbilityStackInstance si : game.getStack()) {
+            SpellAbility onStack = si.getSpellAbility();
+            if (sa.canTargetSpellAbility(onStack)) {
+                out.add(onStack);
             }
         }
         return out;

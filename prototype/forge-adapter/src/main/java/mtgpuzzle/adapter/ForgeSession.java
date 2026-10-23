@@ -15,6 +15,7 @@ import forge.LobbyPlayer;
 import forge.StaticData;
 import forge.deck.Deck;
 import forge.game.Game;
+import forge.game.GameLogEntry;
 import forge.game.GameRules;
 import forge.game.GameState;
 import forge.game.GameType;
@@ -65,8 +66,8 @@ public final class ForgeSession implements AutoCloseable {
 
     public enum Status { IN_PROGRESS, CLEARED, FAILED, ERROR }
 
-    /** events はゲームの出来事（{"type": ..., ...}）。カードはインスタンス ID、プレイヤーは問題のプレイヤー ID で表す */
-    public record StepResult(Status status, String reason, Decision pending, List<Map<String, Object>> events, long elapsedMillis) { }
+    /** events はゲームの出来事（{"type": ..., ...}）。カードはインスタンス ID、プレイヤーは問題のプレイヤー ID で表す。debug はデバッグ用の全イベント・ゲームログ */
+    public record StepResult(Status status, String reason, Decision pending, List<Map<String, Object>> events, List<String> debug, long elapsedMillis) { }
 
     /** kinds は land / creature / artifact / enchantment / planeswalker / battle / instant / sorcery。P/T はクリーチャーのときだけ */
     public record CardState(String instanceId, int forgeId, String name, String zone, String owner, String controller,
@@ -102,6 +103,8 @@ public final class ForgeSession implements AutoCloseable {
     private Status status = Status.IN_PROGRESS;
     private String reason = "";
     private final List<Map<String, Object>> eventBuffer = Collections.synchronizedList(new ArrayList<>());
+    private final List<String> debugBuffer = Collections.synchronizedList(new ArrayList<>());
+    private volatile int logCursor;
     /** 盤面の復元が終わったか（復元中の出来事はイベントとして返さない） */
     private volatile boolean setupDone;
     /** 期限（このターン）を過ぎたので、エンジンを止めた */
@@ -180,6 +183,8 @@ public final class ForgeSession implements AutoCloseable {
         fallbackLog.clear();
         outcome = null;
         eventBuffer.clear();
+        debugBuffer.clear();
+        logCursor = 0;
         instanceToForgeId.clear();
         lastStep = start();
         return lastStep;
@@ -393,6 +398,7 @@ public final class ForgeSession implements AutoCloseable {
                 Ja.run(() -> state.applyToGame(g));
                 startTurn = g.getPhaseHandler().getTurn();
                 mapInstances(g);
+                logCursor = g.getGameLog().getAllEntries().size();
                 setupDone = true;
             });
             ch.finished();
@@ -458,7 +464,21 @@ public final class ForgeSession implements AutoCloseable {
             ev = List.copyOf(eventBuffer);
             eventBuffer.clear();
         }
-        return new StepResult(status, reason, pending, ev, (System.nanoTime() - t0) / 1_000_000);
+        List<String> dbg;
+        synchronized (debugBuffer) {
+            Game g = game;
+            if (g != null && setupDone) {
+                List<GameLogEntry> entries = g.getGameLog().getAllEntries();
+                for (int i = logCursor; i < entries.size(); i++) {
+                    GameLogEntry le = entries.get(i);
+                    debugBuffer.add("[GameLog:" + le.type().name() + "] " + le.message());
+                }
+                logCursor = entries.size();
+            }
+            dbg = List.copyOf(debugBuffer);
+            debugBuffer.clear();
+        }
+        return new StepResult(status, reason, pending, ev, dbg, (System.nanoTime() - t0) / 1_000_000);
     }
 
     /** 直近の Forge のイベント（応答しないときに、どこまで進んだかを出すため） */
@@ -557,6 +577,7 @@ public final class ForgeSession implements AutoCloseable {
             if (!setupDone || wasExceeded) {
                 return; // 盤面の復元で起きた出来事と、期限を過ぎた後の出来事は返さない
             }
+            debugBuffer.add("[Event] " + e.getClass().getSimpleName() + ": " + e);
             Map<String, Object> m = new LinkedHashMap<>();
             if (e instanceof GameEventTurnBegan tb) {
                 m.put("type", "turnBegan");
@@ -598,6 +619,12 @@ public final class ForgeSession implements AutoCloseable {
                 m.put("cardId", cardId(cz.card()));
                 m.put("from", cz.from() == null ? null : cz.from().zoneType().name());
                 m.put("to", cz.to() == null ? null : cz.to().zoneType().name());
+                String pl = cz.to() != null && cz.to().player() != null ? cz.to().player().getName()
+                        : cz.from() != null && cz.from().player() != null ? cz.from().player().getName()
+                        : cz.card() != null && cz.card().getOwner() != null ? cz.card().getOwner().getName() : null;
+                if (pl != null) {
+                    m.put("player", pl);
+                }
             } else if (e instanceof GameEventCardTapped ct) {
                 m.put("type", "tapped");
                 m.put("cardId", cardId(ct.card()));
@@ -623,6 +650,11 @@ public final class ForgeSession implements AutoCloseable {
             } else if (e instanceof GameEventGameOutcome go) {
                 m.put("type", "gameOver");
                 m.put("winner", go.winningPlayerName());
+                m.put("outcomes", go.outcomeStrings() == null ? List.of() : List.copyOf(go.outcomeStrings()));
+                Game g = game;
+                if (g != null && g.getOutcome() != null && g.getOutcome().getWinCondition() != null) {
+                    m.put("winCondition", String.valueOf(g.getOutcome().getWinCondition()));
+                }
             } else {
                 return;
             }

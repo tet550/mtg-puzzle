@@ -105,4 +105,33 @@ describe("PuzzleSession", () => {
     expect(s.state.notice).not.toContain("p2:");
     expect(s.state.notice!.match(/assignCombatDamage/g)).toHaveLength(1);
   });
+
+  it("debugHistory に生イベント・GameLog・行動・選択要求・判定をすべて記録する", async () => {
+    const engine = fakeEngine([
+      step({
+        debug: ["[Event] GameEventTurnPhase: MAIN1", "[GameLog:PHASE] Main 1"],
+        fallback: ["p2: auto"],
+      }),
+      step({
+        engine: { state: "GAME_OVER", outcome: { winner: "p1", draw: false, winCondition: "Milled" } },
+        pending: null,
+        debug: ["[Event] GameEventGameOutcome: p2 lost", "[GameLog:GAME_OUTCOME] p2 has lost trying to draw cards from an empty library"],
+        events: [{ type: "gameOver", winner: "p1", winCondition: "Milled", outcomes: ["p2 has lost trying to draw cards from an empty library"] }],
+      }),
+    ]);
+    const s = new PuzzleSession(engine);
+    await s.open(puzzle);
+    await s.answer(["pass"]);
+    const dbg = s.state.debugHistory.join("\n");
+    expect(dbg).toContain("[Load]");
+    expect(dbg).toContain("[Event] GameEventTurnPhase: MAIN1");
+    expect(dbg).toContain("[GameLog:PHASE] Main 1");
+    expect(dbg).toContain("[Fallback] p2: auto");
+    expect(dbg).toContain("[Decision #1]");
+    expect(dbg).toContain("[Option pass]");
+    expect(dbg).toContain("[Submit] seq=1 ids=[pass (Pass)]");
+    expect(dbg).toContain("[GameLog:GAME_OUTCOME] p2 has lost trying to draw cards from an empty library");
+    expect(dbg).toContain("[AdapterEvent]");
+    expect(dbg).toContain("verdict=CLEARED");
+  });
 });

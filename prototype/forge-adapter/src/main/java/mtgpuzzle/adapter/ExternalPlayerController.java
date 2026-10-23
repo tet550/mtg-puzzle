@@ -1,37 +1,62 @@
 package mtgpuzzle.adapter;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
+
+import com.google.common.collect.ListMultimap;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 
 import forge.LobbyPlayer;
+import forge.StaticData;
 import forge.card.ColorSet;
+import forge.card.ICardFace;
 import forge.card.MagicColor;
+import forge.card.mana.ManaCost;
+import forge.card.mana.ManaCostShard;
 import forge.game.Game;
 import forge.game.GameEntity;
 import forge.game.GameObject;
+import forge.game.ability.AbilityUtils;
 import forge.game.card.Card;
 import forge.game.card.CardCollection;
 import forge.game.card.CardCollectionView;
+import forge.game.card.CardState;
 import forge.game.card.CounterType;
 import forge.game.combat.Combat;
 import forge.game.combat.CombatUtil;
+import forge.game.cost.Cost;
 import forge.game.cost.CostPart;
 import forge.game.cost.CostPartWithList;
+import forge.game.keyword.KeywordInterface;
+import forge.game.mana.Mana;
+import forge.game.mana.ManaCostBeingPaid;
 import forge.game.phase.PhaseType;
 import forge.game.player.DelayedReveal;
-import forge.game.player.PlayerActionConfirmMode;
+import forge.game.player.PlaySpellAbility;
 import forge.game.player.Player;
+import forge.game.player.PlayerActionConfirmMode;
 import forge.game.replacement.ReplacementEffect;
-import forge.game.staticability.StaticAbility;
 import forge.game.spellability.AbilityManaPart;
 import forge.game.spellability.AbilitySub;
+import forge.game.spellability.OptionalCostValue;
 import forge.game.spellability.SpellAbility;
+import forge.game.spellability.SpellAbilityStackInstance;
+import forge.game.spellability.TargetChoices;
+import forge.game.staticability.StaticAbility;
 import forge.game.trigger.WrappedAbility;
 import forge.game.zone.ZoneType;
+import forge.util.ITriggerEvent;
 import forge.util.collect.FCollectionView;
 
 /**
@@ -50,6 +75,8 @@ class ExternalPlayerController extends BaseAdapterController {
     private static final int MAX_NUMBER_OPTIONS = 21;
     /** これ以上の max は「上限なし」とみなす（X の値は Integer.MAX_VALUE で来る） */
     private static final int UNBOUNDED = 1000;
+    /** カード名・サブタイプの選択で出す候補の上限 */
+    private static final int MAX_TYPE_OPTIONS = 30;
 
     private final DecisionChannel channel;
     /** 「自動で支払う」が選ばれた支払い（支払い対象の SpellAbility ごと） */
@@ -81,16 +108,31 @@ class ExternalPlayerController extends BaseAdapterController {
         if (o instanceof Player p) {
             return "player:" + p.getName();
         }
+        if (o instanceof SpellAbility sa) {
+            return sa.getHostCard().getName() + " (" + sa.getStackDescription() + ")";
+        }
         Card c = (Card) o;
         return c.getName() + " (" + c.getZone().getZoneType() + ", " + c.getController().getName() + ")";
     }
 
     private static String id(GameObject o) {
-        return o instanceof Player p ? "p" + p.getId() : "c" + ((Card) o).getId();
+        if (o instanceof Player p) {
+            return "p" + p.getId();
+        }
+        if (o instanceof SpellAbility sa) {
+            return "s" + sa.getId();
+        }
+        return "c" + ((Card) o).getId();
     }
 
     private static Decision.Ref ref(GameObject o) {
-        return o instanceof Player p ? Decision.Ref.player(p.getName()) : Decision.Ref.card(((Card) o).getId());
+        if (o instanceof Player p) {
+            return Decision.Ref.player(p.getName());
+        }
+        if (o instanceof SpellAbility sa) {
+            return Decision.Ref.card(sa.getHostCard().getId());
+        }
+        return Decision.Ref.card(((Card) o).getId());
     }
 
     private static Decision.Option option(GameObject o) {
@@ -111,7 +153,7 @@ class ExternalPlayerController extends BaseAdapterController {
         return sa.isSpell() ? "spell" : "activated";
     }
 
-    /** 候補（カード・プレイヤー）から選ばせ、選ばれた候補を返す */
+    /** 候補（カード・プレイヤー・スタック上の呪文や能力）から選ばせ、選ばれた候補を返す */
     private <T extends GameObject> List<T> chooseObjects(Decision.Kind kind, String prompt, List<T> candidates, int min, int max) {
         return chooseObjects(kind, Decision.Prompt.text(prompt), candidates, min, max, false);
     }
@@ -131,7 +173,9 @@ class ExternalPlayerController extends BaseAdapterController {
             options.add(special("cancel", "Cancel"));
         }
         // 「取りやめ」は選択数に数えない（ForgeSession が「取りやめ」だけの回答を範囲外でも受け付ける）
-        List<String> answer = channel.ask(kind, prompt, options, min, Math.min(max, candidates.size()));
+        int effectiveMax = Math.min(max, candidates.size());
+        int effectiveMin = Math.min(min, effectiveMax);
+        List<String> answer = channel.ask(kind, prompt, options, effectiveMin, effectiveMax);
         if (answer.contains("cancel")) {
             return null;
         }
@@ -234,6 +278,17 @@ class ExternalPlayerController extends BaseAdapterController {
         return getGame().getPhaseHandler().isPlayerTurn(player) && STOPS.contains(getGame().getPhaseHandler().getPhase());
     }
 
+    @Override
+    public SpellAbility getAbilityToPlay(Card hostCard, List<SpellAbility> abilities, ITriggerEvent triggerEvent) {
+        if (abilities.isEmpty()) {
+            return null;
+        }
+        if (abilities.size() == 1) {
+            return abilities.get(0);
+        }
+        return abilities.get(chooseIndex(Decision.Prompt.text(hostCard.getName()), abilities));
+    }
+
     // ---------- 対象（SpellAbility.setupTargets から、対象を取る能力 1 つごとに呼ばれる） ----------
 
     @Override
@@ -242,15 +297,85 @@ class ExternalPlayerController extends BaseAdapterController {
         if (candidates.isEmpty()) {
             return sa.isTargetNumberValid();
         }
+        boolean divided = sa.isDividedAsYouChoose();
+        int max = divided ? Math.min(sa.getMaxTargets(), sa.getStillToDivide()) : sa.getMaxTargets();
         List<GameObject> chosen = chooseObjects(Decision.Kind.TARGETS,
                 Decision.Prompt.of("Choose targets for " + sa.getHostCard().getName() + ": " + sa.getDescription(), "targets",
                         "card", sa.getHostCard().getName(), "desc", sa.getDescription(),
                         "descJa", Ja.description(sa.getDescription(), sa.getHostCard())).withSource(sa.getHostCard().getId()),
-                candidates, sa.getMinTargets(), sa.getMaxTargets());
+                candidates, sa.getMinTargets(), max);
         for (GameObject o : chosen) {
             sa.getTargets().add(o);
         }
+        if (divided && !chosen.isEmpty() && sa.getStillToDivide() > 0) {
+            int left = sa.getStillToDivide();
+            if (sa.hasParam("DividedUpTo") && chosen.size() < left) {
+                left = chooseNumberIn(Decision.Prompt.text("How many to divide?"), chosen.size(), left);
+            }
+            for (int i = 0; i < chosen.size(); i++) {
+                GameObject t = chosen.get(i);
+                int rem = chosen.size() - 1 - i;
+                int v;
+                if (rem == 0) {
+                    v = left;
+                } else if (left - rem <= 1) {
+                    v = 1;
+                } else {
+                    String to = t instanceof Card c ? c.getName() : label(t);
+                    v = chooseNumberIn(Decision.Prompt.of(
+                            "Divide for " + sa.getHostCard().getName() + " to " + to + " (" + left + " left)",
+                            "divide", "card", sa.getHostCard().getName(), "to", to, "left", String.valueOf(left)), 1, left - rem);
+                }
+                sa.addDividedAllocation(t, v);
+                left -= v;
+            }
+        }
         return sa.isTargetNumberValid();
+    }
+
+    @Override
+    public TargetChoices chooseNewTargetsFor(SpellAbility ability, Predicate<GameObject> filter, boolean optional) {
+        TargetChoices old = ability.getTargets();
+        TargetChoices next = new TargetChoices();
+        ability.setTargets(next);
+        List<GameObject> candidates = new ArrayList<>();
+        for (GameObject o : targetCandidates(ability)) {
+            if (filter == null || filter.test(o)) {
+                candidates.add(o);
+            }
+        }
+        if (candidates.isEmpty()) {
+            ability.setTargets(old);
+            return null;
+        }
+        int min = optional ? 0 : Math.min(ability.getMinTargets(), candidates.size());
+        int max = Math.min(ability.getMaxTargets(), candidates.size());
+        List<GameObject> chosen = chooseObjects(Decision.Kind.TARGETS,
+                Decision.Prompt.of("Choose new targets for " + ability.getHostCard().getName() + ": " + ability.getDescription(), "targets",
+                        "card", ability.getHostCard().getName(), "desc", ability.getDescription(),
+                        "descJa", Ja.description(ability.getDescription(), ability.getHostCard())).withSource(ability.getHostCard().getId()),
+                candidates, min, max);
+        if (chosen.isEmpty()) {
+            ability.setTargets(old);
+            return null;
+        }
+        for (GameObject o : chosen) {
+            next.add(o);
+        }
+        return next;
+    }
+
+    @Override
+    public Pair<SpellAbilityStackInstance, GameObject> chooseTarget(SpellAbility sa,
+            List<Pair<SpellAbilityStackInstance, GameObject>> allTargets) {
+        if (allTargets.size() <= 1) {
+            return allTargets.get(0);
+        }
+        List<String> labels = new ArrayList<>();
+        for (Pair<SpellAbilityStackInstance, GameObject> pair : allTargets) {
+            labels.add(pair.getRight().toString() + " - " + pair.getLeft().getStackDescription());
+        }
+        return allTargets.get(chooseIndex(Decision.Prompt.text(sa.getHostCard().getName()), labels));
     }
 
     // ---------- 誘発・確認 ----------
@@ -271,6 +396,26 @@ class ExternalPlayerController extends BaseAdapterController {
         return confirm(Decision.Prompt.text(message));
     }
 
+    @Override
+    public boolean confirmPayment(CostPart costPart, String message, SpellAbility sa) {
+        return confirm(Decision.Prompt.text(message == null || message.isBlank() ? costPart.toString() : message));
+    }
+
+    @Override
+    public boolean confirmReplacementEffect(ReplacementEffect replacementEffect, SpellAbility effectSA, GameEntity affected, String question) {
+        return confirm(Decision.Prompt.text(question == null || question.isBlank() ? replacementEffect.toString() : question));
+    }
+
+    @Override
+    public boolean confirmStaticApplication(Card hostCard, PlayerActionConfirmMode mode, String message, String logic) {
+        return confirm(Decision.Prompt.text(message == null || message.isBlank() ? hostCard.getName() : message));
+    }
+
+    @Override
+    public boolean confirmBidAction(SpellAbility sa, PlayerActionConfirmMode bidlife, String message, int bid, Player winner) {
+        return confirm(Decision.Prompt.text(message));
+    }
+
     private boolean confirm(Decision.Prompt prompt) {
         List<String> answer = channel.ask(Decision.Kind.CONFIRM, prompt,
                 List.of(special("yes", "Yes"), special("no", "No")), 1, 1);
@@ -288,6 +433,20 @@ class ExternalPlayerController extends BaseAdapterController {
         List<Card> candidates = new ArrayList<>();
         sourceList.forEach(candidates::add);
         return new CardCollection(chooseObjects(Decision.Kind.CHOOSE_ENTITY, title, candidates, isOptional ? 0 : min, max));
+    }
+
+    @Override
+    public CardCollection chooseCardsForEffectMultiple(Map<String, CardCollection> validMap, SpellAbility sa, String title, boolean isOptional) {
+        CardCollection chosen = new CardCollection();
+        for (Map.Entry<String, CardCollection> entry : validMap.entrySet()) {
+            CardCollection list = entry.getValue();
+            if (list.isEmpty()) {
+                continue;
+            }
+            CardCollectionView picked = chooseCardsForEffect(list, sa, title + " (" + entry.getKey() + ")", 1, 1, isOptional, null);
+            chosen.addAll(picked);
+        }
+        return chosen;
     }
 
     @Override
@@ -317,29 +476,125 @@ class ExternalPlayerController extends BaseAdapterController {
     }
 
     @Override
-    public List<AbilitySub> chooseModeForAbility(SpellAbility sa, List<AbilitySub> possible, int min, int num, boolean allowRepeat) {
-        if (allowRepeat) {
-            fallback("chooseModeForAbility(allowRepeat)"); // 同じモードを複数回選ぶ形には未対応
+    public SpellAbility chooseSingleSpellForEffect(List<SpellAbility> spells, SpellAbility sa, String title, Map<String, Object> params) {
+        if (spells.isEmpty()) {
+            return null;
         }
+        if (spells.size() == 1) {
+            return spells.get(0);
+        }
+        return spells.get(chooseIndex(Decision.Prompt.text(title), spells));
+    }
+
+    @Override
+    public List<SpellAbility> chooseSpellAbilitiesForEffect(List<SpellAbility> spells, SpellAbility sa, String title, int num,
+            Map<String, Object> params) {
+        if (spells.isEmpty() || num <= 0) {
+            return List.of();
+        }
+        if (spells.size() <= num) {
+            return new ArrayList<>(spells);
+        }
+        List<Decision.Option> opts = new ArrayList<>();
+        for (int i = 0; i < spells.size(); i++) {
+            SpellAbility sp = spells.get(i);
+            Card host = sp.getHostCard();
+            String label = (host != null ? host.getName() + ": " : "") + sp;
+            String ja = host != null && Ja.available() ? Ja.name(host.getName()) + ": " + Ja.description(sp.toString(), host) : null;
+            opts.add(new Decision.Option("k" + i, label, host != null ? Decision.Ref.card(host.getId()) : null, ja));
+        }
+        List<String> ans = channel.ask(Decision.Kind.CHOOSE_MODE, Decision.Prompt.text(title), opts, num, num);
+        List<SpellAbility> out = new ArrayList<>();
+        for (String id : ans) {
+            out.add(spells.get(Integer.parseInt(id.substring(1))));
+        }
+        return out;
+    }
+
+    private static List<Decision.Option> modeOptions(SpellAbility sa, List<AbilitySub> possible) {
         List<Decision.Option> options = new ArrayList<>();
         for (int i = 0; i < possible.size(); i++) {
-            String desc = possible.get(i).getDescription();
-            options.add(new Decision.Option("m" + i, desc.replace("CARDNAME", sa.getHostCard().getName()), null,
-                    Ja.available() ? Ja.description(desc, sa.getHostCard()).replaceFirst("^[・•]\\s*", "") : null)); // 訳の箇条書きの「・」は外す
+            AbilitySub sub = possible.get(i);
+            String desc = sub.getDescription();
+            String prefix = "";
+            if (sub.hasParam("Pawprint")) {
+                int paw = AbilityUtils.calculateAmount(sub.getHostCard(), sub.getParam("Pawprint"), sub);
+                if (paw > 0) {
+                    prefix = "{P}".repeat(paw) + " \u2014 ";
+                }
+            }
+            String fullDesc = prefix + desc;
+            String ja = null;
+            if (Ja.available()) {
+                ja = Ja.description(fullDesc, sa.getHostCard()).replaceFirst("^[・•]\\s*", "");
+                if (ja.equals(fullDesc.replace("CARDNAME", Ja.name(sa.getHostCard().getName()))) && !prefix.isEmpty()) {
+                    String subJa = Ja.description(desc, sa.getHostCard()).replaceFirst("^[・•]\\s*", "");
+                    ja = subJa.startsWith("{P}") ? subJa : prefix + subJa;
+                } else if (!prefix.isEmpty() && !ja.startsWith("{P}")) {
+                    ja = prefix + ja;
+                }
+            }
+            options.add(new Decision.Option("m" + i, fullDesc.replace("CARDNAME", sa.getHostCard().getName()), null, ja)); // 訳の箇条書きの「・」は外す
         }
-        List<String> answer = channel.ask(Decision.Kind.CHOOSE_MODE,
-                Decision.Prompt.of("Choose mode for " + sa.getHostCard().getName(), "mode", "card", sa.getHostCard().getName()),
-                options, min, Math.min(num, possible.size()));
+        return options;
+    }
+
+    @Override
+    public List<AbilitySub> chooseModeForAbility(SpellAbility sa, List<AbilitySub> possible, int min, int num, boolean allowRepeat) {
+        boolean pawprint = sa.hasParam("Pawprint");
+        Decision.Prompt prompt = Decision.Prompt.of("Choose mode for " + sa.getHostCard().getName(), "mode", "card", sa.getHostCard().getName())
+                .withSource(sa.getHostCard().getId());
+        if (!allowRepeat && !pawprint) {
+            List<Decision.Option> options = modeOptions(sa, possible);
+            List<String> answer = channel.ask(Decision.Kind.CHOOSE_MODE,
+                    prompt,
+                    options, min, Math.min(num, possible.size()));
+            List<AbilitySub> out = new ArrayList<>();
+            for (Decision.Option o : options) {
+                if (answer.contains(o.id())) {
+                    out.add(possible.get(indexOf(options, o.id())));
+                }
+            }
+            return out;
+        }
         List<AbilitySub> out = new ArrayList<>();
-        for (Decision.Option o : options) {
-            if (answer.contains(o.id())) {
-                out.add(possible.get(indexOf(options, o.id())));
+        List<AbilitySub> rem = new ArrayList<>(possible);
+        int chosenPawprint = 0;
+        for (int i = 0; i < num; i++) {
+            if (pawprint) {
+                int budget = num - chosenPawprint;
+                rem.removeIf(ab -> AbilityUtils.calculateAmount(ab.getHostCard(), ab.getParam("Pawprint"), ab) > budget);
+            }
+            if (rem.isEmpty()) {
+                break;
+            }
+            List<Decision.Option> options = modeOptions(sa, rem);
+            int reqMin = i < min ? 1 : 0;
+            List<String> answer = channel.ask(Decision.Kind.CHOOSE_MODE,
+                    prompt,
+                    options, reqMin, 1);
+            if (answer.isEmpty()) {
+                break;
+            }
+            AbilitySub picked = rem.get(indexOf(options, answer.get(0)));
+            out.add(picked);
+            if (!allowRepeat) {
+                rem.remove(picked);
+            }
+            if (pawprint) {
+                chosenPawprint += AbilityUtils.calculateAmount(picked.getHostCard(), picked.getParam("Pawprint"), picked);
             }
         }
         return out;
     }
 
     // ---------- 色・コストの順 ----------
+
+    /** マナプールから取り出すマナ（PlayerControllerHuman と同じく先頭を返し、未対応として記録しない） */
+    @Override
+    public Mana chooseManaFromPool(List<Mana> manaChoices) {
+        return manaChoices.get(0);
+    }
 
     /**
      * 色を選ぶ。支払いの中でマナ能力から呼ばれたとき（2 色以上を出せる土地など）は、ManaPayer が候補を「支払いに使える色」に
@@ -357,6 +612,58 @@ class ExternalPlayerController extends BaseAdapterController {
             return options.get(0);
         }
         return askColor(message, sa, options, 0, 0);
+    }
+
+    @Override
+    public byte chooseColorAllowColorless(String message, Card c, ColorSet colors) {
+        List<Byte> options = new ArrayList<>();
+        options.add(MagicColor.COLORLESS);
+        for (byte col : MagicColor.WUBRG) {
+            if (colors.hasAnyColor(col)) {
+                options.add(col);
+            }
+        }
+        if (options.size() <= 1) {
+            return options.get(0);
+        }
+        int hostId = c == null ? -1 : c.getId();
+        List<Decision.Option> opts = new ArrayList<>();
+        for (int i = 0; i < options.size(); i++) {
+            byte col = options.get(i);
+            String name = MagicColor.toLongString(col);
+            opts.add(new Decision.Option("k" + i, name, Decision.Ref.color(hostId, MagicColor.toShortString(col)), COLOR_JA.get(name)));
+        }
+        Decision.Prompt prompt = Decision.Prompt.of(message, "color", "card", c == null ? null : c.getName());
+        String id = channel.ask(Decision.Kind.CHOOSE_MODE, prompt, opts, 1, 1).get(0);
+        return options.get(Integer.parseInt(id.substring(1)));
+    }
+
+    @Override
+    public ColorSet chooseColors(String message, SpellAbility sa, int min, int max, ColorSet options) {
+        List<Byte> colors = new ArrayList<>();
+        for (byte c : MagicColor.WUBRG) {
+            if (options.hasAnyColor(c)) {
+                colors.add(c);
+            }
+        }
+        if (colors.isEmpty()) {
+            return ColorSet.fromMask(0);
+        }
+        Card host = sa == null ? null : sa.getHostCard();
+        int hostId = host == null ? -1 : host.getId();
+        List<Decision.Option> opts = new ArrayList<>();
+        for (int i = 0; i < colors.size(); i++) {
+            String name = MagicColor.toLongString(colors.get(i));
+            opts.add(new Decision.Option("k" + i, name, Decision.Ref.color(hostId, MagicColor.toShortString(colors.get(i))), COLOR_JA.get(name)));
+        }
+        Decision.Prompt prompt = Decision.Prompt.of(message, "color", "card", host == null ? null : host.getName());
+        List<String> answer = channel.ask(Decision.Kind.CHOOSE_MODE, prompt, opts,
+                Math.min(min, opts.size()), Math.min(max, opts.size()));
+        byte mask = 0;
+        for (String id : answer) {
+            mask |= colors.get(Integer.parseInt(id.substring(1)));
+        }
+        return ColorSet.fromMask(mask);
     }
 
     /**
@@ -389,7 +696,7 @@ class ExternalPlayerController extends BaseAdapterController {
      */
     @Override
     public Map<Byte, Integer> specifyManaCombo(SpellAbility sa, ColorSet colorSet, int manaAmount, boolean different) {
-        Map<Byte, Integer> out = new java.util.LinkedHashMap<>();
+        Map<Byte, Integer> out = new LinkedHashMap<>();
         ColorSet left = colorSet;
         for (int i = 0; i < manaAmount && !left.isColorless(); i++) {
             List<Byte> colors = new ArrayList<>();
@@ -404,9 +711,10 @@ class ExternalPlayerController extends BaseAdapterController {
         return out;
     }
 
-    private static final Map<String, String> COLOR_JA = Map.of("white", "白", "blue", "青", "black", "黒", "red", "赤", "green", "緑");
+    private static final Map<String, String> COLOR_JA = Map.of(
+            "white", "白", "blue", "青", "black", "黒", "red", "赤", "green", "緑", "colorless", "無色");
 
-    /** 同時に当てはまる置換効果・常在型能力のうち、どれを先に適用するか */
+    /** 同時に当てはまる置換効果・常在型能力・誘発能力のうち、どれを先に適用／スタックに置くか */
     @Override
     public ReplacementEffect chooseSingleReplacementEffect(List<ReplacementEffect> possible) {
         return possible.size() == 1 ? possible.get(0)
@@ -419,14 +727,30 @@ class ExternalPlayerController extends BaseAdapterController {
                 : possible.get(chooseIndex(Decision.Prompt.of("Choose which effect applies first", "staticOrder"), possible));
     }
 
+    @Override
+    public List<SpellAbility> orderSimultaneousSa(List<SpellAbility> activePlayerSAs) {
+        if (activePlayerSAs.size() <= 1) {
+            return activePlayerSAs;
+        }
+        List<SpellAbility> ordered = new ArrayList<>();
+        List<SpellAbility> rem = new ArrayList<>(activePlayerSAs);
+        while (rem.size() > 1) {
+            int idx = chooseIndex(Decision.Prompt.of("Choose next ability to put on the stack", "orderSimultaneous"), rem);
+            ordered.add(rem.remove(idx));
+        }
+        ordered.addAll(rem);
+        return ordered;
+    }
+
     private int chooseIndex(Decision.Prompt prompt, List<?> items) {
         List<Decision.Option> opts = new ArrayList<>();
         for (int i = 0; i < items.size(); i++) {
             Object it = items.get(i);
-            forge.game.card.Card hostCard = it instanceof forge.game.CardTraitBase t ? t.getHostCard() : null;
+            Card hostCard = it instanceof forge.game.CardTraitBase t ? t.getHostCard() : null;
             String host = hostCard != null ? hostCard.getName() + ": " : "";
             String ja = hostCard != null ? Ja.name(hostCard.getName()) + ": " + Ja.description(String.valueOf(it), hostCard) : null;
-            opts.add(new Decision.Option("k" + i, host + it, null, Ja.available() ? ja : null));
+            opts.add(new Decision.Option("k" + i, host + it,
+                    hostCard != null ? Decision.Ref.card(hostCard.getId()) : null, Ja.available() ? ja : null));
         }
         return Integer.parseInt(channel.ask(Decision.Kind.CHOOSE_MODE, prompt, opts, 1, 1).get(0).substring(1));
     }
@@ -434,7 +758,7 @@ class ExternalPlayerController extends BaseAdapterController {
     /**
      * 戦闘ダメージの割り振り。選ぶ余地が無いとき（ブロッカーが 1 体以下でトランプルでない）はそのまま。
      * トランプルでブロッカーが 1 体なら、致死量をブロッカーに、残りを防御側に割り振る（パズルではふつう最善）。
-     * ブロッカーが 2 体以上のときは、決まった順に致死量を割り振り、未対応の選択として記録する
+     * ブロッカーが 2 体以上のときは、ブロッカーごとに何点与えるかを順に聞く
      */
     @Override
     public Map<Card, Integer> assignCombatDamage(Card attacker, CardCollectionView blockers, CardCollectionView remaining,
@@ -448,7 +772,7 @@ class ExternalPlayerController extends BaseAdapterController {
         // ブロッカーが 2 体以上: ブロッカーごとに何点与えるかを順に聞く。トランプルなら、各ブロッカーに致死ダメージを
         // 与えた残りを防御側に通せる（致死ダメージ未満しか与えないなら、残りは最後のブロッカーへ）
         boolean trample = attacker.hasKeyword(forge.game.keyword.Keyword.TRAMPLE) && defender != null;
-        Map<Card, Integer> map = new java.util.HashMap<>();
+        Map<Card, Integer> map = new HashMap<>();
         int left = damageDealt;
         List<Card> list = new ArrayList<>();
         blockers.forEach(list::add);
@@ -484,6 +808,93 @@ class ExternalPlayerController extends BaseAdapterController {
         return map;
     }
 
+    @Override
+    public Map<GameEntity, Integer> divideShield(Card effectSource, Map<GameEntity, Integer> affected, int shieldAmount) {
+        if (affected.size() <= 1 || shieldAmount <= 0) {
+            if (affected.size() == 1) {
+                GameEntity only = affected.keySet().iterator().next();
+                affected.put(only, shieldAmount);
+            }
+            return affected;
+        }
+        List<GameEntity> entities = new ArrayList<>(affected.keySet());
+        int left = shieldAmount;
+        for (int i = 0; i < entities.size(); i++) {
+            GameEntity e = entities.get(i);
+            if (i == entities.size() - 1) {
+                affected.put(e, left);
+            } else {
+                int v = left == 0 ? 0 : chooseNumberIn(Decision.Prompt.of(
+                        "Divide shield from " + effectSource.getName() + " to " + e + " (" + left + " left)",
+                        "divide", "card", effectSource.getName(), "to", e.toString(), "left", String.valueOf(left)), 0, left);
+                affected.put(e, v);
+                left -= v;
+            }
+        }
+        return affected;
+    }
+
+    // ---------- ライブラリー操作・領域移動 ----------
+
+    private CardCollection orderCardList(List<Card> cards, Decision.Prompt prompt) {
+        if (cards.size() <= 1) {
+            return new CardCollection(cards);
+        }
+        CardCollection ordered = new CardCollection();
+        List<Card> rem = new ArrayList<>(cards);
+        while (rem.size() > 1) {
+            List<Card> picked = chooseObjects(Decision.Kind.CHOOSE_CARDS, prompt, rem, 1, 1);
+            Card c = picked.get(0);
+            ordered.add(c);
+            rem.remove(c);
+        }
+        ordered.addAll(rem);
+        return ordered;
+    }
+
+    @Override
+    public ImmutablePair<CardCollection, CardCollection> arrangeForScry(CardCollection topN) {
+        if (topN.isEmpty()) {
+            return ImmutablePair.of(new CardCollection(), new CardCollection());
+        }
+        List<Card> list = new ArrayList<>();
+        topN.forEach(list::add);
+        List<Card> bottomChosen = chooseObjects(Decision.Kind.CHOOSE_CARDS,
+                Decision.Prompt.of("Scry: choose cards to put on the bottom of your library", "scryBottom"),
+                list, 0, list.size());
+        CardCollection toBottom = orderCardList(bottomChosen,
+                Decision.Prompt.of("Choose next card to put on the bottom of your library", "scryBottom"));
+        List<Card> topRem = new ArrayList<>(list);
+        topRem.removeAll(bottomChosen);
+        CardCollection toTop = orderCardList(topRem,
+                Decision.Prompt.of("Choose next card to put on top of your library", "putOnTop"));
+        return ImmutablePair.of(toTop, toBottom);
+    }
+
+    @Override
+    public ImmutablePair<CardCollection, CardCollection> arrangeForSurveil(CardCollection topN) {
+        if (topN.isEmpty()) {
+            return ImmutablePair.of(new CardCollection(), new CardCollection());
+        }
+        List<Card> list = new ArrayList<>();
+        topN.forEach(list::add);
+        List<Card> graveChosen = chooseObjects(Decision.Kind.CHOOSE_CARDS,
+                Decision.Prompt.of("Surveil: choose cards to put into your graveyard", "surveilGrave"),
+                list, 0, list.size());
+        CardCollection toGrave = new CardCollection(graveChosen);
+        List<Card> topRem = new ArrayList<>(list);
+        topRem.removeAll(graveChosen);
+        CardCollection toTop = orderCardList(topRem,
+                Decision.Prompt.of("Choose next card to put on top of your library", "putOnTop"));
+        return ImmutablePair.of(toTop, toGrave);
+    }
+
+    @Override
+    public boolean willPutCardOnTop(Card c) {
+        return confirm(Decision.Prompt.of("Put " + c.getName() + " on top of your library? (No: bottom)",
+                "putOnTop", "card", c.getName()));
+    }
+
     /** 同時に同じ領域へ移るカードの順（墓地に置く順など）。並びのままでよい */
     @Override
     public CardCollectionView orderMoveToZoneList(CardCollectionView cards, ZoneType destinationZone, SpellAbility source) {
@@ -510,7 +921,22 @@ class ExternalPlayerController extends BaseAdapterController {
         return chosen.isEmpty() ? null : chosen.get(0);
     }
 
-    // ---------- 効果での選択（生け贄・捨てる・二択・カウンターの種類・プロテクション） ----------
+    @Override
+    public List<Card> chooseCardsForZoneChange(ZoneType destination, List<ZoneType> origin, SpellAbility sa, CardCollection fetchList,
+            int min, int max, DelayedReveal delayedReveal, String selectPrompt, Player decider) {
+        if (fetchList.isEmpty() || max <= 0) {
+            return List.of();
+        }
+        List<Card> candidates = new ArrayList<>();
+        fetchList.forEach(candidates::add);
+        return chooseObjects(Decision.Kind.CHOOSE_ENTITY,
+                selectPrompt == null || selectPrompt.isBlank()
+                        ? Decision.Prompt.of("Choose card(s) to move to " + destination, "zoneChange", "zone", String.valueOf(destination))
+                        : Decision.Prompt.text(selectPrompt),
+                candidates, min, max);
+    }
+
+    // ---------- 効果での選択（生け贄・破壊・捨てる・公開・探査・連繋・二択・種類・カード名） ----------
 
     @Override
     public CardCollectionView choosePermanentsToSacrifice(SpellAbility sa, int min, int max, CardCollectionView validTargets, String message) {
@@ -524,6 +950,56 @@ class ExternalPlayerController extends BaseAdapterController {
                 candidates, min, max));
     }
 
+    @Override
+    public CardCollectionView choosePermanentsToDestroy(SpellAbility sa, int min, int max, CardCollectionView validTargets, String message) {
+        List<Card> candidates = new ArrayList<>();
+        validTargets.forEach(candidates::add);
+        if (candidates.size() <= min) {
+            return new CardCollection(candidates);
+        }
+        return new CardCollection(chooseObjects(Decision.Kind.CHOOSE_ENTITY,
+                message == null || message.isBlank() ? Decision.Prompt.of("Choose permanents to destroy", "destroy") : Decision.Prompt.text(message),
+                candidates, min, max));
+    }
+
+    @Override
+    public CardCollectionView chooseCardsToDiscardFrom(Player playerDiscard, SpellAbility sa, CardCollection validCards, int min, int max,
+            CardCollectionView visibleToChooser) {
+        if (validCards.isEmpty() || max <= 0) {
+            return CardCollection.EMPTY;
+        }
+        List<Card> candidates = new ArrayList<>();
+        validCards.forEach(candidates::add);
+        if (candidates.size() <= min && min == max) {
+            return new CardCollection(candidates);
+        }
+        return new CardCollection(chooseObjects(Decision.Kind.CHOOSE_ENTITY,
+                Decision.Prompt.of("Choose " + min + " card(s) to discard", "discard", "n", String.valueOf(min)),
+                candidates, min, max));
+    }
+
+    @Override
+    public CardCollectionView chooseCardsToDiscardUnlessType(int min, CardCollectionView hand, String[] unlessTypes, SpellAbility sa) {
+        if (hand.isEmpty() || min <= 0) {
+            return CardCollection.EMPTY;
+        }
+        List<Card> rem = new ArrayList<>();
+        hand.forEach(rem::add);
+        CardCollection chosen = new CardCollection();
+        for (int i = 0; i < min && !rem.isEmpty(); i++) {
+            List<Card> picked = chooseObjects(Decision.Kind.CHOOSE_ENTITY,
+                    Decision.Prompt.of("Choose a card to discard (" + (i + 1) + "/" + min + ")", "discard", "n", String.valueOf(min - i)),
+                    rem, 1, 1);
+            Card c = picked.get(0);
+            chosen.add(c);
+            rem.remove(c);
+            if (unlessTypes != null && c.isValid(unlessTypes, sa.getActivatingPlayer(), sa.getHostCard(), sa)) {
+                break;
+            }
+        }
+        return chosen;
+    }
+
     /** クリンナップで手札の上限まで捨てる */
     @Override
     public CardCollectionView chooseCardsToDiscardToMaximumHandSize(int numDiscard) {
@@ -535,6 +1011,87 @@ class ExternalPlayerController extends BaseAdapterController {
         return new CardCollection(chooseObjects(Decision.Kind.CHOOSE_ENTITY,
                 Decision.Prompt.of("Discard " + numDiscard + " card(s) to your maximum hand size", "discardHandSize", "n", String.valueOf(numDiscard)),
                 hand, numDiscard, numDiscard));
+    }
+
+    @Override
+    public CardCollectionView chooseCardsToRevealFromHand(int min, int max, CardCollectionView valid) {
+        if (valid.isEmpty() || max <= 0) {
+            return CardCollection.EMPTY;
+        }
+        List<Card> candidates = new ArrayList<>();
+        valid.forEach(candidates::add);
+        return new CardCollection(chooseObjects(Decision.Kind.CHOOSE_ENTITY, "Choose card(s) to reveal from hand", candidates, min, max));
+    }
+
+    @Override
+    public CardCollectionView chooseCardsToDelve(int genericAmount, CardCollection grave) {
+        int max = Math.min(genericAmount, grave.size());
+        if (max <= 0) {
+            return CardCollection.EMPTY;
+        }
+        List<Card> candidates = new ArrayList<>();
+        grave.forEach(candidates::add);
+        return new CardCollection(chooseObjects(Decision.Kind.CHOOSE_CARDS,
+                Decision.Prompt.of("Choose cards in graveyard to exile for Delve (up to " + max + ")", "delve", "n", String.valueOf(max)),
+                candidates, 0, max));
+    }
+
+    @Override
+    public Map<Card, ManaCostShard> chooseCardsForConvokeOrImprovise(SpellAbility sa, ManaCost manaCost,
+            CardCollectionView untappedCards, boolean artifacts, boolean creatures, Integer maxReduction) {
+        if (untappedCards.isEmpty()) {
+            return new HashMap<>();
+        }
+        int max = maxReduction == null ? manaCost.getCMC() : Math.min(manaCost.getCMC(), maxReduction);
+        max = Math.min(max, untappedCards.size());
+        if (max <= 0) {
+            return new HashMap<>();
+        }
+        List<Card> candidates = new ArrayList<>();
+        untappedCards.forEach(candidates::add);
+        List<Card> chosen = chooseObjects(Decision.Kind.CHOOSE_CARDS,
+                Decision.Prompt.of("Choose cards to tap for " + sa.getHostCard().getName() + " (" + manaCost + ")",
+                        "convoke", "card", sa.getHostCard().getName(), "cost", manaCost.toString())
+                        .withSource(sa.getHostCard().getId()),
+                candidates, 0, max);
+        ManaCostBeingPaid remaining = new ManaCostBeingPaid(manaCost);
+        byte initialUnpaid = remaining.getUnpaidColors();
+        List<Card> ordered = new ArrayList<>(chosen);
+        ordered.sort(Comparator
+                .comparingInt((Card c) -> Integer.bitCount((creatures && c.isCreature() ? c.getColor().getColor() : 0) & initialUnpaid))
+                .thenComparingInt(c -> c.getColor().countColors()));
+        Map<Card, ManaCostShard> result = new LinkedHashMap<>();
+        for (Card c : ordered) {
+            byte color = MagicColor.COLORLESS;
+            if (creatures && c.isCreature()) {
+                ColorSet colors = c.getColor();
+                if (colors.isMulticolor()) {
+                    colors = ColorSet.fromMask(colors.getColor() & remaining.getUnpaidColors());
+                }
+                if (colors.isMulticolor()) {
+                    color = chooseColorAllowColorless("Choose color to convoke " + c.getName(), c, colors);
+                } else {
+                    color = colors.getColor();
+                }
+            }
+            ManaCostShard shard = remaining.payManaViaConvoke(color);
+            if (shard == null && color != MagicColor.COLORLESS) {
+                shard = remaining.payManaViaConvoke(MagicColor.COLORLESS);
+            }
+            if (shard != null) {
+                result.put(c, shard);
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public List<Card> chooseCardsForSplice(SpellAbility sa, List<Card> cards) {
+        if (cards.isEmpty()) {
+            return List.of();
+        }
+        return chooseObjects(Decision.Kind.CHOOSE_CARDS, "Choose card(s) to splice onto " + sa.getHostCard().getName(),
+                cards, 0, cards.size());
     }
 
     private static final Map<String, String[]> BINARY_JA = Map.of(
@@ -564,6 +1121,20 @@ class ExternalPlayerController extends BaseAdapterController {
     }
 
     @Override
+    public boolean chooseFlipResult(SpellAbility sa, Player flipper, boolean call) {
+        return chooseBinary(sa, flipper.getName() + ": Call coin flip", BinaryChoiceType.HeadsOrTails, call);
+    }
+
+    @Override
+    public boolean chooseCardsPile(SpellAbility sa, CardCollectionView pile1, CardCollectionView pile2, String faceUp) {
+        String p1 = "Pile 1 (" + pile1.size() + "): " + pile1;
+        String p2 = "Pile 2 (" + pile2.size() + "): " + pile2;
+        String id = channel.ask(Decision.Kind.CHOOSE_MODE, "Choose a pile",
+                List.of(new Decision.Option("k0", p1), new Decision.Option("k1", p2)), 1, 1).get(0);
+        return id.equals("k0");
+    }
+
+    @Override
     public CounterType chooseCounterType(List<CounterType> options, SpellAbility sa, String prompt, Map<String, Object> params) {
         if (options.size() == 1) {
             return options.get(0);
@@ -580,10 +1151,179 @@ class ExternalPlayerController extends BaseAdapterController {
         return choices.get(chooseIndex(Decision.Prompt.of("Choose a protection", "protection"), choices));
     }
 
+    @Override
+    public String chooseKeywordForPump(List<String> options, SpellAbility sa, String prompt, Card tgtCard) {
+        if (options.isEmpty()) {
+            return null;
+        }
+        if (options.size() == 1) {
+            return options.get(0);
+        }
+        return options.get(chooseIndex(Decision.Prompt.text(prompt == null || prompt.isBlank() ? "Choose a keyword" : prompt), options));
+    }
+
+    @Override
+    public String chooseSomeType(String kindOfType, SpellAbility sa, Collection<String> validTypes, boolean isOptional) {
+        if (validTypes.isEmpty()) {
+            return null;
+        }
+        if (validTypes.size() == 1 && !isOptional) {
+            return validTypes.iterator().next();
+        }
+        // 盤面・手札・墓地などゲーム内のカードが持つタイプを先頭に並べ、選択肢の上限内に収める
+        Set<String> inGame = new LinkedHashSet<>();
+        for (Card c : getGame().getCardsInGame()) {
+            for (String t : validTypes) {
+                if (c.getType().hasSubtype(t) || c.getType().hasStringType(t)) {
+                    inGame.add(t);
+                }
+            }
+        }
+        List<String> candidates = new ArrayList<>(inGame);
+        for (String t : validTypes) {
+            if (candidates.size() >= MAX_TYPE_OPTIONS) {
+                break;
+            }
+            if (!inGame.contains(t)) {
+                candidates.add(t);
+            }
+        }
+        List<Decision.Option> opts = new ArrayList<>();
+        for (int i = 0; i < candidates.size(); i++) {
+            opts.add(new Decision.Option("k" + i, candidates.get(i)));
+        }
+        List<String> ans = channel.ask(Decision.Kind.CHOOSE_MODE,
+                Decision.Prompt.text("Choose a " + kindOfType.toLowerCase() + " type"), opts, isOptional ? 0 : 1, 1);
+        return ans.isEmpty() ? null : candidates.get(Integer.parseInt(ans.get(0).substring(1)));
+    }
+
+    @Override
+    public Object vote(SpellAbility sa, String prompt, List<Object> options, ListMultimap<Object, Player> votes, Player forPlayer, boolean optional) {
+        if (options.isEmpty()) {
+            return null;
+        }
+        if (options.size() == 1 && !optional) {
+            return options.get(0);
+        }
+        List<Decision.Option> opts = new ArrayList<>();
+        for (int i = 0; i < options.size(); i++) {
+            opts.add(new Decision.Option("k" + i, String.valueOf(options.get(i))));
+        }
+        List<String> ans = channel.ask(Decision.Kind.CHOOSE_MODE,
+                Decision.Prompt.text(prompt == null || prompt.isBlank() ? "Vote" : prompt), opts, optional ? 0 : 1, 1);
+        return ans.isEmpty() ? null : options.get(Integer.parseInt(ans.get(0).substring(1)));
+    }
+
+    @Override
+    public ICardFace chooseSingleCardFace(SpellAbility sa, List<ICardFace> faces, String message) {
+        if (faces.isEmpty()) {
+            return null;
+        }
+        if (faces.size() == 1) {
+            return faces.get(0);
+        }
+        List<String> names = new ArrayList<>();
+        for (ICardFace f : faces) {
+            names.add(f.getName());
+        }
+        return faces.get(chooseIndex(Decision.Prompt.text(message == null || message.isBlank() ? "Choose a card face" : message), names));
+    }
+
+    @Override
+    public ICardFace chooseSingleCardFace(SpellAbility sa, String message, Predicate<ICardFace> cpp, String name) {
+        List<ICardFace> faces = matchingFacesInGame(cpp);
+        return chooseSingleCardFace(sa, faces, message);
+    }
+
+    @Override
+    public CardState chooseSingleCardState(SpellAbility sa, List<CardState> states, String message, Map<String, Object> params) {
+        if (states.isEmpty()) {
+            return null;
+        }
+        if (states.size() == 1) {
+            return states.get(0);
+        }
+        List<String> names = new ArrayList<>();
+        for (CardState st : states) {
+            names.add(st.getName());
+        }
+        return states.get(chooseIndex(Decision.Prompt.text(message == null || message.isBlank() ? "Choose a card state" : message), names));
+    }
+
+    @Override
+    public String chooseCardName(SpellAbility sa, List<ICardFace> faces, String message) {
+        ICardFace chosen = chooseSingleCardFace(sa, faces, message);
+        return chosen == null ? "" : chosen.getName();
+    }
+
+    @Override
+    public String chooseCardName(SpellAbility sa, Predicate<ICardFace> cpp, String valid, String message) {
+        if (valid != null && !valid.isEmpty()) {
+            CardCollection validCards = forge.game.card.CardLists.getValidCards(
+                    getGame().getCardsInGame(), valid, player, sa.getHostCard(), sa);
+            Map<String, ICardFace> map = new LinkedHashMap<>();
+            for (Card c : validCards) {
+                ICardFace f = c.getRules() != null ? c.getRules().getMainPart() : null;
+                if (f != null && (cpp == null || cpp.test(f))) {
+                    map.putIfAbsent(f.getName(), f);
+                }
+            }
+            if (!map.isEmpty()) {
+                return chooseCardName(sa, new ArrayList<>(map.values()), message);
+            }
+        }
+        return chooseCardName(sa, matchingFacesInGame(cpp), message);
+    }
+
+    private List<ICardFace> matchingFacesInGame(Predicate<ICardFace> cpp) {
+        Map<String, ICardFace> map = new LinkedHashMap<>();
+        for (Card c : getGame().getCardsInGame()) {
+            if (c.getRules() == null) {
+                continue;
+            }
+            ICardFace main = c.getRules().getMainPart();
+            if (main != null && (cpp == null || cpp.test(main))) {
+                map.putIfAbsent(main.getName(), main);
+            }
+            ICardFace other = c.getRules().getOtherPart();
+            if (other != null && (cpp == null || cpp.test(other))) {
+                map.putIfAbsent(other.getName(), other);
+            }
+        }
+        if (map.isEmpty()) {
+            StaticData.instance().getCommonCards().streamAllFaces()
+                    .filter(cpp != null ? cpp : f -> true)
+                    .limit(MAX_TYPE_OPTIONS)
+                    .forEach(f -> map.putIfAbsent(f.getName(), f));
+        }
+        return new ArrayList<>(map.values());
+    }
+
     /** コストを払う順（マナと、タップ・生け贄などの順）。並びのままでよい（人間用の画面でも既定の順で払う） */
     @Override
     public List<CostPart> orderCosts(List<CostPart> costs) {
         return costs;
+    }
+
+    @Override
+    public List<OptionalCostValue> chooseOptionalCosts(SpellAbility chosen, List<OptionalCostValue> optionalCostValues) {
+        if (optionalCostValues.isEmpty()) {
+            return List.of();
+        }
+        List<Decision.Option> opts = new ArrayList<>();
+        for (int i = 0; i < optionalCostValues.size(); i++) {
+            OptionalCostValue v = optionalCostValues.get(i);
+            opts.add(new Decision.Option("k" + i, v.getType().getName() + " (" + v.getCost() + ")"));
+        }
+        List<String> ans = channel.ask(Decision.Kind.CHOOSE_MODE,
+                Decision.Prompt.of("Choose additional cost(s) for " + chosen.getHostCard().getName(), "optionalCost",
+                        "card", chosen.getHostCard().getName()),
+                opts, 0, opts.size());
+        List<OptionalCostValue> out = new ArrayList<>();
+        for (String id : ans) {
+            out.add(optionalCostValues.get(Integer.parseInt(id.substring(1))));
+        }
+        return out;
     }
 
     // ---------- 数 ----------
@@ -595,12 +1335,34 @@ class ExternalPlayerController extends BaseAdapterController {
     }
 
     @Override
+    public int chooseNumberForCostReduction(SpellAbility sa, int min, int max) {
+        if (min >= max) {
+            return min;
+        }
+        return chooseNumberIn(Decision.Prompt.text("Choose cost reduction for " + sa.getHostCard().getName()), min, max);
+    }
+
+    @Override
+    public int chooseNumberForKeywordCost(SpellAbility sa, Cost cost, KeywordInterface keyword, String prompt, int max) {
+        if (max <= 0) {
+            return 0;
+        }
+        return chooseNumberIn(Decision.Prompt.text(prompt), 0, max);
+    }
+
+    @Override
     public int chooseNumber(SpellAbility sa, String title, int min, int max) {
+        if (min >= max) {
+            return min;
+        }
         return chooseNumberIn(Decision.Prompt.text(title), min, max);
     }
 
     @Override
     public int chooseNumber(SpellAbility sa, String title, List<Integer> values, Player relatedPlayer) {
+        if (values.size() == 1) {
+            return values.get(0);
+        }
         List<Decision.Option> options = new ArrayList<>();
         for (Integer v : values) {
             options.add(new Decision.Option("n" + v, String.valueOf(v)));
@@ -609,6 +1371,9 @@ class ExternalPlayerController extends BaseAdapterController {
     }
 
     private int chooseNumberIn(Decision.Prompt title, int min, int max) {
+        if (min >= max) {
+            return min;
+        }
         int hi = max;
         if ((long) max - min + 1 > MAX_NUMBER_OPTIONS) {
             hi = min + MAX_NUMBER_OPTIONS - 1;
@@ -650,7 +1415,67 @@ class ExternalPlayerController extends BaseAdapterController {
         }
     }
 
+    @Override
+    public List<Card> exertAttackers(List<Card> attackers) {
+        if (attackers.isEmpty()) {
+            return List.of();
+        }
+        return chooseObjects(Decision.Kind.CHOOSE_CARDS, "Choose attacker(s) to exert", attackers, 0, attackers.size());
+    }
+
+    @Override
+    public List<Card> enlistAttackers(List<Card> attackers) {
+        if (attackers.isEmpty()) {
+            return List.of();
+        }
+        return chooseObjects(Decision.Kind.CHOOSE_CARDS, "Choose attacker(s) to enlist with", attackers, 0, attackers.size());
+    }
+
+    @Override
+    public CardCollection orderBlockers(Card attacker, CardCollection blockers) {
+        if (blockers.size() <= 1) {
+            return blockers;
+        }
+        List<Card> list = new ArrayList<>();
+        blockers.forEach(list::add);
+        return orderCardList(list, Decision.Prompt.of("Order blockers for " + attacker.getName(),
+                "orderBlockers", "card", attacker.getName()));
+    }
+
+    @Override
+    public CardCollection orderBlocker(Card attacker, Card blocker, CardCollection oldBlockers) {
+        CardCollection all = new CardCollection(oldBlockers);
+        all.add(blocker);
+        return orderBlockers(attacker, all);
+    }
+
+    @Override
+    public CardCollection orderAttackers(Card blocker, CardCollection attackers) {
+        if (attackers.size() <= 1) {
+            return attackers;
+        }
+        List<Card> list = new ArrayList<>();
+        attackers.forEach(list::add);
+        return orderCardList(list, Decision.Prompt.of("Order attackers for " + blocker.getName(),
+                "orderAttackers", "card", blocker.getName()));
+    }
+
     // ---------- 支払い ----------
+
+    @Override
+    public boolean payCostToPreventEffect(Cost cost, SpellAbility sa, boolean alreadyPaid, FCollectionView<Player> allPayers) {
+        return PlaySpellAbility.payCostDuringAbilityResolve(this, player, cost, sa, "");
+    }
+
+    @Override
+    public boolean payCostDuringRoll(Cost cost, SpellAbility sa) {
+        return PlaySpellAbility.payCostDuringAbilityResolve(this, player, cost, sa, "");
+    }
+
+    @Override
+    public boolean payCombatCost(Card card, Cost cost, SpellAbility sa, String prompt) {
+        return PlaySpellAbility.payCostDuringAbilityResolve(this, player, cost, sa, prompt);
+    }
 
     @Override
     protected ManaPayer.Source chooseManaSource(SpellAbility saPaidFor, String remaining, List<ManaPayer.Source> sources) {
@@ -685,6 +1510,18 @@ class ExternalPlayerController extends BaseAdapterController {
         candidates.forEach(list::add);
         List<Card> chosen = chooseObjects(Decision.Kind.CHOOSE_CARDS,
                 Decision.Prompt.of("Tap creatures with total power " + need + " or greater (" + sa.getHostCard().getName() + ")", "totalPower",
+                        "n", String.valueOf(need), "card", sa.getHostCard().getName()), list, 1, list.size(), true);
+        return chosen == null ? null : new CardCollection(chosen);
+    }
+
+    /** 証拠収集など: 候補から 1 枚以上を選ばせる。マナ総量の合計が足りなければ支払いを取りやめる（呼び出し側が確かめる） */
+    @Override
+    protected CardCollectionView chooseCardsForTotalCMC(CardCollectionView candidates, SpellAbility sa, int need, boolean exact) {
+        List<Card> list = new ArrayList<>();
+        candidates.forEach(list::add);
+        List<Card> chosen = chooseObjects(Decision.Kind.CHOOSE_CARDS,
+                Decision.Prompt.of("Exile cards with total mana value " + need + (exact ? "" : " or greater")
+                        + " (" + sa.getHostCard().getName() + ")", "totalCMC",
                         "n", String.valueOf(need), "card", sa.getHostCard().getName()), list, 1, list.size(), true);
         return chosen == null ? null : new CardCollection(chosen);
     }

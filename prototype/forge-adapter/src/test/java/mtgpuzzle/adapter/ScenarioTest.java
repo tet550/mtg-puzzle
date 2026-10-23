@@ -528,4 +528,231 @@ class ScenarioTest {
             assertEquals("Lightning Bolt", t.promptArgs().get("card"));
         }
     }
+
+    private static PuzzleDefinition customPuzzle(List<String> p1Hand, List<String> p1Battlefield,
+            List<String> p1Graveyard, List<String> p1Library, int p2Life, List<String> p2Battlefield) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{\"schemaVersion\":1,\"title\":\"test\",\"engine\":{\"type\":\"forge\",\"version\":\"2.0.15\"},");
+        sb.append("\"game\":{\"activePlayer\":\"p1\",\"phase\":\"main1\",\"players\":[");
+        sb.append("{\"id\":\"p1\",\"life\":20,\"hand\":").append(cardsJson("h", p1Hand));
+        sb.append(",\"battlefield\":").append(cardsJson("b", p1Battlefield));
+        sb.append(",\"graveyard\":").append(cardsJson("g", p1Graveyard));
+        sb.append(",\"library\":").append(cardsJson("l", p1Library)).append("},");
+        sb.append("{\"id\":\"p2\",\"life\":").append(p2Life).append(",\"battlefield\":").append(cardsJson("ob", p2Battlefield));
+        sb.append(",\"library\":[{\"id\":\"ol0\",\"cardId\":\"Island\"}]}]},");
+        sb.append("\"goal\":{\"type\":\"win\",\"player\":\"p1\",\"deadline\":\"current_turn\"},\"opponent\":{\"policy\":\"pass\"}}");
+        return PuzzleDefinition.fromJson(sb.toString());
+    }
+
+    private static String cardsJson(String prefix, List<String> names) {
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < names.size(); i++) {
+            if (i > 0) sb.append(",");
+            sb.append("{\"id\":\"").append(prefix).append(i).append("\",\"cardId\":\"").append(names.get(i)).append("\"}");
+        }
+        return sb.append("]").toString();
+    }
+
+    @Test
+    void dividedDamageAsksForAllocation() throws Exception {
+        PuzzleDefinition p = customPuzzle(
+                List.of("Pyrotechnics"),
+                List.of("Mountain", "Mountain", "Mountain", "Mountain", "Mountain"),
+                List.of(),
+                List.of("Island"),
+                3,
+                List.of("Llanowar Elves"));
+        try (ForgeSession s = ForgeSession.load(p)) {
+            s.submit(expect(s, Decision.Kind.PRIORITY).findByLabelPrefix("Pyrotechnics").id());
+            Decision t = expect(s, Decision.Kind.TARGETS);
+            s.submit(t.findByLabelPrefix("Llanowar Elves").id(), t.findByLabelPrefix("player:p2").id());
+            Decision div = expect(s, Decision.Kind.CHOOSE_NUMBER);
+            assertEquals("divide", div.promptKey());
+            s.submit(div.findByLabelPrefix("1").id());
+            s.submit(expect(s, Decision.Kind.PAY_MANA).findByLabelPrefix("Auto pay").id());
+            StepResult r = s.submit("pass");
+            assertEquals(Status.CLEARED, r.status(), r.reason());
+            assertTrue(s.fallbackLog().isEmpty(), s.fallbackLog().toString());
+        }
+    }
+
+    @Test
+    void modalAllowRepeat() throws Exception {
+        PuzzleDefinition p = customPuzzle(
+                List.of("Fiery Confluence", "Season of Loss"),
+                List.of("Mountain", "Mountain", "Mountain", "Mountain", "Swamp", "Swamp", "Swamp", "Grizzly Bears"),
+                List.of(),
+                List.of("Island"),
+                6,
+                List.of("Llanowar Elves"));
+        try (ForgeSession s = ForgeSession.load(p)) {
+            s.submit(expect(s, Decision.Kind.PRIORITY).findByLabelPrefix("Season of Loss").id());
+            Decision m1 = expect(s, Decision.Kind.CHOOSE_MODE);
+            assertEquals("h1", s.instanceIdOf(m1.source()));
+            assertEquals(0, m1.min());
+            assertEquals(1, m1.max());
+            assertEquals(3, m1.options().size());
+            assertTrue(m1.options().get(0).label().startsWith("{P} \u2014 "), m1.options().get(0).label());
+            assertTrue(m1.options().get(1).label().startsWith("{P}{P} \u2014 "), m1.options().get(1).label());
+            assertTrue(m1.options().get(2).label().startsWith("{P}{P}{P} \u2014 "), m1.options().get(2).label());
+            // {P}{P}{P} を選ぶと残り予算 2 になり、次は {P} と {P}{P} の 2 択だけが出る
+            s.submit(m1.options().get(2).id());
+            Decision m2 = expect(s, Decision.Kind.CHOOSE_MODE);
+            assertEquals(2, m2.options().size());
+            s.submit(m2.options().get(0).id());
+            // 途中で空回答を送るとモード選択を打ち切れる
+            Decision m3 = expect(s, Decision.Kind.CHOOSE_MODE);
+            s.submit();
+            s.submit(expect(s, Decision.Kind.PAY_MANA).findByLabelPrefix("Cancel").id());
+
+            s.submit(expect(s, Decision.Kind.PRIORITY).findByLabelPrefix("Fiery Confluence").id());
+            for (int i = 0; i < 3; i++) {
+                Decision m = expect(s, Decision.Kind.CHOOSE_MODE);
+                assertEquals(1, m.min());
+                assertEquals(1, m.max());
+                s.submit(m.findByLabelPrefix("Fiery Confluence deals 2 damage").id());
+            }
+            s.submit(expect(s, Decision.Kind.PAY_MANA).findByLabelPrefix("Auto pay").id());
+            StepResult r = s.submit("pass");
+            assertEquals(Status.CLEARED, r.status(), r.reason());
+            assertTrue(s.fallbackLog().isEmpty(), s.fallbackLog().toString());
+        }
+    }
+
+    @Test
+    void scryAndSurveil() throws Exception {
+        PuzzleDefinition p = customPuzzle(
+                List.of("Opt", "Consider"),
+                List.of("Island", "Island"),
+                List.of(),
+                List.of("Mountain", "Lightning Bolt", "Swamp"),
+                3,
+                List.of());
+        try (ForgeSession s = ForgeSession.load(p)) {
+            s.submit(expect(s, Decision.Kind.PRIORITY).findByLabelPrefix("Opt").id());
+            s.submit(expect(s, Decision.Kind.PAY_MANA).findByLabelPrefix("Auto pay").id());
+            s.submit("pass");
+            Decision scry = expect(s, Decision.Kind.CHOOSE_CARDS);
+            assertEquals("scryBottom", scry.promptKey());
+            // 先頭の Mountain を下に送り、次の Lightning Bolt を引く
+            s.submit(scry.findByLabelPrefix("Mountain").id());
+            assertTrue(s.getState().players().get(0).cards().stream()
+                    .anyMatch(c -> "Lightning Bolt".equals(c.name()) && "HAND".equalsIgnoreCase(c.zone())));
+
+            s.submit(expect(s, Decision.Kind.PRIORITY).findByLabelPrefix("Consider").id());
+            s.submit(expect(s, Decision.Kind.PAY_MANA).findByLabelPrefix("Auto pay").id());
+            s.submit("pass");
+            Decision surveil = expect(s, Decision.Kind.CHOOSE_CARDS);
+            assertEquals("surveilGrave", surveil.promptKey());
+            s.submit(surveil.findByLabelPrefix("Swamp").id());
+            assertTrue(s.getState().players().get(0).cards().stream()
+                    .anyMatch(c -> "Swamp".equals(c.name()) && "GRAVEYARD".equalsIgnoreCase(c.zone())));
+            assertTrue(s.fallbackLog().isEmpty(), s.fallbackLog().toString());
+        }
+    }
+
+    @Test
+    void convokeAndDelve() throws Exception {
+        PuzzleDefinition p = customPuzzle(
+                List.of("Stoke the Flames", "Gurmag Angler", "Pile On"),
+                List.of("Mountain", "Mountain", "Swamp", "Goblin Piker", "Goblin Piker", "Ygra, Eater of All", "Camellia, the Seedmiser"),
+                List.of("Island", "Island", "Island", "Island", "Island", "Island"),
+                List.of("Island"),
+                4,
+                List.of("Grizzly Bears"));
+        try (ForgeSession s = ForgeSession.load(p)) {
+            s.submit(expect(s, Decision.Kind.PRIORITY).findByLabelPrefix("Pile On").id());
+            s.submit(expect(s, Decision.Kind.TARGETS).findByLabelPrefix("Grizzly Bears").id());
+            Decision pileConvoke = expect(s, Decision.Kind.CHOOSE_CARDS);
+            assertEquals("convoke", pileConvoke.promptKey());
+            assertEquals("h2", s.instanceIdOf(pileConvoke.source()));
+            // 多色（黒緑）クリーチャー 2 体で {3}{B} の招集を払うとき、1 体目で {B}、2 体目で不特定マナが自動選択され色質問は出ない
+            s.submit(pileConvoke.findByLabelPrefix("Ygra").id(), pileConvoke.findByLabelPrefix("Camellia").id());
+            s.submit(expect(s, Decision.Kind.PAY_MANA).findByLabelPrefix("Cancel").id());
+
+            s.submit(expect(s, Decision.Kind.PRIORITY).findByLabelPrefix("Gurmag Angler").id());
+            Decision delve = expect(s, Decision.Kind.CHOOSE_CARDS);
+            assertEquals("delve", delve.promptKey());
+            s.submit(delve.options().stream().map(Decision.Option::id).limit(6).toArray(String[]::new));
+            s.submit(expect(s, Decision.Kind.PAY_MANA).findByLabelPrefix("Swamp").id());
+            s.submit("pass");
+
+            s.submit(expect(s, Decision.Kind.PRIORITY).findByLabelPrefix("Stoke the Flames").id());
+            s.submit(expect(s, Decision.Kind.TARGETS).findByLabelPrefix("player:p2").id());
+            Decision convoke = expect(s, Decision.Kind.CHOOSE_CARDS);
+            assertEquals("convoke", convoke.promptKey());
+            s.submit(convoke.findByLabelPrefix("Goblin Piker").id(),
+                    convoke.options().stream().filter(o -> o.label().startsWith("Goblin Piker")).skip(1).findFirst().orElseThrow().id());
+            s.submit(expect(s, Decision.Kind.PAY_MANA).findByLabelPrefix("Auto pay").id());
+            StepResult r = s.submit("pass");
+            assertEquals(Status.CLEARED, r.status(), r.reason());
+            assertTrue(s.fallbackLog().isEmpty(), s.fallbackLog().toString());
+        }
+    }
+
+    @Test
+    void stackSpellTargetingAndRetargeting() throws Exception {
+        PuzzleDefinition p = customPuzzle(
+                List.of("Lightning Bolt", "Reverberate"),
+                List.of("Mountain", "Mountain", "Mountain"),
+                List.of(),
+                List.of("Island"),
+                3,
+                List.of("Grizzly Bears"));
+        try (ForgeSession s = ForgeSession.load(p)) {
+            s.submit(expect(s, Decision.Kind.PRIORITY).findByLabelPrefix("Lightning Bolt").id());
+            s.submit(expect(s, Decision.Kind.TARGETS).findByLabelPrefix("Grizzly Bears").id());
+            s.submit(expect(s, Decision.Kind.PAY_MANA).findByLabelPrefix("Auto pay").id());
+            // スタックに Lightning Bolt がある状態で Reverberate を唱える
+            s.submit(expect(s, Decision.Kind.PRIORITY).findByLabelPrefix("Reverberate").id());
+            Decision tgtSpell = expect(s, Decision.Kind.TARGETS);
+            Decision.Option boltOnStack = tgtSpell.findByLabelPrefix("Lightning Bolt");
+            assertTrue(boltOnStack.id().startsWith("s"), boltOnStack.toString());
+            s.submit(boltOnStack.id());
+            s.submit(expect(s, Decision.Kind.PAY_MANA).findByLabelPrefix("Auto pay").id());
+            // Reverberate を解決 → 新しい対象を選ぶ（TARGETS, optional なので min=0）→ player:p2 を選ぶ
+            s.submit("pass");
+            Decision newTgt = expect(s, Decision.Kind.TARGETS);
+            assertEquals(0, newTgt.min());
+            s.submit(newTgt.findByLabelPrefix("player:p2").id());
+            StepResult r = s.submit("pass");
+            assertEquals(Status.CLEARED, r.status(), r.reason());
+            assertTrue(s.fallbackLog().isEmpty(), s.fallbackLog().toString());
+        }
+    }
+
+    @Test
+    void collectEvidenceCost() throws Exception {
+        PuzzleDefinition p = customPuzzle(
+                List.of("Extract a Confession"),
+                List.of("Swamp", "Swamp"),
+                List.of("Grizzly Bears", "Hill Giant", "Mountain"),
+                List.of("Island"),
+                20,
+                List.of("Llanowar Elves", "Shivan Dragon"));
+        try (ForgeSession s = ForgeSession.load(p)) {
+            s.submit(expect(s, Decision.Kind.PRIORITY).findByLabelPrefix("Extract a Confession").id());
+            // Collect evidence 6（任意の追加コスト）
+            Decision opt = expect(s, Decision.Kind.CHOOSE_MODE);
+            assertEquals("optionalCost", opt.promptKey());
+            s.submit(opt.options().get(0).id());
+            if (s.getPendingDecision().kind() == Decision.Kind.PAY_MANA) {
+                s.submit(expect(s, Decision.Kind.PAY_MANA).findByLabelPrefix("Auto pay").id());
+                Decision ev = expect(s, Decision.Kind.CHOOSE_CARDS);
+                assertEquals("totalCMC", ev.promptKey());
+                assertEquals("6", ev.promptArgs().get("n"));
+                s.submit(ev.findByLabelPrefix("Grizzly Bears").id(), ev.findByLabelPrefix("Hill Giant").id());
+            } else {
+                Decision ev = expect(s, Decision.Kind.CHOOSE_CARDS);
+                assertEquals("totalCMC", ev.promptKey());
+                assertEquals("6", ev.promptArgs().get("n"));
+                s.submit(ev.findByLabelPrefix("Grizzly Bears").id(), ev.findByLabelPrefix("Hill Giant").id());
+                s.submit(expect(s, Decision.Kind.PAY_MANA).findByLabelPrefix("Auto pay").id());
+            }
+            s.submit("pass");
+            // 証拠収集 6 を支払ったので、パワー最大の Shivan Dragon を生け贄に捧げさせる
+            assertEquals("GRAVEYARD", card(s.getState(), "ob1").zone().toUpperCase());
+            assertTrue(s.fallbackLog().isEmpty(), s.fallbackLog().toString());
+        }
+    }
 }

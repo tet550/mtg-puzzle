@@ -30,6 +30,8 @@ export interface SessionState {
   startTurn: number;
   /** 開いてからの出来事（Log に出す） */
   history: GameEvent[];
+  /** デバッグ用の全記録（アクション・生イベント・GameLog・選択要求・判定・経過時間など） */
+  debugHistory: string[];
   /** 直前の回答が受け付けられなかったときなど、続けられる問題のお知らせ */
   notice: string | null;
   /** phase が error のときの内容 */
@@ -43,6 +45,7 @@ const INITIAL: SessionState = {
   verdict: { result: "IN_PROGRESS" },
   startTurn: 0,
   history: [],
+  debugHistory: [],
   notice: null,
   errors: [],
 };
@@ -72,17 +75,23 @@ export class PuzzleSession {
   async open(data: unknown): Promise<void> {
     const v = validatePuzzle(data);
     if (!v.ok) {
-      this.set({ ...INITIAL, phase: "error", errors: v.errors });
+      this.set({ ...INITIAL, phase: "error", errors: v.errors, debugHistory: v.errors.map((e) => `[ValidationError] ${e}`) });
       return;
     }
-    this.set({ ...INITIAL, phase: "loading", puzzle: v.puzzle });
-    await this.run(() => this.engine.load(v.puzzle), true);
+    const p = v.puzzle;
+    this.set({ ...INITIAL, phase: "loading", puzzle: p });
+    await this.run(() => this.engine.load(p), true, [`[Load] title=${JSON.stringify(p.title)} active=${p.game.activePlayer} phase=${p.game.phase}`]);
   }
 
   async answer(optionIds: string[]): Promise<void> {
     if (this.s.phase !== "playing") return;
+    const d = this.s.step?.pending;
+    const detail = optionIds.map((id) => {
+      const o = d?.options.find((x) => x.id === id);
+      return o ? `${id} (${o.label})` : id;
+    }).join(", ");
     this.set({ phase: "busy", notice: null });
-    await this.run(() => this.engine.submit(optionIds), false);
+    await this.run(() => this.engine.submit(optionIds), false, [`[Submit] seq=${d?.seq ?? "?"} ids=[${detail}]`]);
   }
 
   /** 初期盤面からやり直す。エンジンが異常のときは、エンジンを作り直してから読み込み直す */
@@ -94,34 +103,39 @@ export class PuzzleSession {
       try {
         await this.engine.restart();
       } catch (e) {
-        this.set({ phase: "error", errors: [message(e)] });
+        this.set({ phase: "error", errors: [message(e)], debugHistory: [`[RestartError] ${message(e)}`] });
         return;
       }
-      await this.run(() => this.engine.load(puzzle), true);
+      await this.run(() => this.engine.load(puzzle), true, [`[Restart+Load] title=${JSON.stringify(puzzle.title)}`]);
       return;
     }
     this.set({ ...INITIAL, phase: "loading", puzzle });
-    await this.run(() => this.engine.reset(), true);
+    await this.run(() => this.engine.reset(), true, [`[Reset] title=${JSON.stringify(puzzle.title)}`]);
   }
 
-  private async run(call: () => Promise<StepResult>, fresh: boolean) {
+  private async run(call: () => Promise<StepResult>, fresh: boolean, actionLines: string[] = []) {
+    const prevStep = this.s.step;
     let step: StepResult;
     try {
       step = await call();
     } catch (e) {
       const code = (e as { code?: string }).code;
+      const errLine = `[Error] code=${code ?? "-"} ${message(e)}`;
+      const debugHistory = fresh ? [...actionLines, errLine] : [...this.s.debugHistory, ...actionLines, errLine];
       if (code === "INVALID_ANSWER" && !fresh) {
         // 回答が受け付けられなかった。選択待ちの状態は残っているので続けられる
-        this.set({ phase: "playing", notice: message(e) });
+        this.set({ phase: "playing", notice: message(e), debugHistory });
         return;
       }
-      this.set({ phase: "error", errors: [message(e)] });
+      this.set({ phase: "error", errors: [message(e)], debugHistory });
       return;
     }
     const startTurn = fresh ? step.view.turn : this.s.startTurn;
     const goal = this.s.puzzle!.goal;
     const verdict = judge({ goal, startTurn, events: step.events, engine: step.engine });
     const history = fresh ? step.events : [...this.s.history, ...step.events];
+    const stepDebug = formatStepDebug(actionLines, fresh ? null : prevStep, step, verdict);
+    const debugHistory = fresh ? stepDebug : [...this.s.debugHistory, ...stepDebug];
     const phase: SessionPhase =
       verdict.result === "IN_PROGRESS" ? (step.pending ? "playing" : "error")
         : verdict.result === "ERROR" ? "error" : "finished";
@@ -131,10 +145,40 @@ export class PuzzleSession {
       verdict,
       startTurn,
       history,
+      debugHistory,
       errors: phase === "error" ? [verdict.result === "ERROR" ? verdict.message : t("status.stalled")] : [],
       notice: noticeOf(step.fallback, goal.player),
     });
   }
+}
+
+function formatStepDebug(actionLines: string[], prevStep: StepResult | null, step: StepResult, verdict: Verdict): string[] {
+  const out: string[] = [...actionLines];
+  if (step.debug) {
+    for (const line of step.debug) out.push(line);
+  }
+  for (const ev of step.events) {
+    out.push(`[AdapterEvent] ${JSON.stringify(ev)}`);
+  }
+  const prevFb = prevStep?.fallback.length ?? 0;
+  for (const fb of step.fallback.slice(prevFb)) {
+    out.push(`[Fallback] ${fb}`);
+  }
+  const eng = step.engine.state === "GAME_OVER"
+    ? `GAME_OVER(winner=${step.engine.outcome.winner}, draw=${step.engine.outcome.draw}, winCondition=${step.engine.outcome.winCondition})`
+    : step.engine.state === "ERROR" ? `ERROR(${step.engine.message})` : step.engine.state;
+  out.push(
+    `[Step] turn=${step.view.turn} phase=${step.view.phase} active=${step.view.activePlayer} priority=${step.view.priorityPlayer ?? "-"} ` +
+    `stack=${step.view.stack.length} engine=${eng} javaJudge=${step.javaJudge.status}(${step.javaJudge.reason}) verdict=${verdict.result} elapsed=${step.elapsedMs}ms`,
+  );
+  if (step.pending) {
+    const d = step.pending;
+    out.push(`[Decision #${d.seq}] kind=${d.kind} min=${d.min} max=${d.max} source=${d.source ?? "-"} key=${d.promptKey ?? "-"} prompt=${JSON.stringify(d.prompt)}`);
+    for (const o of d.options) {
+      out.push(`  [Option ${o.id}] label=${JSON.stringify(o.label)}${o.labelJa ? ` labelJa=${JSON.stringify(o.labelJa)}` : ""}${o.ref ? ` ref=${JSON.stringify(o.ref)}` : ""}`);
+    }
+  }
+  return out;
 }
 
 /**

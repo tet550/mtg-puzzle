@@ -148,6 +148,11 @@
   "normal": "https://cards.scryfall.io/normal/front/4/6/46666fba-d4a7-4687-8747-a42e4c6d853e.jpg?1783930745",
   "small": "https://cards.scryfall.io/small/front/4/6/46666fba-d4a7-4687-8747-a42e4c6d853e.jpg?1783930745"
  },
+ "Construct Token": {
+  "artist": "Gabriel Rubio",
+  "normal": "https://cards.scryfall.io/normal/front/0/9/0910f9ee-755f-4a94-a2ab-20df2d7f7f27.jpg?1783902806",
+  "small": "https://cards.scryfall.io/small/front/0/9/0910f9ee-755f-4a94-a2ab-20df2d7f7f27.jpg?1783902806"
+ },
  "Corpseberry Cultivator": {
   "artist": "Izzy",
   "ja": {
@@ -218,6 +223,11 @@
   },
   "normal": "https://cards.scryfall.io/normal/front/9/4/9472be1e-388c-45fe-a18d-35b2cb12dc5f.jpg?1783910971",
   "small": "https://cards.scryfall.io/small/front/9/4/9472be1e-388c-45fe-a18d-35b2cb12dc5f.jpg?1783910971"
+ },
+ "Eldrazi Spawn Token": {
+  "artist": "Aleksi Briclot",
+  "normal": "https://cards.scryfall.io/normal/front/c/7/c74a7492-ed7b-4037-aa5c-bcfabe4c8951.jpg?1783903463",
+  "small": "https://cards.scryfall.io/small/front/c/7/c74a7492-ed7b-4037-aa5c-bcfabe4c8951.jpg?1783903463"
  },
  "Electrodominance": {
   "artist": "Dmitry Burmak",
@@ -336,6 +346,16 @@
   },
   "normal": "https://cards.scryfall.io/normal/front/3/7/37b41b59-0296-443b-8a62-8d5c4641ef66.jpg?1783911302",
   "small": "https://cards.scryfall.io/small/front/3/7/37b41b59-0296-443b-8a62-8d5c4641ef66.jpg?1783911302"
+ },
+ "Food Token": {
+  "artist": "Raymond Bonilla",
+  "ja": {
+   "artist": "TSWCK",
+   "normal": "https://cards.scryfall.io/normal/front/2/d/2d8b15b7-07e1-4f3e-a64d-706b64c4a5d7.jpg?1782828258",
+   "small": "https://cards.scryfall.io/small/front/2/d/2d8b15b7-07e1-4f3e-a64d-706b64c4a5d7.jpg?1782828258"
+  },
+  "normal": "https://cards.scryfall.io/normal/front/2/7/276dedb8-3d41-499c-8804-bb1471fcb06f.jpg?1786586750",
+  "small": "https://cards.scryfall.io/small/front/2/7/276dedb8-3d41-499c-8804-bb1471fcb06f.jpg?1786586750"
  },
  "Forebear's Blade": {
   "artist": "Scott Murphy",
@@ -466,6 +486,11 @@
   },
   "normal": "https://cards.scryfall.io/normal/front/f/5/f5ba5d4b-5dbb-43d6-8f44-a2f80944df98.jpg?1783930471",
   "small": "https://cards.scryfall.io/small/front/f/5/f5ba5d4b-5dbb-43d6-8f44-a2f80944df98.jpg?1783930471"
+ },
+ "Insect Token": {
+  "artist": "Michele Giorgi",
+  "normal": "https://cards.scryfall.io/normal/front/f/5/f5d782a4-6726-4d64-9977-82ea2ab77e0f.jpg?1789737199",
+  "small": "https://cards.scryfall.io/small/front/f/5/f5d782a4-6726-4d64-9977-82ea2ab77e0f.jpg?1789737199"
  },
  "Island": {
   "artist": "Eren Arik",
@@ -942,6 +967,11 @@
   "normal": "https://cards.scryfall.io/normal/front/f/2/f25d56f9-aa54-4657-9ac9-e93fbba3e715.jpg?1783929413",
   "small": "https://cards.scryfall.io/small/front/f/2/f25d56f9-aa54-4657-9ac9-e93fbba3e715.jpg?1783929413"
  },
+ "Servo Token": {
+  "artist": "Victor Adame Minguez",
+  "normal": "https://cards.scryfall.io/normal/front/5/7/57890ef7-9006-47b9-9f8b-42b665123607.jpg?1783906794",
+  "small": "https://cards.scryfall.io/small/front/5/7/57890ef7-9006-47b9-9f8b-42b665123607.jpg?1783906794"
+ },
  "Shimmering Grotto": {
   "artist": "Cliff Childs",
   "ja": {
@@ -978,6 +1008,16 @@
   "normal": "https://cards.scryfall.io/normal/front/0/b/0b51c3b5-db70-4976-986d-ed3fc8584d1a.jpg?1783921293",
   "small": "https://cards.scryfall.io/small/front/0/b/0b51c3b5-db70-4976-986d-ed3fc8584d1a.jpg?1783921293"
  },
+ "Soldier Token": {
+  "artist": "Magali Villeneuve",
+  "ja": {
+   "artist": "Daisuke Izuka",
+   "normal": "https://cards.scryfall.io/normal/front/a/5/a51f82d6-d653-4fff-a3f3-27b639f2ea84.jpg?1783916663",
+   "small": "https://cards.scryfall.io/small/front/a/5/a51f82d6-d653-4fff-a3f3-27b639f2ea84.jpg?1783916663"
+  },
+  "normal": "https://cards.scryfall.io/normal/front/a/5/a58c2fc3-c07f-4f06-a9d5-1d0fe3dbde1f.jpg?1789737284",
+  "small": "https://cards.scryfall.io/small/front/a/5/a58c2fc3-c07f-4f06-a9d5-1d0fe3dbde1f.jpg?1789737284"
+ },
  "Song of Freyalise": {
   "artist": "Min Yum",
   "ja": {
@@ -1001,6 +1041,11 @@
   },
   "normal": "https://cards.scryfall.io/normal/front/c/e/ce1e4aa6-b06d-4b87-9912-a4c403e8d7c6.jpg?1783943680",
   "small": "https://cards.scryfall.io/small/front/c/e/ce1e4aa6-b06d-4b87-9912-a4c403e8d7c6.jpg?1783943680"
+ },
+ "Squirrel Token": {
+  "artist": "Brooklyn Smith",
+  "normal": "https://cards.scryfall.io/normal/front/f/d/fd0474f3-682d-4c6d-b902-84f3250aa269.jpg?1783902800",
+  "small": "https://cards.scryfall.io/small/front/f/d/fd0474f3-682d-4c6d-b902-84f3250aa269.jpg?1783902800"
  },
  "Storm Fleet Swashbuckler": {
   "artist": "Kieran Yanner",
@@ -1167,6 +1212,16 @@
   },
   "normal": "https://cards.scryfall.io/normal/front/8/c/8c2d6b02-a453-40f9-992a-5c5542987cfb.jpg?1783910802",
   "small": "https://cards.scryfall.io/small/front/8/c/8c2d6b02-a453-40f9-992a-5c5542987cfb.jpg?1783910802"
+ },
+ "Treasure Token": {
+  "artist": "Alayna Danner",
+  "ja": {
+   "artist": "Esuthio",
+   "normal": "https://cards.scryfall.io/normal/front/0/c/0ca2f44c-fdc9-475e-bac5-56392ad01854.jpg?1783912749",
+   "small": "https://cards.scryfall.io/small/front/0/c/0ca2f44c-fdc9-475e-bac5-56392ad01854.jpg?1783912749"
+  },
+  "normal": "https://cards.scryfall.io/normal/front/0/3/03992f88-7a15-4234-9bed-b7617d7ff09c.jpg?1789735245",
+  "small": "https://cards.scryfall.io/small/front/0/3/03992f88-7a15-4234-9bed-b7617d7ff09c.jpg?1789735245"
  },
  "Underhanded Designs": {
   "artist": "Anastasia Ovchinnikova",

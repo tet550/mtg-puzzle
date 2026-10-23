@@ -30,12 +30,18 @@ export interface Snapshot {
   cards: Map<string, Shot>;
   /** スタックの小窓のカード（解決の光弾の出どころ） */
   stack: Map<string, Shot>;
+  /** スタックの小窓そのもの（最後の項目が解決して小窓が閉じるとき、解決の演出が終わるまで残す） */
+  stackBox: Shot | null;
   /** プレイヤーの見出し */
   players: Map<string, DOMRect>;
 }
 
 function shot(el: HTMLElement): Shot {
-  return { el, rect: el.getBoundingClientRect(), h: getComputedStyle(el).getPropertyValue("--h") };
+  const rect = el.getBoundingClientRect();
+  const clone = el.cloneNode(true) as HTMLElement;
+  clone.dataset.shotW = String(el.offsetWidth || rect.width);
+  clone.dataset.shotH = String(el.offsetHeight || rect.height);
+  return { el: clone, rect, h: getComputedStyle(el).getPropertyValue("--h") };
 }
 
 export function capture(root: HTMLElement): Snapshot {
@@ -49,21 +55,29 @@ export function capture(root: HTMLElement): Snapshot {
   for (const el of root.querySelectorAll<HTMLElement>(".combatbox .card[data-id]")) {
     if (!cards.has(el.dataset.id!)) cards.set(el.dataset.id!, shot(el));
   }
+  const sb = root.querySelector<HTMLElement>(".stackbox");
+  const stackBox = sb ? shot(sb) : null;
   const players = new Map<string, DOMRect>();
   for (const el of root.querySelectorAll<HTMLElement>(".phead[data-player]")) players.set(el.dataset.player!, el.getBoundingClientRect());
-  return { cards, stack, players };
+  return { cards, stack, stackBox, players };
 }
 
 // ---------------------------------------------------------------- 再生
 
 let skipping = false;
 let running: HTMLElement | null = null;
+let cleanupNow: (() => void) | null = null;
 
-/** 演出の層を押したとき: 残りを待たずに終わらせる */
+const finishFinite = (a: Animation) => {
+  if (Number.isFinite(Number(a.effect?.getComputedTiming().endTime))) a.finish();
+};
+
+/** 演出の層を押したとき・次の状態へ進むとき: 残りを待たずに終わらせ、盤面の要素をすぐ元の状態に戻す */
 export function skip() {
   skipping = true;
-  running?.querySelectorAll("*").forEach((e) => e.getAnimations().forEach((a) => a.finish()));
-  document.querySelectorAll<HTMLElement>(".mv").forEach((e) => e.getAnimations().forEach((a) => a.finish()));
+  running?.querySelectorAll("*").forEach((e) => e.getAnimations().forEach(finishFinite));
+  document.querySelectorAll<HTMLElement>(".mv").forEach((e) => e.getAnimations().forEach(finishFinite));
+  cleanupNow?.();
 }
 
 /** 演出全体の速さ（長さと待ち時間に掛ける。小さいほど速い） */
@@ -93,6 +107,33 @@ export interface PlayArgs {
   viewer: string;
   /** 最後に見えていたカードの姿（スタックの呪文はエンジンの盤面に出てこないので、色をここから取る） */
   known?: Map<string, CardView>;
+  /** プレイヤーが今起動している起動型能力の発生源（誘発と区別する） */
+  activated?: string | null;
+  /** スタックに積む前の選択（対象・同時誘発の順など）で今誘発した発生源 */
+  triggered?: string[];
+  /** 前の選択で既に誘発の演出を出した発生源（直後の cast で二重に出さない） */
+  prompted?: ReadonlySet<string>;
+}
+
+/**
+ * cast の出来事が誘発型能力か（呪文の詠唱と、プレイヤーが自分で起動した能力を除く）。
+ * - 呪文は Stack 領域へ移るか、stack の項目で spell が true
+ * - 起動型能力は、プレイヤーが優先権で能力を選んだ発生源（activated）、または「コスト: 効果」の形の文
+ * - スタックに積む前の選択（対象など）で既に誘発の演出を出した発生源（prompted）は二重に出さない
+ */
+export function isTriggerCast(
+  e: Extract<GameEvent, { type: "cast" }>,
+  events: GameEvent[],
+  next: GameView,
+  activated?: string | null,
+  prompted?: ReadonlySet<string>,
+): boolean {
+  if (e.sourceId === activated || prompted?.has(e.sourceId)) return false;
+  if (events.some((x) => x.type === "zoneChange" && x.cardId === e.sourceId && x.to === "Stack")) return false;
+  if (!next.players.some((p) => p.cards.some((c) => c.instanceId === e.sourceId && c.zone !== "Stack"))) return false;
+  if (next.stack.some((s) => s.sourceId === e.sourceId && s.spell)) return false;
+  if (!activated && !/^(When|Whenever|At)\b/i.test(e.description) && /^[^:]{1,40}:/.test(e.description)) return false;
+  return true;
 }
 
 /**
@@ -132,6 +173,21 @@ export async function play(a: PlayArgs): Promise<void> {
   const held: HTMLElement[] = [];
   const ghosts = new Map<string, HTMLElement>();
   const lifeEls = new Map<string, HTMLElement>();
+  let cleaned = false;
+  const finish = () => {
+    if (cleaned) return;
+    cleaned = true;
+    for (const el of held) { el.style.translate = ""; el.classList.remove("mv"); }
+    for (const el of hidden) el.style.visibility = "";
+    for (const [id, el] of lifeEls) {
+      const p = next.players.find((x) => x.id === id);
+      if (p) el.textContent = String(p.life);
+    }
+    layer.remove();
+    if (running === layer) running = null;
+    if (cleanupNow === finish) cleanupNow = null;
+  };
+  cleanupNow = finish;
 
   try {
     // 1. 領域が変わったカードは、後の要素を隠して前の位置に写しを置く。同じ領域で動いたカードは前の位置に留める
@@ -149,6 +205,30 @@ export async function play(a: PlayArgs): Promise<void> {
       for (const f of root.querySelectorAll<HTMLElement>(`[data-top="${CSS.escape(id)}"]`)) { f.style.visibility = "hidden"; hidden.add(f); }
       const old = before.cards.get(id) ?? before.stack.get(id);
       if (old) ghosts.set(id, ghost(layer, old.el, old.rect, old.h));
+    }
+    // 最後の項目が解決してスタックの小窓が閉じるとき、解決の光弾や移動が始まるまで小窓の写しを残しておく
+    let stackGhost: HTMLElement | null = null;
+    if (before.stackBox && !root.querySelector(".stackbox")
+      && events.some((e) => e.type === "resolved" || (e.type === "zoneChange" && e.from === "Stack"))) {
+      stackGhost = ghost(layer, before.stackBox.el, before.stackBox.rect, before.stackBox.h);
+      stackGhost.style.zIndex = "0";
+      for (const id of ghosts.keys()) {
+        const dup = stackGhost.querySelector<HTMLElement>(`.card[data-id="${CSS.escape(id)}"]`);
+        if (dup) dup.style.visibility = "hidden";
+      }
+    }
+    const closeStackGhost = () => {
+      if (!stackGhost) return;
+      const g = stackGhost;
+      stackGhost = null;
+      gone(g, anim(g, [{ opacity: 1 }, { opacity: 0 }], { duration: 220, easing: "ease-out", fill: "forwards" }));
+    };
+    // 新しく誘発した能力は、発生源のカードが光って写しがスタックに着くまで、スタックの項目を隠しておく
+    const triggerCasts = events.filter((e): e is Extract<GameEvent, { type: "cast" }> =>
+      e.type === "cast" && isTriggerCast(e, events, next, a.activated, a.prompted));
+    for (const id of new Set([...triggerCasts.map((e) => e.sourceId), ...(a.triggered ?? [])])) {
+      const sitem = root.querySelector<HTMLElement>(`.stackbox .sitem[data-source="${CSS.escape(id)}"]`);
+      if (sitem && !prev.stack.some((s) => s.sourceId === id && !s.spell)) { sitem.style.visibility = "hidden"; hidden.add(sitem); }
     }
     // タップ・アンタップしたカードは、前の中心から回しながら動かす（下の tapSpin）。留めておく対象から外す
     const tapChanged = new Set([...nextCards].filter(([id, c]) => !moved.has(id) && prevCards.get(id)?.tapped !== c.tapped).map(([id]) => id));
@@ -182,8 +262,9 @@ export async function play(a: PlayArgs): Promise<void> {
 
     // 2. 出来事を順に再生する
     const card = (id: string | null) => (id ? nextCards.get(id) ?? prevCards.get(id) ?? a.known?.get(id) : undefined);
-    const ctx: Ctx = { a, layer, prevCards, nextCards, ghosts, hidden, lifeEls, struck: new Set(), now, card };
+    const ctx: Ctx = { a, layer, prevCards, nextCards, ghosts, hidden, lifeEls, struck: new Set(), now, card, closeStackGhost };
     const handled = new Set<string>();
+    const triggeredDone = new Set<string>();
     for (const e of events) {
       if (skipping) break;
       switch (e.type) {
@@ -193,8 +274,18 @@ export async function play(a: PlayArgs): Promise<void> {
             await moveCard(ctx, e.cardId, e.from, e.to);
           }
           break;
+        case "cast":
+          if (isTriggerCast(e, events, next, a.activated, a.prompted)) {
+            if (!handled.has(e.sourceId) && moved.has(e.sourceId)) {
+              handled.add(e.sourceId);
+              await moveCard(ctx, e.sourceId, prevCards.get(e.sourceId)?.zone ?? null, nextCards.get(e.sourceId)?.zone ?? null);
+            }
+            triggeredDone.add(e.sourceId);
+            await triggerFx(ctx, e.sourceId);
+          }
+          break;
         case "resolved":
-          await resolve(ctx, e.sourceId, e.fizzled);
+          await resolve(ctx, e.sourceId, e.fizzled, moved.has(e.sourceId));
           break;
         case "damage":
           await damage(ctx, e.sourceId, e.target, e.amount, e.combat || inCombat(prev, e.sourceId));
@@ -211,6 +302,14 @@ export async function play(a: PlayArgs): Promise<void> {
     const rest = [...moved].filter((id) => !handled.has(id))
       .sort((x, y) => ZONE_ORDER.indexOf(nextCards.get(x)?.zone ?? "") - ZONE_ORDER.indexOf(nextCards.get(y)?.zone ?? ""));
     if (!skipping) await Promise.all(rest.map((id) => moveCard(ctx, id, prevCards.get(id)?.zone ?? null, nextCards.get(id)?.zone ?? null)));
+    closeStackGhost();
+
+    // スタックに積む前の選択（対象・同時誘発の順など）で今誘発した発生源: 移動が終わってから光らせる
+    for (const id of a.triggered ?? []) {
+      if (skipping || triggeredDone.has(id)) continue;
+      triggeredDone.add(id);
+      await triggerFx(ctx, id);
+    }
 
     // 新しく積まれた対象のある項目: 発生源から対象へ光の線（対象に取った印）
     const was = new Set(prev.stack.map((s) => `${s.sourceId}:${s.description}`));
@@ -234,14 +333,7 @@ export async function play(a: PlayArgs): Promise<void> {
     }
   } finally {
     // 4. 片付け（飛ばしたとき・途中で失敗したときも、盤面は必ず後の状態に戻す）
-    for (const el of held) { el.style.translate = ""; el.classList.remove("mv"); }
-    for (const el of hidden) el.style.visibility = "";
-    for (const [id, el] of lifeEls) {
-      const p = next.players.find((x) => x.id === id);
-      if (p) el.textContent = String(p.life);
-    }
-    layer.remove();
-    running = null;
+    finish();
     skipping = false;
   }
 }
@@ -258,6 +350,7 @@ interface Ctx {
   struck: Set<string>;
   now: (id: string) => HTMLElement | null;
   card: (id: string | null) => CardView | undefined;
+  closeStackGhost: () => void;
 }
 
 function cardMap(v: GameView): Map<string, CardView> {
@@ -315,7 +408,8 @@ function ghost(layer: HTMLElement, src: HTMLElement, rect: DOMRect, hVar: string
   g.style.translate = "";
   if (hVar) g.style.setProperty("--h", hVar);
   // 傾いた手札の外接矩形ではなく、要素の本来の大きさを中心に合わせて置く
-  const w = src.offsetWidth || rect.width, ht = src.offsetHeight || rect.height;
+  const w = src.offsetWidth || Number(src.dataset.shotW) || rect.width;
+  const ht = src.offsetHeight || Number(src.dataset.shotH) || rect.height;
   const c = center(rect);
   Object.assign(g.style, { left: `${c.x - w / 2}px`, top: `${c.y - ht / 2}px`, width: `${w}px`, height: `${ht}px` });
   layer.append(g);
@@ -359,8 +453,6 @@ function reveal(ctx: Ctx, id: string, land = false) {
     const ring = fx(ctx.layer, "dust", { left: `${c.x}px`, top: `${c.y}px`, width: `${r.width * 1.2}px`, height: `${r.width * 1.2}px` });
     gone(ring, anim(ring, [{ transform: "translate(-50%,-50%) scale(.5)", opacity: 0.8 }, { transform: "translate(-50%,-50%) scale(1.4)", opacity: 0 }],
       { duration: 420, easing: "ease-out", fill: "forwards" }));
-  } else {
-    anim(el, [{ opacity: 0.4, scale: "0.92" }, { opacity: 1, scale: "1" }], { duration: 200, easing: "ease-out" });
   }
 }
 
@@ -386,6 +478,7 @@ function stackArea(ctx: Ctx, g: HTMLElement): DOMRect | null {
 // ---------------------------------------------------------------- 領域の移動
 
 async function moveCard(ctx: Ctx, id: string, from: string | null, to: string | null) {
+  if (from === "Stack" || (!from && !ctx.prevCards.has(id))) ctx.closeStackGhost();
   const card = ctx.card(id);
   const owner = card?.owner ?? ctx.a.viewer;
   let g = ctx.ghosts.get(id) ?? null;
@@ -481,22 +574,84 @@ async function bounceFx(ctx: Ctx, g: HTMLElement, dest: HTMLElement | null, owne
 
 // ---------------------------------------------------------------- 解決・対象・ダメージ・ライフ
 
+/** 誘発: 発生源のカードが黄金に脈打って光輪と「⚡ 誘発！」を出し、スタックの小窓へ写しを飛ばす */
+async function triggerFx(ctx: Ctx, sourceId: string) {
+  const root = ctx.a.root;
+  const card = ctx.card(sourceId);
+  const owner = card?.owner ?? ctx.a.viewer;
+  const zone = ctx.nextCards.get(sourceId)?.zone ?? ctx.prevCards.get(sourceId)?.zone;
+  const boardEl = root.querySelector<HTMLElement>(`.side .card[data-id="${CSS.escape(sourceId)}"]`)
+    ?? root.querySelector<HTMLElement>(`.combatbox .card[data-id="${CSS.escape(sourceId)}"]`)
+    ?? root.querySelector<HTMLElement>(`[data-top="${CSS.escape(sourceId)}"]`);
+  const r = boardEl?.getBoundingClientRect()
+    ?? (zone === "Graveyard" || zone === "Exile" ? pileRect(ctx, owner, zone.toLowerCase()) : null)
+    ?? ctx.a.before.cards.get(sourceId)?.rect
+    ?? liveCard(root, sourceId, true)?.getBoundingClientRect() ?? null;
+  const sitem = root.querySelector<HTMLElement>(`.stackbox .sitem[data-source="${CSS.escape(sourceId)}"]`);
+  if (!r || (!r.width && !r.height)) {
+    if (sitem) { sitem.style.visibility = ""; ctx.hidden.delete(sitem); }
+    return;
+  }
+  const c = center(r);
+  const color = colorOf(card);
+  glow(ctx.layer, r, "#ffd23d");
+  for (const [scale, delay] of [[1.9, 0], [1.45, 90]] as const) {
+    const ring = fx(ctx.layer, "trig", { left: `${c.x}px`, top: `${c.y}px`, "--c": color });
+    gone(ring, anim(ring, [
+      { transform: "translate(-50%,-50%) scale(.35)", opacity: 1 },
+      { transform: `translate(-50%,-50%) scale(${scale})`, opacity: 0 },
+    ], { duration: 460, delay, easing: "ease-out", fill: "forwards" }));
+  }
+  sparks(ctx.layer, r, "#ffd23d", 10);
+  stamp(ctx.layer, r, t("motion.trigger"), "trig", 0.78);
+  if (boardEl) {
+    anim(boardEl, [
+      { scale: "1", translate: "0px 0px", filter: "none" },
+      { scale: "1.14", translate: "0px -6px", filter: "brightness(1.7) drop-shadow(0 0 14px #ffd23d)", offset: 0.3 },
+      { scale: "1.06", translate: "0px -3px", filter: "brightness(1.3) drop-shadow(0 0 10px #ffd23d)", offset: 0.65 },
+      { scale: "1", translate: "0px 0px", filter: "none" },
+    ], { duration: 520, easing: "ease-out" });
+  }
+  await sleep(220);
+  const dest = liveCard(root, sourceId, true) ?? sitem;
+  const srcEl = boardEl ?? ctx.a.before.cards.get(sourceId)?.el ?? liveCard(root, sourceId, true);
+  if (dest && srcEl && dest !== boardEl) {
+    const to = dest.getBoundingClientRect();
+    if (to.width || to.height) {
+      const g = ghost(ctx.layer, srcEl, r, getComputedStyle(srcEl).getPropertyValue("--h"));
+      g.style.filter = "brightness(1.35) drop-shadow(0 0 12px #ffd23d)";
+      await fly(g, to, { duration: 420 });
+      g.remove();
+      if (sitem) { sitem.style.visibility = ""; ctx.hidden.delete(sitem); }
+      glow(ctx.layer, to, color);
+      return;
+    }
+  }
+  if (sitem) { sitem.style.visibility = ""; ctx.hidden.delete(sitem); }
+  await sleep(180);
+}
+
 /** 解決: 対象があれば発生源から対象へ光弾。立ち消えなら煙 */
-async function resolve(ctx: Ctx, sourceId: string, fizzled: boolean) {
+async function resolve(ctx: Ctx, sourceId: string, fizzled: boolean, willMove = false) {
   const item = ctx.a.prev.stack.find((s) => s.sourceId === sourceId);
   const src = ctx.a.before.stack.get(sourceId)?.rect ?? ctx.a.before.cards.get(sourceId)?.rect
     ?? ctx.ghosts.get(sourceId)?.getBoundingClientRect() ?? ctx.now(sourceId)?.getBoundingClientRect();
-  if (!src) return;
+  if (!src) {
+    if (!willMove) ctx.closeStackGhost();
+    return;
+  }
   const color = colorOf(ctx.card(sourceId));
   if (fizzled) {
     motes(ctx.layer, src, "#9aa0a8", 10);
     await sleep(300);
+    if (!willMove) ctx.closeStackGhost();
     return;
   }
   glow(ctx.layer, src, color);
   const targets = item?.targets ?? [];
   if (!targets.length) {
     await sleep(240);
+    if (!willMove) ctx.closeStackGhost();
     return;
   }
   await sleep(120);
@@ -506,6 +661,7 @@ async function resolve(ctx: Ctx, sourceId: string, fizzled: boolean) {
     await bolt(ctx.layer, src, to, color);
     ctx.struck.add(tg);
   }));
+  if (!willMove) ctx.closeStackGhost();
 }
 
 function targetRect(ctx: Ctx, id: string): DOMRect | null {

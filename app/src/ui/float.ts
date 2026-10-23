@@ -5,6 +5,8 @@ interface Pos { x: number; y: number; right: boolean; bottom: boolean }
 
 const PREFIX = "mtg-puzzle.float.";
 const cache = new Map<string, Pos | null>();
+const boundHeads = new WeakSet<HTMLElement>();
+const activeFloats = new Map<string, HTMLElement>();
 
 function load(key: string): Pos | null {
   if (cache.has(key)) return cache.get(key)!;
@@ -45,10 +47,12 @@ function place(el: HTMLElement, p: Pos) {
 
 /** 小窓（.float）を動かせるようにする。DOM に入れた後に呼ぶ */
 export function setupFloat(el: HTMLElement, key: string) {
+  activeFloats.set(key, el);
   const head = el.querySelector<HTMLElement>(".fhead");
   const saved = load(key);
-  if (saved) place(el, saved);
-  if (!head) return;
+  if (saved && !el.classList.contains("dragging")) place(el, saved);
+  if (!head || boundHeads.has(head)) return;
+  boundHeads.add(head);
   head.addEventListener("pointerdown", (ev) => {
     if ((ev.target as HTMLElement).closest("button")) return;
     ev.preventDefault();
@@ -113,4 +117,18 @@ export function fitHands(root: ParentNode) {
     }
     fitHand(row);
   }
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("resize", () => {
+    for (const [key, el] of activeFloats) {
+      if (!el.isConnected) {
+        activeFloats.delete(key);
+        continue;
+      }
+      const saved = load(key);
+      if (saved && !el.classList.contains("dragging")) place(el, saved);
+    }
+    for (const row of document.querySelectorAll<HTMLElement>(".hand.fan")) fitHand(row);
+  });
 }
