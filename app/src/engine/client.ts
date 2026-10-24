@@ -171,14 +171,17 @@ export class ForgeEngine {
     const res = await fetch(`${BASE}engine/manifest.json`, { cache: "no-cache" });
     if (!res.ok) throw new EngineError("WORKER", t("error.manifest", { status: res.status }));
     const m = (await res.json()) as { jar: string; res: string; cards: string; preload?: string };
+    // GitHub Pages のサブパス配信（/<repo>/）や相対 BASE（"./"）でも CheerpJ の /app/... パスが常にオリジン基準の絶対パスになるよう解決する
+    const engineBase = new URL(`${BASE}engine/`, location.href);
+    const enginePath = engineBase.pathname;
     return {
-      jar: `/app${BASE}engine/${m.jar}`,
-      resZip: `/app${BASE}engine/${m.res}`,
+      jar: `/app${enginePath}${m.jar}`,
+      resZip: `/app${enginePath}${m.res}`,
       // 展開先もバンドルごとに分ける（古いバンドルの展開物を使わない）
       resDir: `/files/${m.res.replace(/\.zip$/, "")}`,
       // Worker が fetch で読む（CheerpJ のファイルではない）ので、普通の URL
-      cardsUrl: new URL(`${BASE}engine/${m.cards}`, location.href).href,
-      preloadUrl: `${BASE}engine/${m.preload ?? "preload.json"}`,
+      cardsUrl: new URL(m.cards, engineBase).href,
+      preloadUrl: new URL(m.preload ?? "preload.json", engineBase).href,
     };
   }
 

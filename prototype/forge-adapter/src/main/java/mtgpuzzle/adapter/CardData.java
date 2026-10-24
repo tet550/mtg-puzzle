@@ -185,7 +185,7 @@ public final class CardData {
         Map<String, Map<String, Object>> allTokens = (Map<String, Map<String, Object>>) data.get("tokens");
         Set<Integer> picked = new TreeSet<>();
         List<String> todo = new ArrayList<>();
-        names.forEach(n -> todo.add(n.toLowerCase()));
+        names.forEach(n -> todo.add(n.split(" // ", 2)[0].trim().toLowerCase()));
         while (!todo.isEmpty()) {
             Object i = keys.get(todo.remove(todo.size() - 1));
             if (i == null || !picked.add(((Number) i).intValue())) continue;

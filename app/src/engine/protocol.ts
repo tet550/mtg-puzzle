@@ -5,7 +5,7 @@ export const API_VERSION = 2;
 export type PlayerId = string;
 /** 問題のカードのインスタンス ID。問題に無いカード（トークンなど）は "f" + Forge の ID */
 export type InstanceId = string;
-export type Zone = "Hand" | "Battlefield" | "Graveyard" | "Exile" | "Stack";
+export type Zone = "Hand" | "Battlefield" | "Graveyard" | "Exile" | "Stack" | "Library";
 export type Phase =
   | "UNTAP" | "UPKEEP" | "DRAW" | "MAIN1" | "COMBAT_BEGIN" | "COMBAT_DECLARE_ATTACKERS"
   | "COMBAT_DECLARE_BLOCKERS" | "COMBAT_FIRST_STRIKE_DAMAGE" | "COMBAT_DAMAGE" | "COMBAT_END"

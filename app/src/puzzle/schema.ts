@@ -2,11 +2,13 @@
 // Forge の内部構造には依存させない。エンジン側でも検証する（存在しないカードなど）が、
 // 形の誤りはエンジンを起動する前にここで弾く。
 
+import type { ManaColor } from "../engine/protocol";
 import { t } from "../i18n";
 
 export const SCHEMA_VERSION = 1;
 /** このアプリが同梱しているエンジンの Forge のバージョン */
 export const ENGINE_VERSION = "2.0.15";
+export const MANA_COLORS: ManaColor[] = ["W", "U", "B", "R", "G", "C"];
 
 export interface CardDef {
   id: string;
@@ -46,10 +48,34 @@ export interface PuzzleJson {
     players: PlayerDef[];
   };
   goal: PuzzleGoal;
-  opponent?: { policy: "pass" };
+  opponent?: { policy: "pass"; block?: "minimize" | "none" };
 }
 
 export const ZONES = ["hand", "battlefield", "graveyard", "exile", "library"] as const;
+export type ZoneKey = (typeof ZONES)[number];
+
+/** "R R G" のようなマナプール文字列を色ごとの数に変える */
+export function parseManaPool(raw?: string): Partial<Record<ManaColor, number>> {
+  const out: Partial<Record<ManaColor, number>> = {};
+  if (!raw) return out;
+  for (const tok of raw.trim().split(/\s+/)) {
+    const c = tok.toUpperCase() as ManaColor;
+    if (MANA_COLORS.includes(c)) {
+      out[c] = (out[c] ?? 0) + 1;
+    }
+  }
+  return out;
+}
+
+/** 色ごとの数を "R R G" のようなマナプール文字列に変える（空なら undefined） */
+export function formatManaPool(pool: Partial<Record<ManaColor, number>>): string | undefined {
+  const parts: string[] = [];
+  for (const c of MANA_COLORS) {
+    const n = Math.max(0, Math.floor(pool[c] ?? 0));
+    for (let i = 0; i < n; i++) parts.push(c);
+  }
+  return parts.length ? parts.join(" ") : undefined;
+}
 
 export type ValidationResult = { ok: true; puzzle: PuzzleJson } | { ok: false; errors: string[] };
 

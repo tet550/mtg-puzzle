@@ -34,7 +34,7 @@ button svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke
 .chip.ok { background: var(--ok); color: var(--on-accent); }
 
 /* ---- 最上段（1 行に収める。入らない分は題名を省略） ---- */
-.bar { display: flex; flex-wrap: nowrap; gap: 10px; align-items: center; padding: 6px 16px; white-space: nowrap;
+.bar { display: flex; flex-wrap: nowrap; gap: 10px; align-items: center; padding: 4px 12px; white-space: nowrap;
   background: var(--panel); border-bottom: 1px solid var(--line); }
 .bar > * { flex: none; }
 .brand { font-size: 15px; }
@@ -60,7 +60,10 @@ img.ms { width: 1.05em; height: 1.05em; vertical-align: -0.15em; margin: 0 1px; 
 .list { max-width: 760px; margin: 0 auto; padding: 16px; }
 .lead { margin: 4px 0 14px; }
 .puzzles { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.pz { width: 100%; text-align: left; display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 10px; }
+.pzrow { display: flex; gap: 8px; align-items: stretch; }
+.pz { flex: 1 1 auto; min-width: 0; text-align: left; display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 10px; }
+.pzedit { flex: none; padding: 0 14px; border-radius: 10px; font-weight: 600; color: var(--muted); }
+.pzedit:hover { outline: 2px solid var(--accent); color: var(--ink); }
 .pz:hover { outline: 2px solid var(--accent); }
 .pz.done { border-color: var(--ok); }
 .pzt { font-weight: 600; font-size: 14px; }
@@ -69,16 +72,16 @@ img.ms { width: 1.05em; height: 1.05em; vertical-align: -0.15em; margin: 0 1px; 
 .fatal { padding: 24px; color: var(--warn); }
 
 /* ---- 盤面の配置: 盤面 | Log（開いたとき） ---- */
-.layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; padding: 8px 12px; }
+.layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; padding: 5px 10px; }
 .layout.withlog { grid-template-columns: minmax(0, 1fr) var(--logw, 360px); }
-.board { position: relative; isolation: isolate; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.side { position: relative; isolation: isolate; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; }
+.board { position: relative; isolation: isolate; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.side { position: relative; isolation: isolate; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 5px 10px; }
 .side.active { box-shadow: inset 4px 0 0 var(--accent); }
-/* 画面の高さに収めないとき（低い横長の窓）のカードの高さ。幅が狭いときは幅に合わせて縮小する */
-.side { --h: min(151px, 22vw); }
-.side .lands { --h: min(106px, 15vw); }
-.side .hand { --h: min(150px, 22vw); }
-.side.opp { --h: clamp(64px, 18vw, 120px); }
+/* カードの高さ（画面サイズで縮小せず最大サイズで固定） */
+.side { --h: 151px; }
+.side .lands { --h: 106px; }
+.side .hand { --h: 150px; }
+.side.opp { --h: 120px; }
 
 /* ---- Player の見出し（1 行）: アバター・LIFE・優先権・フェイズ・（右に）マナなど ---- */
 .phead { display: flex; flex-wrap: nowrap; gap: 8px; align-items: center; height: 26px; white-space: nowrap; min-width: 0; border-radius: 8px; }
@@ -114,17 +117,21 @@ img.ms { width: 1.05em; height: 1.05em; vertical-align: -0.15em; margin: 0 1px; 
   -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 16px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 16px), transparent); }
 .pextra > * { flex: none; }
 
-/* ---- 相手の側（最小限）: 見出し・要約・土地以外のパーマネント ---- */
-.osum { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+/* ---- 相手の側（最小限）: 見出し・要約・土地以外のパーマネント（高さを固定） ---- */
+.osum { display: inline-flex; flex-wrap: nowrap; align-items: center; gap: 4px; margin: 0; flex: 0 1 auto; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.osum::-webkit-scrollbar { display: none; }
+.osum > * { flex: none; }
 .sumchip { border: 1px solid var(--line); background: var(--badge); border-radius: 10px; padding: 1px 9px; font-size: 12px; margin: 0; }
 .sumchip.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 .sumchip:disabled { opacity: .6; }
-.side.opp .bfrow { margin-top: 4px; }
+.side.opp { flex: none; overflow: hidden; }
+.side.opp .bfrow { margin-top: 2px; height: calc(var(--h) * 1.12 + 14px); padding: 3px 6px; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; flex: none; }
+.side.opp .zone.opened { position: absolute; left: 10px; right: 10px; bottom: 6px; max-height: calc(100% - 34px); overflow: auto; z-index: 5; margin: 0; --h: 106px; }
 
-/* ---- 自分の側: 左の列に束（名前はカードの上に重ねる）、右に戦場・土地・手札 ---- */
-.side.mine { --ph: 100px; }
-.sidegrid { display: grid; grid-template-columns: calc(var(--ph) * .72 + 14px) minmax(0, 1fr); gap: 10px; margin-top: 4px; }
-.piles { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+/* ---- 自分の側: 左の列に束（左端で左半分が見切れるように配置）、右に戦場・土地・手札 ---- */
+.side.mine { --ph: 105px; }
+.sidegrid { display: grid; grid-template-columns: calc(var(--ph) * .36 + 6px) minmax(0, 1fr); gap: 10px; margin-top: 2px; }
+.piles { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; margin-left: calc(var(--ph) * -.36 - 10px); }
 .sidemain, .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .row { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; min-height: 10px; }
 .bfrow { align-items: flex-end; }
@@ -138,14 +145,14 @@ img.ms { width: 1.05em; height: 1.05em; vertical-align: -0.15em; margin: 0 1px; 
 .pstack .face img { width: 100%; height: 100%; object-fit: cover; }
 .pstack .face.back { background: radial-gradient(circle at 50% 50%, #c9a24a 0 18%, transparent 19%),
   repeating-linear-gradient(45deg, #5b3a24, #5b3a24 6px, #6d4a2f 6px, #6d4a2f 12px); }
-.pstack .ftext { font-size: 10px; padding: 4px; text-align: center; }
-.pile.empty .pstack::before { content: ""; position: absolute; left: 0; top: 0; width: calc(var(--ph) * .72); height: var(--ph);
-  border: 1px dashed var(--line); border-radius: 6px; }
+.pstack .ftext { font-size: 9px; padding: 14px 2px 4px calc(50% + 2px); text-align: center; line-height: 1.15; }
+.pstack .face.emptyface { border: 1px dashed var(--line); background: color-mix(in srgb, var(--badge) 45%, transparent); padding-left: 50%; }
+.pstack .pempty { font-size: 11px; font-weight: 600; color: var(--muted); text-align: center; }
 .pile.open .face { outline: 2px solid var(--accent); }
-.pstack .plabel { position: absolute; left: 0; top: 0; width: calc(var(--ph) * .72); z-index: 3; padding: 1px 0; text-align: center;
-  font-size: 9px; font-weight: 700; color: #fff; background: rgba(0, 0, 0, .62); border-radius: 6px 6px 0 0;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.pile.empty .pstack .plabel { color: var(--muted); background: none; }
+.pstack .plabel { position: absolute; left: 50%; top: 0; width: 50%; z-index: 3; padding: 2px 2px; text-align: center;
+  font-size: 8.5px; line-height: 1.1; font-weight: 700; color: #fff; background: rgba(0, 0, 0, .62); border-radius: 0 6px 0 0;
+  white-space: normal; word-break: keep-all; overflow: hidden; }
+.pile.empty .pstack .plabel { color: var(--muted); background: color-mix(in srgb, var(--badge) 85%, transparent); }
 .pcount { position: absolute; right: -2px; bottom: -4px; z-index: 3; }
 /* 開いた墓地・追放の中身 */
 .zone.opened { --h: 123px; margin-top: 8px; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel);
@@ -218,7 +225,7 @@ body.nosel, body.nosel * { user-select: none !important; -webkit-user-select: no
    横にスクロールさせず、重なり（--ov。fitHand が決める）を詰めて幅に収める。ホバーでまっすぐ浮かせる */
 /* 手札は戦場・土地に重ねるので、戦場のカードの札（土地の ×N・付けたカードなど。z-index 1〜2）より上に置く */
 .handbox { position: relative; z-index: 3; }
-.hand { display: flex; gap: 6px; padding: 14px 4px 4px; }
+.hand { display: flex; justify-content: center; gap: 6px; padding: 14px 4px 4px; }
 .hand.fan { flex-wrap: nowrap; overflow: visible; align-items: flex-start; }
 /* カードの高さは絵の高さのまま（行の高さに縮めると、ハイライトの枠が絵の途中で切れてずれて見える） */
 .hand.fan > .card { align-self: flex-start; }
@@ -267,8 +274,8 @@ body.nosel, body.nosel * { user-select: none !important; -webkit-user-select: no
 .stargets { margin-top: 2px; font-size: 11px; }
 .card.instack { flex: none; }
 .card.instack.src .artbox { opacity: .75; }
-/* 戦闘: 攻撃クリーチャーの列（カード → 攻撃先 → ブロック） */
-.combat { --h: min(13vh, 18vw, 120px); --h: min(13dvh, 18dvw, 120px); display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; padding: 6px 8px; }
+/* 戦闘: 攻撃クリーチャーの列（上: ブロック → 攻撃先 ↑ → 下: 攻撃クリーチャー） */
+.combat { --h: 120px; display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; padding: 6px 8px; }
 .cbcol { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 4px; border-radius: 8px; background: var(--bg); border: 1px solid var(--line); flex: none; }
 .cbto { display: flex; align-items: center; gap: 2px; line-height: 1; font-size: 12px; font-weight: 700; color: var(--warn); }
 .cbto .arw { font-size: 20px; }
@@ -309,8 +316,9 @@ body.nosel, body.nosel * { user-select: none !important; -webkit-user-select: no
 .dbgev.dbg-event { color: var(--muted); }
 .dbgev.dbg-warn { font-weight: 700; color: var(--warn); }
 
-/* ---- 操作パネル（mtgtable の「p1 として操作」）: 右下に浮かぶ ---- */
-.playpanel { position: fixed; z-index: var(--z-play); right: 12px; bottom: 12px; width: 360px; max-height: 60vh; }
+/* ---- 操作パネル（mtgtable の「p1 として操作」）: 右下に固定サイズで浮かぶ ---- */
+.playpanel { position: fixed; z-index: var(--z-play); right: 12px; bottom: 12px; width: 360px; height: 168px; }
+.playpanel.min { height: auto; }
 .playpanel > .fbody { flex: 1; min-height: 0; overflow: auto; }
 .actions { padding: 8px 10px; display: flex; flex-direction: column; gap: 8px; }
 .actions .prompt { font-weight: 600; font-size: 13px; display: flex; gap: 8px; align-items: center; }
@@ -364,54 +372,40 @@ body.nosel, body.nosel * { user-select: none !important; -webkit-user-select: no
 .menu .mfoot button.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); box-shadow: none; }
 .menu .mfoot button.on:disabled { background: var(--panel); color: inherit; border-color: var(--line); }
 
-/* ---- 画面の高さに収める（高さが 560px 以上か縦長のとき）: ページはスクロールしない。
-   カードの大きさは自分の欄の高さと幅から決める（mtgtable と同じく、戦場 27・土地 17・手札 27 の割合。縦長・狭い画面では幅に合わせて縮小） ---- */
-@media (min-height: 560px), (orientation: portrait) {
-  .play { height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
-  .play > .bar { flex: none; }
-  .play > .layout { flex: 1; min-height: 0; }
-  .board { min-height: 0; height: 100%; }
-  .side.opp { flex: none; --h: clamp(56px, min(13vh, 11vw), 120px); --h: clamp(56px, min(13dvh, 11dvw), 120px); }
-  .side.mine { flex: 1 1 0; min-height: 0; container-type: size; overflow: hidden; display: flex; flex-direction: column;
-    /* 見出し（約 30px）と、戦場・土地の行の余白（カードの余白・枠 8px と、ハイライトの枠と影の分 12px。各行 20px）を
-       引いた残りを 27 : 17 : 27 で分ける（戦場の行はカードの 1.12 倍。合わせて 74 単位）。縦長・狭い画面では欄の幅（100cqw）と画面幅（100vw）でも上限をかける */
-    --u: clamp(2.5px, min(calc((100cqh - 74px) / 74), calc(100cqw / 154), calc(100vw / 200)), 6.4px);
-    --ph: clamp(50px, min(calc((100cqh - 60px) / 3), calc(100cqw / 9), calc(100vw / 12)), 105px); }
-  .side.mine .phead { flex: none; }
-  .side.mine .sidegrid { flex: 1; min-height: 0; }
-  .side.mine .piles { gap: 8px; justify-content: center; overflow: hidden; }
-  /* 行ははみ出しを切る（横はスクロール）ので、カードの余白・枠（8px）とハイライトの枠と影（上下左右 6px）の分の高さと余白を取る */
-  .side.mine .bfrow:not(.lands) { --h: min(calc(var(--u) * 27), 151px); flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
-    height: calc(var(--h) * 1.12 + 20px); padding: 6px; flex: none; }
-  .side.mine .lands { --h: min(calc(var(--u) * 17), 106px); flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
-    height: calc(var(--h) + 20px); padding: 6px; flex: none; }
-  .side.mine .field { justify-content: flex-start; gap: 2px; }
-  .side.mine .sidemain { min-height: 0; }
-  .side.mine .sidemain > .field { flex: 1; min-height: 0; justify-content: flex-end; }  /* 余りは見出しの側へ（土地と手札を離さない） */
-  /* 手札はカードを 1.25 倍にして、欄の下の端の外へ少しはみ出させて切る */
-  .side.mine .handbox { flex: none; margin-top: -12px; margin-bottom: -6px; }
-  .side.mine .hand { --ha: min(calc(var(--u) * 27), 150px); --h: calc(var(--ha) * 1.25); height: calc(var(--ha) + 8px); padding: 8px 4px 0; }
-  .side.mine .hand.fan > .card:hover { transform: translateY(calc(var(--ha) - var(--h) - 8px)); }
-  .side.mine .zone.opened { position: absolute; left: calc(var(--ph) * .72 + 34px); right: 10px; bottom: 8px; max-height: 70%;
-    overflow: auto; z-index: 5; margin: 0; --h: min(26cqh, 22cqw, 123px); }
-  .layout.withlog .logpane { min-height: 0; }
-}
+/* ---- 画面の高さに収める（画面スクロール不要）。カードの大きさ・相手の領域・操作パネルは固定 ---- */
+.play { height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+.play > .bar { flex: none; }
+.play > .layout { flex: 1 1 0; min-height: 0; }
+.board { min-height: 0; height: 100%; }
+.side.opp { flex: none; --h: 120px; }
+.side.mine { flex: 1 1 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; --ph: 105px; }
+.side.mine .phead { flex: none; }
+.side.mine .sidegrid { flex: 1 1 0; min-height: 0; }
+.side.mine .piles { gap: 6px; justify-content: center; }
+/* 行ははみ出しを切る（横はスクロール）ので、カードの余白・枠（8px）とハイライトの枠と影（上下左右 6px）の分の高さと余白を取る */
+.side.mine .bfrow:not(.lands) { --h: 151px; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
+  height: calc(var(--h) * 1.12 + 14px); padding: 3px 6px; flex: none; }
+.side.mine .lands { --h: 106px; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
+  height: calc(var(--h) + 14px); padding: 3px 6px; flex: none; }
+.side.mine .field { justify-content: flex-start; gap: 4px; }
+.side.mine .sidemain { min-height: 0; }
+.side.mine .sidemain > .field { flex: 1 1 0; min-height: 0; justify-content: flex-start; }
+/* 手札は最大サイズ（--h: 188px）を維持しつつ、デフォルト位置を下に下げて土地の視認性を確保し、ホバーで全体を見せる */
+.side.mine .handbox { flex: none; margin-top: 0; margin-bottom: -6px; }
+.side.mine .hand { --ha: 96px; --h: 188px; height: calc(var(--ha) + 8px); padding: 8px 4px 0; }
+.side.mine .hand.fan > .card:hover { transform: translateY(calc(var(--ha) - var(--h) - 8px)); }
+.side.mine .zone.opened { position: absolute; left: calc(var(--ph) * .36 + 20px); right: 10px; bottom: 8px; max-height: 70%;
+  overflow: auto; z-index: 5; margin: 0; --h: 123px; }
+.layout.withlog .logpane { min-height: 0; contain: size; }
 
-/* ---- 狭い画面・縦長画面: 操作パネルは下に固定、Log は右からの引き出し、カードの詳細は下からのシート ---- */
+/* ---- 狭い画面・縦長画面: 操作パネルは下部に固定枠、Log は右からの引き出し、カードの詳細は下からのシート ---- */
 @media (max-width: 899px), (orientation: portrait) {
   .layout.withlog { grid-template-columns: minmax(0, 1fr); }
   .logpane { position: fixed; top: 0; right: 0; bottom: 0; width: min(88vw, 360px); z-index: var(--z-drawer); border-radius: 0; box-shadow: -8px 0 28px rgba(0, 0, 0, .3); }
-  .playpanel { left: 6px; right: 6px; bottom: 6px; width: auto; max-height: 34vh; }
+  .play > .playpanel { position: relative; left: auto; right: auto; bottom: auto; width: auto; height: 168px; flex: none; margin: 0 6px 6px; }
+  .play > .playpanel.min { height: auto; }
   .cdetail { left: auto; right: 8px; top: 48px; width: min(340px, calc(100vw - 16px)); max-height: 60vh; }
   .stackbox { width: min(260px, calc(100% - 16px)); }
-}
-/* 画面の高さに収めるときは、操作パネルを盤面の下の段に置く（盤面をパネルの分だけ縮め、手札を隠さない） */
-@media (orientation: portrait), (max-width: 899px) and (min-height: 560px) {
-  /* 高さは中身で変えない（変わると盤面の高さが変わり、カードの大きさが変わって画面が動く）。入らない分はパネルの中でスクロール */
-  .play > .playpanel { position: relative; left: auto; right: auto; bottom: auto; flex: none; margin: 0 6px 6px;
-    height: clamp(112px, 16vh, 180px); max-height: none; }
-  .play > .playpanel.min { height: auto; }
-  .play > .layout { padding-bottom: 6px; }
 }
 @media (max-width: 700px), (orientation: portrait) and (max-width: 899px) {
   .bar { padding: 6px 8px; gap: 6px; }
@@ -419,6 +413,7 @@ body.nosel, body.nosel * { user-select: none !important; -webkit-user-select: no
   .bar > .turn, .bar > .engine, .bar > .spacer, .bar > .goal { display: none; }
   .side { padding: 6px 8px; }
   .sidegrid { gap: 6px; }
+  .piles { margin-left: calc(var(--ph) * -.36 - 8px); }
   .bar > .ptitle { flex: 1 1 auto; }
   .bar button { padding: 3px 7px; }
   .lang button.on { display: none; }  /* 切り替え先だけを出す */
@@ -493,7 +488,7 @@ svg.fx.arrow polygon.fill { fill: #fff; }
 @media (prefers-color-scheme: dark) {
   :root { --mat: #10241f; --mat-hi: #1d3d34; --mat-line: rgba(255, 255, 255, .04); --zone: rgba(30, 32, 36, .78); --zone-line: rgba(255, 255, 255, .08); }
 }
-.play .layout { background:
+.play { background:
   linear-gradient(var(--mat-line) 1px, transparent 1px) 0 0 / 28px 28px,
   linear-gradient(90deg, var(--mat-line) 1px, transparent 1px) 0 0 / 28px 28px,
   radial-gradient(ellipse at 50% 45%, var(--mat-hi), var(--mat) 70%); }
@@ -529,3 +524,54 @@ svg.fx.arrow polygon.fill { fill: #fff; }
 @media (prefers-reduced-motion: reduce) {
   .board .card.cand, .phead.cand { animation: none; }
 }
+
+/* ---- 盤面エディタ（edit.ts） ---- */
+.board.editable .pile.empty { cursor: pointer; }
+.playpanel.editpanel { width: 400px; height: 350px; max-height: calc(100vh - 54px); }
+.playpanel.editpanel.min { height: auto; }
+@media (max-width: 899px), (orientation: portrait) {
+  .play > .playpanel.editpanel { width: auto; height: 240px; }
+  .play > .playpanel.editpanel.min { height: auto; }
+}
+.epanel { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.etabs { flex: none; display: flex; gap: 4px; padding: 6px 8px; border-bottom: 1px solid var(--line); background: var(--bg); }
+.etabs button { flex: 1; padding: 4px 8px; font-size: 12px; font-weight: 600; }
+.ebody { flex: 1; min-height: 0; overflow: auto; padding: 8px 10px; }
+.ecards, .esettings, .edata { display: flex; flex-direction: column; gap: 8px; }
+.etargets { display: flex; flex-direction: column; gap: 4px; padding: 6px 8px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; }
+.erow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.elbl { font-size: 11.5px; color: var(--muted); font-weight: 600; min-width: 72px; }
+.ebtns { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; flex: 1; }
+.ebtns button { padding: 2px 8px; font-size: 12px; }
+.ezones button { padding: 2px 6px; font-size: 11.5px; }
+.esearchbox { display: flex; flex-direction: column; gap: 6px; }
+.esearch, .etextin, .edescin, .eselect, .elifein, .ejson {
+  background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; font: inherit;
+}
+.esearch { width: 100%; font-size: 13px; }
+.etextin, .edescin, .eselect { flex: 1; min-width: 140px; }
+.elifein { width: 58px; text-align: right; font-weight: 700; }
+.ejson { width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; line-height: 1.35; resize: vertical; }
+.enote { font-size: 11.5px; }
+.enote.ok { color: var(--ok); font-weight: 600; }
+.enote.err { color: var(--warn); font-weight: 600; }
+.eresultlist { display: flex; flex-direction: column; gap: 4px; max-height: 180px; overflow: auto; }
+.ecarditem { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; text-align: left; padding: 5px 8px; border-radius: 6px; }
+.ecarditem:hover { background: var(--hl); border-color: var(--accent); }
+.ecmain { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.ecname { font-weight: 600; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ecsub { font-size: 10.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ecmeta { display: flex; align-items: center; gap: 4px; flex: none; }
+.addchip { background: var(--accent); color: var(--on-accent); font-weight: 600; }
+.eselbox { display: flex; flex-direction: column; gap: 6px; padding: 7px 8px; border: 2px solid var(--accent); border-radius: 8px; background: color-mix(in srgb, var(--hl) 35%, var(--panel)); }
+.eselhead { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.eselhead > .spacer { flex: 1; }
+.eselname { font-size: 13px; }
+.warnbtn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, var(--line)); }
+.ecounters { display: flex; flex-wrap: wrap; gap: 6px; }
+.ecounter { display: inline-flex; align-items: center; gap: 3px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 1px 5px; font-size: 11.5px; }
+.ecounter button { padding: 0 5px; border: 0; font-weight: 700; }
+.ecval { min-width: 1.5ch; text-align: center; font-weight: 700; }
+.epblock { display: flex; flex-direction: column; gap: 5px; padding: 6px 8px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; }
+.mpipbtn { display: inline-flex; align-items: center; gap: 2px; padding: 2px 6px; }
+

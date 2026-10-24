@@ -40,6 +40,8 @@ export interface BoardUi {
   /** 攻撃している・ブロックしているカード（カードの上に札を出す） */
   attacking: Set<string>;
   blocking: Set<string>;
+  /** エディタ表示（裏向きの領域も開けて編集できるようにし、同名カードも束ねず広げる） */
+  editable?: boolean;
 }
 
 export function combatSets(view: GameView): { attacking: Set<string>; blocking: Set<string> } {
@@ -55,7 +57,7 @@ const MANA_ORDER: ManaColor[] = ["W", "U", "B", "R", "G", "C"];
 export function renderBoard(view: GameView, ui: BoardUi, hooks: BoardHooks): HTMLElement {
   const me = view.players.find((p) => p.id === ui.viewer) ?? view.players[0];
   const opp = view.players.find((p) => p !== me) ?? view.players[1];
-  return h("section.board", null,
+  return h("section.board" + (ui.editable ? ".editable" : ""), null,
     opponentSide(view, opp, ui, hooks),
     mySide(view, me, ui, hooks),
   );
@@ -106,10 +108,12 @@ function phaseStrip(view: GameView, ui: BoardUi): HTMLElement {
 
 function opponentSide(view: GameView, p: PlayerView, ui: BoardUi, hooks: BoardHooks): HTMLElement {
   const side = h("div.side.opp" + (view.activePlayer === p.id ? ".active" : ""));
-  side.append(playerHead(view, p, ui, hooks, false));
+  const head = playerHead(view, p, ui, hooks, false);
   const bf = battlefield(p);
   const lands = bf.filter((c) => c.kinds.includes("land"));
   const others = bf.filter((c) => !c.kinds.includes("land"));
+  const hand = p.cards.filter((c) => c.zone === "Hand");
+  const lib = p.cards.filter((c) => c.zone === "Library");
   const gy = p.cards.filter((c) => c.zone === "Graveyard");
   const ex = p.cards.filter((c) => c.zone === "Exile");
   // 選択の候補・選んだものを含む要約は開いて見せる
@@ -118,18 +122,30 @@ function opponentSide(view: GameView, p: PlayerView, ui: BoardUi, hooks: BoardHo
 
   const untapped = lands.filter((c) => !c.tapped).length;
   const summary = h("div.osum", null,
-    summaryChip(t("opp.lands", { n: lands.length, untapped }), "lands", isOpen("lands", lands), lands.length > 0, hooks, p.id),
-    h("span.chip", { title: t("opp.hand.title"), "data-pile": "hand", "data-owner": p.id }, t("opp.hand", { n: p.handCount })),
-    h("span.chip", { title: t("opp.library.title"), "data-pile": "library", "data-owner": p.id }, t("opp.library", { n: p.libraryCount })),
-    summaryChip(t("opp.graveyard", { n: gy.length }), "graveyard", isOpen("graveyard", gy), gy.length > 0, hooks, p.id),
-    summaryChip(t("opp.exile", { n: ex.length }), "exile", isOpen("exile", ex), ex.length > 0, hooks, p.id),
+    summaryChip(t("opp.lands", { n: lands.length, untapped }), "lands", isOpen("lands", lands), lands.length > 0 || !!ui.editable, hooks, p.id),
+    ui.editable
+      ? summaryChip(t("opp.hand", { n: p.handCount }), "hand", isOpen("hand", hand), true, hooks, p.id)
+      : h("span.chip", { title: t("opp.hand.title"), "data-pile": "hand", "data-owner": p.id }, t("opp.hand", { n: p.handCount })),
+    ui.editable
+      ? summaryChip(t("opp.library", { n: p.libraryCount }), "library", isOpen("library", lib), true, hooks, p.id)
+      : h("span.chip", { title: t("opp.library.title"), "data-pile": "library", "data-owner": p.id }, t("opp.library", { n: p.libraryCount })),
+    summaryChip(t("opp.graveyard", { n: gy.length }), "graveyard", isOpen("graveyard", gy), gy.length > 0 || !!ui.editable, hooks, p.id),
+    summaryChip(t("opp.exile", { n: ex.length }), "exile", isOpen("exile", ex), ex.length > 0 || !!ui.editable, hooks, p.id),
   );
-  side.append(summary);
-  // 土地以外のパーマネントは自分の側と同じ大きさ（ブロッカー・対象・除去の対象になるため）
-  if (others.length) side.append(h("div.row.bfrow", null, kindGroups(others, p, ui, hooks)));
-  if (isOpen("lands", lands) && lands.length) side.append(h("div.row.bfrow.lands", null, landGroups(lands, ui, hooks)));
-  if (isOpen("graveyard", gy) && gy.length) side.append(opened(t("opened.oppGraveyard"), gy, ui, hooks));
-  if (isOpen("exile", ex) && ex.length) side.append(opened(t("opened.oppExile"), ex, ui, hooks));
+  head.insertBefore(summary, head.querySelector(".pextra"));
+  side.append(head);
+  // 土地以外のパーマネントは自分の側と同じ大きさ（ブロッカー・対象・除去の対象になるため）。領域の高さを固定するため空でも行を出し、開いた土地も同じ行に並べる
+  const row = h("div.row.bfrow", null, kindGroups(others, p, ui, hooks));
+  if (isOpen("lands", lands) && lands.length) {
+    const lgroups = landGroups(lands, ui, hooks);
+    if (others.length && lgroups.length) lgroups[0].classList.add("kgap");
+    row.append(...lgroups);
+  }
+  side.append(row);
+  if (ui.editable && isOpen("hand", hand)) side.append(opened(t("opened.oppHand"), hand, ui, hooks));
+  if (ui.editable && isOpen("library", lib)) side.append(opened(t("opened.oppLibrary"), lib, ui, hooks));
+  if (isOpen("graveyard", gy) && (gy.length || ui.editable)) side.append(opened(t("opened.oppGraveyard"), gy, ui, hooks));
+  if (isOpen("exile", ex) && (ex.length || ui.editable)) side.append(opened(t("opened.oppExile"), ex, ui, hooks));
   return side;
 }
 
@@ -148,14 +164,18 @@ function mySide(view: GameView, p: PlayerView, ui: BoardUi, hooks: BoardHooks): 
   const bf = battlefield(p);
   const lands = bf.filter((c) => c.kinds.includes("land"));
   const others = bf.filter((c) => !c.kinds.includes("land"));
+  const lib = p.cards.filter((c) => c.zone === "Library");
   const gy = p.cards.filter((c) => c.zone === "Graveyard");
   const ex = p.cards.filter((c) => c.zone === "Exile" && !c.exiledBy);
   const hand = p.cards.filter((c) => c.zone === "Hand");
 
+  const libOpen = !!ui.editable && (ui.open.has("my-library") || lib.some((c) => ui.marks.has(c.instanceId)));
+  const gyOpen = ui.open.has("my-graveyard") || gy.some((c) => ui.marks.has(c.instanceId));
+  const exOpen = ui.open.has("my-exile") || ex.some((c) => ui.marks.has(c.instanceId));
   const piles = h("div.piles", null,
-    pile(t("pile.library"), p.libraryCount, null, false, null, ui, "library", p.id),
-    pile(t("pile.graveyard"), gy.length, gy[gy.length - 1] ?? null, ui.open.has("my-graveyard") || gy.some((c) => ui.marks.has(c.instanceId)), () => hooks.toggle("my-graveyard"), ui, "graveyard", p.id),
-    ex.length ? pile(t("pile.exile"), ex.length, ex[ex.length - 1], ui.open.has("my-exile") || ex.some((c) => ui.marks.has(c.instanceId)), () => hooks.toggle("my-exile"), ui, "exile", p.id) : null,
+    pile(t("pile.library"), p.libraryCount, ui.editable ? (lib[0] ?? null) : null, libOpen, ui.editable ? () => hooks.toggle("my-library") : null, ui, "library", p.id),
+    pile(t("pile.graveyard"), gy.length, gy[gy.length - 1] ?? null, gyOpen, () => hooks.toggle("my-graveyard"), ui, "graveyard", p.id),
+    pile(t("pile.exile"), ex.length, ex[ex.length - 1] ?? null, exOpen, () => hooks.toggle("my-exile"), ui, "exile", p.id),
   );
   const field = h("div.field", null,
     h("div.row.bfrow", null, kindGroups(others, p, ui, hooks)),
@@ -164,8 +184,9 @@ function mySide(view: GameView, p: PlayerView, ui: BoardUi, hooks: BoardHooks): 
   // 手札は土地に少し重ね、欄の下の端で切る（mtgtable と同じ。押すと浮かせて全体を見せる）
   const handRow = h("div.handbox", { "data-pile": "hand", "data-owner": p.id }, h("div.hand.fan", { "data-zone": "hand" }, hand.map((c) => cardTile(c, ui, hooks, ".inhand"))));
   side.append(h("div.sidegrid", null, piles, h("div.sidemain", null, field, handRow)));
-  if ((ui.open.has("my-graveyard") || gy.some((c) => ui.marks.has(c.instanceId))) && gy.length) side.append(opened(t("opened.myGraveyard"), gy, ui, hooks));
-  if ((ui.open.has("my-exile") || ex.some((c) => ui.marks.has(c.instanceId))) && ex.length) side.append(opened(t("opened.myExile"), ex, ui, hooks));
+  if (libOpen) side.append(opened(t("opened.myLibrary"), lib, ui, hooks));
+  if (gyOpen && (gy.length || ui.editable)) side.append(opened(t("opened.myGraveyard"), gy, ui, hooks));
+  if (exOpen && (ex.length || ui.editable)) side.append(opened(t("opened.myExile"), ex, ui, hooks));
   return side;
 }
 
@@ -173,10 +194,10 @@ function pile(label: string, count: number, top: CardView | null, open: boolean,
   const url = top ? ui.art(top.name) : null;
   const face = top
     ? h("div.face", { "data-top": top.instanceId }, url ? h("img", { src: url, alt: displayName(top.name), loading: "lazy" }) : h("div.ftext", null, displayName(top.name)))
-    : count ? h("div.face.back") : null;
+    : count ? h("div.face.back") : h("div.face.emptyface", null, h("span.pempty", null, t("pile.empty")));
   return h("div.pile" + (count ? "" : ".empty") + (open ? ".open" : ""), {
     "data-pile": key, "data-owner": owner,
-    onclick: onclick && count ? (ev: Event) => { ev.stopPropagation(); onclick(); } : null,
+    onclick: onclick && (count || ui.editable) ? (ev: Event) => { ev.stopPropagation(); onclick(); } : null,
     title: t("pile.title", { label, n: count }),
   }, h("div.pstack", null, h("div.plabel", null, label), face, h("span.chip.strong.pcount", null, count)));
 }
@@ -220,8 +241,8 @@ function kindGroups(cards: CardView[], p: PlayerView, ui: BoardUi, hooks: BoardH
     if (g.under.length) tile = tuck(c, g.under, ui, hooks);
     else if (g.cards.length === 1) tile = cardTile(c, ui, hooks, "");
     else {
-      // 選択の候補・選んだものを含む束は重ねずに広げる（1 枚ずつ選べるように）
-      const spread = g.cards.some((x) => ui.marks.has(x.instanceId));
+      // 選択の候補・選んだものを含む束、またはエディタ表示は重ねずに広げる（1 枚ずつ選べるように）
+      const spread = !!ui.editable || g.cards.some((x) => ui.marks.has(x.instanceId));
       tile = h("div.lgroup.pgroup" + (spread ? "" : ".overlap"), { "data-group": g.key }, g.cards.map((x) => cardTile(x, ui, hooks, "")));
       if (!spread) tile.append(h("span.chip.strong.gcount", null, `×${g.cards.length}`));
     }
@@ -259,8 +280,8 @@ function landGroups(lands: CardView[], ui: BoardUi, hooks: BoardHooks): HTMLElem
     else groups.push({ key, cards: [c] });
   }
   return groups.map((g) => {
-    // 選択の候補を含む束は重ねずに広げる（1 枚ずつ選べるように）
-    const spread = g.cards.some((c) => ui.marks.has(c.instanceId));
+    // 選択の候補を含む束、またはエディタ表示は重ねずに広げる（1 枚ずつ選べるように）
+    const spread = !!ui.editable || g.cards.some((c) => ui.marks.has(c.instanceId));
     const box = h("div.lgroup" + (spread ? "" : ".overlap"), { "data-group": g.key }, g.cards.map((c) => cardTile(c, ui, hooks, ".land")));
     if (g.cards.length > 1 && !spread) box.append(h("span.chip.strong.gcount", null, `×${g.cards.length}`));
     return box;
@@ -269,7 +290,7 @@ function landGroups(lands: CardView[], ui: BoardUi, hooks: BoardHooks): HTMLElem
 
 // ---------------------------------------------------------------- 戦闘・スタックの小窓の中身
 
-/** 戦闘: 攻撃クリーチャーごとに、カード → 攻撃先 → ブロックしているカードを縦に並べる（mtgtable の cbcol） */
+/** 戦闘: 攻撃クリーチャーごとに、上（相手側）にブロック・攻撃先、下（自分側）に攻撃クリーチャーを縦に並べる */
 export function combatBody(view: GameView, ui: BoardUi, hooks: BoardHooks): HTMLElement {
   const byId = new Map(view.players.flatMap((p) => p.cards).map((c) => [c.instanceId, c]));
   const target = (id: string) => view.players.some((p) => p.id === id)
@@ -278,10 +299,10 @@ export function combatBody(view: GameView, ui: BoardUi, hooks: BoardHooks): HTML
     const att = byId.get(a.attackerId);
     const blockers = a.blockers.map((b) => byId.get(b)).filter((c): c is CardView => !!c);
     return h("div.cbcol", null,
-      att ? cardTile(att, ui, hooks, ".incombat") : null,
-      h("div.cbto", null, h("span.arw", null, "↓"), target(a.defender)),
       blockers.length ? h("div.cbrow", null, blockers.map((b) => cardTile(b, ui, hooks, ".incombat")))
-        : h("div.cbblk", null, t("combat.noBlock")));
+        : h("div.cbblk", null, t("combat.noBlock")),
+      h("div.cbto", null, h("span.arw", null, "↑"), target(a.defender)),
+      att ? cardTile(att, ui, hooks, ".incombat") : null);
   }));
 }
 

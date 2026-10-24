@@ -2,9 +2,10 @@
 
 import { puzzleCardNames, type EngineStatus, type ForgeEngine } from "../engine/client";
 import type { CardView, Decision, GameEvent, GameView, Option } from "../engine/protocol";
+import { cardMeta } from "../puzzle/carddb";
 import { markCleared } from "../puzzle/catalog";
 import { verdictText } from "../puzzle/judge";
-import type { PuzzleJson } from "../puzzle/schema";
+import { parseManaPool, ZONES, type PuzzleJson } from "../puzzle/schema";
 import { PuzzleSession, type SessionState } from "../puzzle/session";
 import { combatBody, combatSets, detailBody, renderBoard, stackBody, type BoardHooks, type BoardUi, type Mark, type Targeting } from "./board";
 import { TargetArrow } from "./arrow";
@@ -23,9 +24,17 @@ import { capture, motionEnabled, play, setMotionEnabled, skip, verdictStamp } fr
 
 const VIEWER = "p1";
 
+export interface PlayOptions {
+  backKey?: MessageKey;
+  backTitleKey?: MessageKey;
+  toBackKey?: MessageKey;
+  recordClear?: boolean;
+}
+
 export class PlayPage {
   readonly el: HTMLElement;
   private readonly session: PuzzleSession;
+  private readonly opts: Required<PlayOptions>;
   private engineStatus: EngineStatus = "idle";
   private selected = new Set<string>();
   private decisionSeq = -1;
@@ -77,7 +86,13 @@ export class PlayPage {
   private lastMarks = new Map<string, Mark>();
   private disposed = false;
 
-  constructor(engine: ForgeEngine, private readonly puzzleId: string, private readonly onBack: () => void) {
+  constructor(engine: ForgeEngine, private readonly puzzleId: string, private readonly onBack: () => void, opts: PlayOptions = {}) {
+    this.opts = {
+      backKey: opts.backKey ?? "header.back",
+      backTitleKey: opts.backTitleKey ?? "header.back.title",
+      toBackKey: opts.toBackKey ?? "action.toCatalog",
+      recordClear: opts.recordClear ?? true,
+    };
     this.el = h("div.play");
     this.session = new PuzzleSession(engine);
     this.unsubs.push(engine.onStatus((s) => { this.engineStatus = s; this.render(); }));
@@ -215,7 +230,7 @@ export class PlayPage {
         this.flashTimer = window.setTimeout(() => { this.flash.clear(); this.render(); }, 900);
       }
     }
-    if (s.phase === "finished" && s.verdict.result === "CLEARED") markCleared(this.puzzleId);
+    if (s.phase === "finished" && s.verdict.result === "CLEARED" && this.opts.recordClear) markCleared(this.puzzleId);
     if (s.phase === "finished" || s.phase === "error" || s.phase === "loading") this.macro = null;
     if (s.step === prev && this.playing) {
       this.dirty = true;
@@ -442,7 +457,7 @@ export class PlayPage {
     const stickLog = !logScroll || logScroll.scrollTop + logScroll.clientHeight >= logScroll.scrollHeight - 8;
 
     const header = h("header.bar", null,
-      h("button.back", { type: "button", onclick: () => this.onBack(), title: t("header.back.title") }, t("header.back")),
+      h("button.back", { type: "button", onclick: () => this.onBack(), title: t(this.opts.backTitleKey) }, t(this.opts.backKey)),
       h("strong.ptitle", null, s.puzzle?.title ?? "…"),
       h("span.chip.goal", { title: t("header.goal.title") }, t("header.goal")),
       view ? h("span.turn", null, t("header.turn", { turn: view.turn, phase: phaseName(view.phase) })) : null,
@@ -556,7 +571,7 @@ export class PlayPage {
         bar.append(h("div.result", null, verdictText(s.verdict)),
           h("div.btns", null,
             h("button.on.big", { type: "button", onclick: () => void this.session.reset() }, t("action.again")),
-            h("button.big", { type: "button", onclick: () => this.onBack() }, t("action.toCatalog"))));
+            h("button.big", { type: "button", onclick: () => this.onBack() }, t(this.opts.toBackKey))));
         break;
       }
       case "error":
@@ -566,7 +581,7 @@ export class PlayPage {
           h("div.btns", null,
             s.puzzle ? h("button.on.big", { type: "button", onclick: () => void this.session.reset() }, t("action.reset")) : null,
             h("button.big", { type: "button", onclick: () => location.reload() }, t("action.reload")),
-            h("button.big", { type: "button", onclick: () => this.onBack() }, t("action.toCatalog"))));
+            h("button.big", { type: "button", onclick: () => this.onBack() }, t(this.opts.toBackKey))));
         break;
       case "playing":
         if (i) this.decisionBar(bar, s, i);
@@ -778,7 +793,7 @@ function passIcon(phase: GameView["phase"], stackSize: number): IconName {
   return phase === "END_OF_TURN" ? "endTurn" : "next";
 }
 
-function engineBadge(s: EngineStatus): HTMLElement {
+export function engineBadge(s: EngineStatus): HTMLElement {
   return h(`span.engine.${s}`, { title: t("engine.title") }, statusText(s));
 }
 
@@ -949,8 +964,10 @@ function preStackTriggers(prev: SessionState["step"], next: SessionState["step"]
 
 const BASIC_LANDS = new Set(["Plains", "Island", "Swamp", "Mountain", "Forest", "Wastes"]);
 
-/** エンジンの準備ができる前に、問題データから盤面を仮に描く（A1 の所見: 準備中も盤面を見て考えられるように） */
-export function previewView(p: PuzzleJson): GameView {
+/** エンジンの準備ができる前に、問題データから盤面を仮に描く（A1 の所見: 準備中も盤面を見て考えられるように。エディタでは includeHidden: true で全領域を描く） */
+export function previewView(p: PuzzleJson, opts?: { includeHidden?: boolean }): GameView {
+  const includeHidden = opts?.includeHidden ?? false;
+  const zones = includeHidden ? ZONES : (["hand", "battlefield", "graveyard", "exile"] as const);
   return {
     turn: p.game.turn ?? 1,
     phase: (p.game.phase.toUpperCase() as GameView["phase"]) ?? "MAIN1",
@@ -962,33 +979,46 @@ export function previewView(p: PuzzleJson): GameView {
       id: pl.id,
       life: pl.life ?? 20,
       poison: 0,
-      manaPool: {},
+      manaPool: parseManaPool(pl.manaPool),
       handCount: pl.hand?.length ?? 0,
       libraryCount: pl.library?.length ?? 0,
-      cards: (["hand", "battlefield", "graveyard", "exile"] as const).flatMap((zone) =>
-        (pl.id !== p.goal.player && zone === "hand") ? [] : (pl[zone] ?? []).map((c): CardView => ({
-          instanceId: c.id,
-          name: c.cardId,
-          zone: (zone[0].toUpperCase() + zone.slice(1)) as CardView["zone"],
-          owner: pl.id,
-          controller: pl.id,
-          kinds: BASIC_LANDS.has(c.cardId) ? ["land"] : [],
-          typeLine: "",
-          manaCost: "",
-          text: "",
-          power: null,
-          toughness: null,
-          basePower: null,
-          baseToughness: null,
-          damage: 0,
-          tapped: !!c.tapped,
-          sick: !!c.summoningSick,
-          token: false,
-          faceDown: false,
-          counters: c.counters ?? {},
-          attachedTo: null,
-          exiledBy: null,
-        }))),
+      cards: zones.flatMap((zone) =>
+        (!includeHidden && pl.id !== p.goal.player && zone === "hand") ? [] : (pl[zone] ?? []).map((c): CardView => {
+          const meta = cardMeta(c.cardId);
+          const counters = c.counters ? { ...c.counters } : {};
+          if (meta?.loyalty !== undefined && zone === "battlefield" && counters.LOYALTY === undefined) {
+            counters.LOYALTY = meta.loyalty;
+          }
+          if (meta?.defense !== undefined && zone === "battlefield" && counters.DEFENSE === undefined) {
+            counters.DEFENSE = meta.defense;
+          }
+          const delta = (counters.P1P1 ?? 0) - (counters.M1M1 ?? 0);
+          const baseP = meta?.basePower ?? null;
+          const baseT = meta?.baseToughness ?? null;
+          return {
+            instanceId: c.id,
+            name: c.cardId,
+            zone: (zone[0].toUpperCase() + zone.slice(1)) as CardView["zone"],
+            owner: pl.id,
+            controller: pl.id,
+            kinds: meta ? meta.kinds : (BASIC_LANDS.has(c.cardId) ? ["land"] : []),
+            typeLine: meta?.typeLine ?? "",
+            manaCost: meta?.manaCost ?? "",
+            text: meta?.text ?? "",
+            power: baseP !== null ? baseP + delta : null,
+            toughness: baseT !== null ? baseT + delta : null,
+            basePower: baseP,
+            baseToughness: baseT,
+            damage: 0,
+            tapped: !!c.tapped,
+            sick: !!c.summoningSick,
+            token: false,
+            faceDown: false,
+            counters,
+            attachedTo: null,
+            exiledBy: null,
+          };
+        })),
     })),
   };
 }

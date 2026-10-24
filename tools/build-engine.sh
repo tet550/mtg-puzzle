@@ -31,7 +31,7 @@ rm -rf "$ADAPTER/target/verify-res"
 
 # ファイル名に中身のハッシュを付けて置く。CheerpJ は /app/ のファイルを URL ごとに保存するので、
 # 同じ名前で中身を差し替えると古いものが読まれる（公開後のキャッシュも同じ）。どれを読むかは manifest.json で渡す
-hash() { shasum -a 256 "$1" | cut -c1-12; }
+hash() { (shasum -a 256 "$1" 2>/dev/null || sha256sum "$1") | cut -c1-12; }
 JAR="forge-adapter-$(hash "$ADAPTER/target/forge-adapter-min-all.jar").jar"
 ZIP="res-base-$(hash "$TMP/res-base.zip").zip"
 CARDS="carddata-$(hash "$TMP/carddata.json.gz").json.gz"

@@ -27,7 +27,7 @@ async function loadCardData(url) {
  * CardData.select（Java、JVM での確かめ用）と同じ処理
  */
 function selectCards(data, names) {
-  const lower = [...new Set(names.map((n) => n.toLowerCase()))].sort();
+  const lower = [...new Set(names.map((n) => n.split(" // ")[0].trim().toLowerCase()))].sort();
   const picked = new Set();
   const todo = [...lower];
   while (todo.length) {

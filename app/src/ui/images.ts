@@ -22,6 +22,12 @@ const API = "https://api.scryfall.com";
 let table: Record<string, CardImage> = {};
 let fetched: Record<string, CardImage | null> = {};
 const inflight = new Set<string>();
+let jaFallback: ((name: string) => { name?: string; text?: string } | null) | null = null;
+
+/** カードデータベース（carddb.ts）から日本語名・日本語テキストのフォールバックを登録する */
+export function setJaFallback(fn: ((name: string) => { name?: string; text?: string } | null) | null) {
+  jaFallback = fn;
+}
 
 export async function loadCardImages(): Promise<void> {
   try {
@@ -71,7 +77,7 @@ export async function ensureCardImages(names: string[]): Promise<boolean> {
         if (!found.has(card.name.split(" // ")[0])) found.set(card.name.split(" // ")[0], img);
       }
       for (const n of chunk) {
-        const img = found.get(n) ?? null;
+        const img = found.get(n) ?? found.get(n.split(" // ")[0]) ?? null;
         if (img) {
           // 検索の API は間隔を空けて呼ぶ（Scryfall のお願い）
           await sleep(100);
@@ -79,6 +85,9 @@ export async function ensureCardImages(names: string[]): Promise<boolean> {
           if (ja) img.ja = ja;
           fetched[n] = img;
           changed = true;
+        } else if (jaFallback?.(n) !== null && jaFallback !== null) {
+          // カードDBに存在する通常カード（Scryfall未収録のデジタル専用カード等）はトークン検索を行わない
+          fetched[n] = null;
         } else {
           // 通常のカードに見つからなければトークン（名前付きトークンなど）として探す
           tokens.push(n);
@@ -204,13 +213,13 @@ export function cardImage(name: string): { normal: string; artist?: string } | n
 /** 画面に出すカード名（日本語の画面で日本語の名前があればそれ。ルールの処理は英語の名前で行う） */
 export function displayName(name: string): string {
   if (lang() !== "ja") return name;
-  return entry(name)?.ja?.name ?? name;
+  return entry(name)?.ja?.name ?? jaFallback?.(name)?.name ?? name;
 }
 
 /** 日本語版の印刷された文（日本語の画面でだけ。無ければ null） */
 export function printedText(name: string): string | null {
   if (lang() !== "ja") return null;
-  return entry(name)?.ja?.text ?? null;
+  return entry(name)?.ja?.text ?? jaFallback?.(name)?.text ?? null;
 }
 
 export function imagesEnabled(): boolean {
