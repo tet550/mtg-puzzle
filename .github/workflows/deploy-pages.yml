@@ -38,7 +38,8 @@ jobs:
           cache-dependency-path: "app/package-lock.json"
 
       - name: Build forge-game
-        run: mvn -B -q -f prototype/forge/pom.xml -pl forge-game -am install -DskipTests -Dcheckstyle.skip
+        working-directory: prototype/forge
+        run: mvn -B -q -pl forge-game -am install -DskipTests -Dcheckstyle.skip
 
       - name: Build engine bundle (jar, res-base.zip, carddata.json.gz)
         run: ./tools/build-engine.sh
