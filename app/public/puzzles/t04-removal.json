@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "title": "S9 X spell",
-  "description": "Win this turn",
+  "title": "チュートリアル 4：ブロッカーを除去する",
+  "description": "相手の《セラの天使》が立ち塞がっています。《喉首狙い》で破壊して《血に飢えた征服者》の攻撃を通しましょう。",
   "engine": {
     "type": "forge",
     "version": "2.0.15"
@@ -16,58 +16,59 @@
         "hand": [
           {
             "id": "c1",
-            "cardId": "Blaze"
+            "cardId": "Go for the Throat"
           }
         ],
         "battlefield": [
           {
-            "id": "m0",
-            "cardId": "Mountain"
+            "id": "c2",
+            "cardId": "Bloodthirsty Conqueror"
           },
           {
-            "id": "m1",
-            "cardId": "Mountain"
+            "id": "c3",
+            "cardId": "Swamp"
           },
           {
-            "id": "m2",
-            "cardId": "Mountain"
-          },
-          {
-            "id": "m3",
-            "cardId": "Mountain"
+            "id": "c4",
+            "cardId": "Swamp"
           }
         ],
         "library": [
           {
             "id": "p1L0",
-            "cardId": "Island"
+            "cardId": "Plains"
           },
           {
             "id": "p1L1",
-            "cardId": "Island"
+            "cardId": "Plains"
           },
           {
             "id": "p1L2",
-            "cardId": "Island"
+            "cardId": "Plains"
           }
         ]
       },
       {
         "id": "p2",
-        "life": 3,
-        "battlefield": [],
+        "life": 5,
+        "battlefield": [
+          {
+            "id": "c5",
+            "cardId": "Serra Angel"
+          }
+        ],
         "library": [
           {
             "id": "p2L0",
-            "cardId": "Island"
+            "cardId": "Plains"
           },
           {
             "id": "p2L1",
-            "cardId": "Island"
+            "cardId": "Plains"
           },
           {
             "id": "p2L2",
-            "cardId": "Island"
+            "cardId": "Plains"
           }
         ]
       }
@@ -79,6 +80,7 @@
     "deadline": "current_turn"
   },
   "opponent": {
-    "policy": "pass"
+    "policy": "pass",
+    "block": "minimize"
   }
 }

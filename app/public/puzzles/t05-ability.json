@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "title": "チュートリアル 5：起動型能力の活用",
+  "description": "戦場のクリーチャーをクリックすると「起動型能力」を使えることがあります。《狂信的扇動者》の能力で相手のブロッカーを除去し、《サバンナ・ライオン》の攻撃を通しましょう。",
+  "engine": {
+    "type": "forge",
+    "version": "2.0.15"
+  },
+  "game": {
+    "activePlayer": "p1",
+    "phase": "main1",
+    "players": [
+      {
+        "id": "p1",
+        "life": 10,
+        "battlefield": [
+          {
+            "id": "c1",
+            "cardId": "Fanatical Firebrand"
+          },
+          {
+            "id": "c2",
+            "cardId": "Savannah Lions"
+          }
+        ],
+        "library": [
+          {
+            "id": "p1L0",
+            "cardId": "Mountain"
+          },
+          {
+            "id": "p1L1",
+            "cardId": "Mountain"
+          },
+          {
+            "id": "p1L2",
+            "cardId": "Mountain"
+          }
+        ]
+      },
+      {
+        "id": "p2",
+        "life": 2,
+        "battlefield": [
+          {
+            "id": "c3",
+            "cardId": "Llanowar Elves"
+          }
+        ],
+        "library": [
+          {
+            "id": "p2L0",
+            "cardId": "Plains"
+          },
+          {
+            "id": "p2L1",
+            "cardId": "Plains"
+          },
+          {
+            "id": "p2L2",
+            "cardId": "Plains"
+          }
+        ]
+      }
+    ]
+  },
+  "goal": {
+    "type": "win",
+    "player": "p1",
+    "deadline": "current_turn"
+  },
+  "opponent": {
+    "policy": "pass",
+    "block": "minimize"
+  }
+}

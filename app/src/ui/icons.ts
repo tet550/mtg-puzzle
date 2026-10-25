@@ -36,7 +36,17 @@ export function icon(name: IconName, cls = ""): SVGSVGElement {
   return svg;
 }
 
-/** プレイヤーのアイコン: あなたは旅の少年、相手（自動でパスする）は石のゴーレム */
+/** プレイヤーのアイコン: あなたはフードの魔道士、相手（自動でパスする）は古のドラゴン */
 export function avatarUrl(kind: "human" | "ai"): string {
   return `${BASE}icons/avatar-${kind}.png`;
+}
+
+/** プレイヤーの丸形ポートレート（トップ画面の対決表示など） */
+export function portraitUrl(kind: "human" | "ai"): string {
+  return `${BASE}icons/portrait-${kind}.png`;
+}
+
+/** トップ画面ヒーロー用の背景イラスト */
+export function heroArtUrl(kind: "human" | "ai"): string {
+  return `${BASE}icons/hero-${kind}.jpg`;
 }

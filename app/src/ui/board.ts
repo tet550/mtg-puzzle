@@ -69,7 +69,7 @@ function playerHead(view: GameView, p: PlayerView, ui: BoardUi, hooks: BoardHook
   const mark = ui.marks.get(p.id);
   const head = h("div.phead" + (mark ? `.${mark}` : ""), { "data-player": p.id, onclick: () => hooks.player(p.id) });
   const who = mine ? t("player.you") : t("player.opponent");
-  // 名前は出さずにアイコンで示す（名前は Tip）。あなたは旅の少年、相手（自動でパスする）は石のゴーレム
+  // 名前は出さずにアイコンで示す（名前は Tip）。あなたはフードの魔道士、相手（自動でパスする）は古のドラゴン
   const avatar = h("span.avatar" + (mine ? ".me" : ""), { title: who, "aria-label": who },
     h("img", { src: avatarUrl(mine ? "human" : "ai"), alt: "" }));
   const life = h("span.life" + (p.life <= 0 ? ".dead" : p.life <= 5 ? ".low" : ""), { title: t("player.life") },

@@ -1,0 +1,1 @@
+{"puzzle":"t01-burn","steps":[{"kind":"PRIORITY","indexes":[1],"labels":["Shock | Shock deals 2 damage to any target."]},{"kind":"TARGETS","indexes":[1],"labels":["player:p2"]},{"kind":"PAY_MANA","indexes":[0],"labels":["Auto pay"]},{"kind":"PRIORITY","indexes":[0],"labels":["Pass priority"]}]}

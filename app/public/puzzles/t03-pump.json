@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "title": "S2 Attack",
-  "description": "Win this turn",
+  "title": "チュートリアル 3：強化呪文を使う",
+  "description": "《巨大化》で《灰色熊》を+3/+3強化し、合計5点の戦闘ダメージを与えて勝利しましょう。",
   "engine": {
     "type": "forge",
     "version": "2.0.15"
@@ -12,44 +12,54 @@
     "players": [
       {
         "id": "p1",
-        "life": 5,
-        "battlefield": [
+        "life": 20,
+        "hand": [
           {
             "id": "c1",
-            "cardId": "Hill Giant"
+            "cardId": "Giant Growth"
+          }
+        ],
+        "battlefield": [
+          {
+            "id": "c2",
+            "cardId": "Grizzly Bears"
+          },
+          {
+            "id": "c3",
+            "cardId": "Forest"
           }
         ],
         "library": [
           {
             "id": "p1L0",
-            "cardId": "Island"
+            "cardId": "Plains"
           },
           {
             "id": "p1L1",
-            "cardId": "Island"
+            "cardId": "Plains"
           },
           {
             "id": "p1L2",
-            "cardId": "Island"
+            "cardId": "Plains"
           }
         ]
       },
       {
         "id": "p2",
-        "life": 3,
+        "life": 5,
         "battlefield": [],
         "library": [
           {
             "id": "p2L0",
-            "cardId": "Island"
+            "cardId": "Plains"
           },
           {
             "id": "p2L1",
-            "cardId": "Island"
+            "cardId": "Plains"
           },
           {
             "id": "p2L2",
-            "cardId": "Island"
+            "cardId": "Plains"
           }
         ]
       }
@@ -61,6 +71,7 @@
     "deadline": "current_turn"
   },
   "opponent": {
-    "policy": "pass"
+    "policy": "pass",
+    "block": "minimize"
   }
 }

@@ -1,1 +1,0 @@
-{"puzzle":"s6-activated","steps":[{"kind":"PRIORITY","indexes":[1],"labels":["Prodigal Pyromancer | {T}: Prodigal Pyromancer deals 1 damage to any target."]},{"kind":"TARGETS","indexes":[1],"labels":["player:p2"]},{"kind":"PRIORITY","indexes":[0],"labels":["Pass priority"]}]}

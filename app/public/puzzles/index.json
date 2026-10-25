@@ -1,80 +1,72 @@
 [
   {
-    "id": "s1-bolt",
-    "title": "S1 Lightning Bolt",
-    "description": "Win this turn",
+    "id": "t01-burn",
+    "title": "チュートリアル 1：火力呪文を唱える",
+    "description": "手札の《ショック》を相手プレイヤーに唱えて、ライフを0にしましょう。",
+    "category": "tutorial",
     "sourceFile": null
   },
   {
-    "id": "s2-attack",
-    "title": "S2 Attack",
-    "description": "Win this turn",
+    "id": "t02-attack",
+    "title": "チュートリアル 2：クリーチャーで攻撃する",
+    "description": "「戦闘へ」進んで《サバンナ・ライオン》で攻撃を宣言し、戦闘ダメージで勝利しましょう。",
+    "category": "tutorial",
     "sourceFile": null
   },
   {
-    "id": "s6-activated",
-    "title": "S6 Activated ability",
-    "description": "Win this turn",
+    "id": "t03-pump",
+    "title": "チュートリアル 3：強化呪文を使う",
+    "description": "《巨大化》で《灰色熊》を+3/+3強化し、合計5点の戦闘ダメージを与えて勝利しましょう。",
+    "category": "tutorial",
     "sourceFile": null
   },
   {
-    "id": "s9-x-spell",
-    "title": "S9 X spell",
-    "description": "Win this turn",
+    "id": "t04-removal",
+    "title": "チュートリアル 4：ブロッカーを除去する",
+    "description": "相手の《セラの天使》が立ち塞がっています。《喉首狙い》で破壊して《血に飢えた征服者》の攻撃を通しましょう。",
+    "category": "tutorial",
     "sourceFile": null
   },
   {
-    "id": "s10-modal",
-    "title": "S10 Modal spell",
-    "description": "Win this turn",
+    "id": "t05-ability",
+    "title": "チュートリアル 5：起動型能力の活用",
+    "description": "戦場のクリーチャーをクリックすると「起動型能力」を使えることがあります。《狂信的扇動者》の能力で相手のブロッカーを除去し、《サバンナ・ライオン》の攻撃を通しましょう。",
+    "category": "tutorial",
     "sourceFile": null
   },
   {
-    "id": "s11-redshift",
-    "title": "S11 Redshift loop",
-    "description": "Win this turn",
+    "id": "e01-prowess",
+    "title": "簡単な問題 1：果敢の連撃",
+    "description": "《僧院の速槍》の「果敢」は非クリーチャー呪文を唱えるたび+1/+1されます。強化と火力を組み合わせて8点を削り切りましょう。",
+    "category": "easy",
     "sourceFile": null
   },
   {
-    "id": "PS_ACR1",
-    "title": "Possibility Storm - Assassin's Creed #01",
-    "description": "Win this turn. Your opponent has five (unknown) cards in their library. Ensure your solution takes all possible opponent decisions into account!",
-    "sourceFile": "PS_ACR1.pzl"
+    "id": "e02-valiant",
+    "title": "簡単な問題 2：雄姿と決死の突撃",
+    "description": "《心火の英雄》は対象になると+1/+1カウンターが乗り、死亡時にパワー分のダメージを相手に与えます。5/5のブロッカーを逆手に取りましょう。",
+    "category": "easy",
+    "sourceFile": null
   },
   {
-    "id": "PS_DOM5",
-    "title": "Possibility Storm - Dominaria #05",
-    "description": "Win this turn. You have exiled Fatal Push and Mutiny with Karn. Assume any cards you could draw from your library are irrelevant. You already have the city's blessing at the start of the puzzle.",
-    "sourceFile": "PS_DOM5.pzl"
+    "id": "e03-shelter",
+    "title": "簡単な問題 3：幽霊による庇護",
+    "description": "オーラ《幽霊による庇護》は自軍クリーチャーを強化しながら相手のブロッカーを追放できます。飛行・絆魂軍団で突破しましょう。",
+    "category": "easy",
+    "sourceFile": null
   },
   {
-    "id": "PP12",
-    "title": "Pauper Puzzles #12 - To The Skies",
-    "description": "",
-    "sourceFile": "PP12.pzl"
+    "id": "e04-bite",
+    "title": "簡単な問題 4：巨大化と噛み締め",
+    "description": "《噛み締め》は自軍クリーチャーのパワー分のダメージを相手クリーチャーに与えます。唱える順番とマナエルフの使い方に注意しましょう。",
+    "category": "easy",
+    "sourceFile": null
   },
   {
-    "id": "PS_RNA6",
-    "title": "Possibility Storm - Ravnica Allegiance #06",
-    "description": "Win this turn. Your solution must satisfy all possible blocking scenarios.",
-    "sourceFile": "PS_RNA6.pzl"
-  },
-  {
-    "id": "PS_BLB1",
-    "title": "Possibility Storm - Bloomburrow #01",
-    "description": "Win this turn. Assume your opponent could have copies of any Bloomburrow Standard-legal Squirrels in their library (...but none of them do anything in this situation). Ensure your solution takes all possible opponent decisions into account!",
-    "sourceFile": "PS_BLB1.pzl"
-  },
-  {
-    "id": "PS_ZNR5",
-    "title": "Possibility Storm - Zendikar Rising #05",
-    "description": "Win this turn. Remember that your solution must satisfy all blocking scenarios.",
-    "sourceFile": "PS_ZNR5.pzl"
-  },
-  {
-    "id": "PC_021616",
-    "title": "Perplexing Chimera (GatheringMagic.com) 021616 - Old Artists Never Die",
-    "description": "Win on your turn.",
-    "sourceFile": "PC_021616.pzl"
+    "id": "e05-tempest",
+    "title": "簡単な問題 5：大嵐のジンと果敢の連携",
+    "description": "《大嵐のジン》はあなたがコントロールする基本《島》の数だけパワーが上がります。手札の《島》と《ショック》を活かして6点のライフを削り切りましょう。",
+    "category": "easy",
+    "sourceFile": null
   }
 ]

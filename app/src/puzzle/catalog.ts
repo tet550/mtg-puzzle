@@ -2,10 +2,14 @@
 
 import { t } from "../i18n";
 
+export type PuzzleCategory = "tutorial" | "easy" | "combo";
+
 export interface CatalogEntry {
   id: string;
   title: string;
   description: string;
+  /** 問題のカテゴリ（チュートリアル・簡単な問題・コンボ問題） */
+  category?: PuzzleCategory;
   /** Forge の .pzl から変換した問題なら、そのファイル名 */
   sourceFile: string | null;
 }

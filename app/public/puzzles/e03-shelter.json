@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "title": "簡単な問題 3：幽霊による庇護",
+  "description": "オーラ《幽霊による庇護》は自軍クリーチャーを強化しながら相手のブロッカーを追放できます。飛行・絆魂軍団で突破しましょう。",
+  "engine": {
+    "type": "forge",
+    "version": "2.0.15"
+  },
+  "game": {
+    "activePlayer": "p1",
+    "phase": "main1",
+    "players": [
+      {
+        "id": "p1",
+        "life": 10,
+        "hand": [
+          {
+            "id": "c1",
+            "cardId": "Sheltered by Ghosts"
+          }
+        ],
+        "battlefield": [
+          {
+            "id": "c2",
+            "cardId": "Ajani's Pridemate"
+          },
+          {
+            "id": "c3",
+            "cardId": "Healer's Hawk"
+          },
+          {
+            "id": "c4",
+            "cardId": "Plains"
+          },
+          {
+            "id": "c5",
+            "cardId": "Plains"
+          }
+        ],
+        "library": [
+          {
+            "id": "p1L0",
+            "cardId": "Plains"
+          },
+          {
+            "id": "p1L1",
+            "cardId": "Plains"
+          },
+          {
+            "id": "p1L2",
+            "cardId": "Plains"
+          }
+        ]
+      },
+      {
+        "id": "p2",
+        "life": 4,
+        "battlefield": [
+          {
+            "id": "c6",
+            "cardId": "Vampire Nighthawk"
+          }
+        ],
+        "library": [
+          {
+            "id": "p2L0",
+            "cardId": "Plains"
+          },
+          {
+            "id": "p2L1",
+            "cardId": "Plains"
+          },
+          {
+            "id": "p2L2",
+            "cardId": "Plains"
+          }
+        ]
+      }
+    ]
+  },
+  "goal": {
+    "type": "win",
+    "player": "p1",
+    "deadline": "current_turn"
+  },
+  "opponent": {
+    "policy": "pass",
+    "block": "minimize"
+  }
+}

@@ -138,7 +138,12 @@ export class ForgeEngine {
     this.setStatus("booting");
     this.worker = new Worker(this.opts.workerUrl);
     this.worker.onmessage = (e: MessageEvent<WorkerResponse>) => this.onMessage(e.data);
-    this.worker.onerror = (e) => this.failAll(new EngineError("WORKER", e.message || t("error.worker")));
+    this.worker.onerror = (e) => {
+      e.preventDefault();
+      if (String(e.message || "").includes("cacheRefCount")) return;
+      this.failAll(new EngineError("WORKER", e.message || t("error.worker")));
+      this.terminate();
+    };
     // どのファイルを読むかは manifest.json（tools/build-engine.sh が作る。ファイル名に中身のハッシュが付いている）
     const files = await this.resolveFiles();
     this.files = files;
@@ -187,6 +192,19 @@ export class ForgeEngine {
 
   /** 問題を読み込む。前の問題とカードの組が違えば、先に問題のカードで Forge を初期化し直す */
   async load(puzzle: unknown): Promise<StepResult> {
+    try {
+      return await this.loadOnce(puzzle);
+    } catch (e) {
+      if (e instanceof EngineError && (e.code === "WORKER" || e.code === "TIMEOUT" || e.code === "INTERNAL")) {
+        console.warn("[engine] 問題の読み込みに失敗したため Worker を再起動してやり直します", e);
+        await this.restart();
+        return this.loadOnce(puzzle);
+      }
+      throw e;
+    }
+  }
+
+  private async loadOnce(puzzle: unknown): Promise<StepResult> {
     await this.start();
     return this.enqueue(async () => {
       await this.useCards(puzzleCardNames(puzzle));
@@ -206,7 +224,7 @@ export class ForgeEngine {
       if (r.totalMs !== undefined) this.metrics.cardsMs = r.totalMs;
     } catch (e) {
       // 初期化の途中で止まった Forge は使えないので、次の読み込みは作り直しから
-      this.cardsKey = null;
+      this.terminate();
       this.setStatus("failed", String(e instanceof Error ? e.message : e));
       throw e;
     }

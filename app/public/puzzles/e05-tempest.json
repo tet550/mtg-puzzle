@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "title": "簡単な問題 5：大嵐のジンと果敢の連携",
+  "description": "《大嵐のジン》はあなたがコントロールする基本《島》の数だけパワーが上がります。手札の《島》と《ショック》を活かして6点のライフを削り切りましょう。",
+  "engine": {
+    "type": "forge",
+    "version": "2.0.15"
+  },
+  "game": {
+    "activePlayer": "p1",
+    "phase": "main1",
+    "players": [
+      {
+        "id": "p1",
+        "life": 10,
+        "hand": [
+          {
+            "id": "c1",
+            "cardId": "Island"
+          },
+          {
+            "id": "c2",
+            "cardId": "Shock"
+          }
+        ],
+        "battlefield": [
+          {
+            "id": "c3",
+            "cardId": "Tempest Djinn"
+          },
+          {
+            "id": "c4",
+            "cardId": "Monastery Swiftspear"
+          },
+          {
+            "id": "c5",
+            "cardId": "Island"
+          },
+          {
+            "id": "c6",
+            "cardId": "Mountain"
+          }
+        ],
+        "library": [
+          {
+            "id": "p1L0",
+            "cardId": "Island"
+          },
+          {
+            "id": "p1L1",
+            "cardId": "Island"
+          },
+          {
+            "id": "p1L2",
+            "cardId": "Island"
+          }
+        ]
+      },
+      {
+        "id": "p2",
+        "life": 6,
+        "battlefield": [
+          {
+            "id": "c7",
+            "cardId": "Serra Angel",
+            "tapped": true
+          }
+        ],
+        "library": [
+          {
+            "id": "p2L0",
+            "cardId": "Plains"
+          },
+          {
+            "id": "p2L1",
+            "cardId": "Plains"
+          },
+          {
+            "id": "p2L2",
+            "cardId": "Plains"
+          }
+        ]
+      }
+    ]
+  },
+  "goal": {
+    "type": "win",
+    "player": "p1",
+    "deadline": "current_turn"
+  },
+  "opponent": {
+    "policy": "pass",
+    "block": "minimize"
+  }
+}

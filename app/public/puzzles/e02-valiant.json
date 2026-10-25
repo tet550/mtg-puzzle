@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "title": "簡単な問題 2：雄姿と決死の突撃",
+  "description": "《心火の英雄》は対象になると+1/+1カウンターが乗り、死亡時にパワー分のダメージを相手に与えます。5/5のブロッカーを逆手に取りましょう。",
+  "engine": {
+    "type": "forge",
+    "version": "2.0.15"
+  },
+  "game": {
+    "activePlayer": "p1",
+    "phase": "main1",
+    "players": [
+      {
+        "id": "p1",
+        "life": 10,
+        "hand": [
+          {
+            "id": "c1",
+            "cardId": "Giant Growth"
+          },
+          {
+            "id": "c2",
+            "cardId": "Shock"
+          }
+        ],
+        "battlefield": [
+          {
+            "id": "c3",
+            "cardId": "Heartfire Hero"
+          },
+          {
+            "id": "c4",
+            "cardId": "Forest"
+          },
+          {
+            "id": "c5",
+            "cardId": "Mountain"
+          }
+        ],
+        "library": [
+          {
+            "id": "p1L0",
+            "cardId": "Plains"
+          },
+          {
+            "id": "p1L1",
+            "cardId": "Plains"
+          },
+          {
+            "id": "p1L2",
+            "cardId": "Plains"
+          }
+        ]
+      },
+      {
+        "id": "p2",
+        "life": 7,
+        "battlefield": [
+          {
+            "id": "c6",
+            "cardId": "Shivan Dragon"
+          }
+        ],
+        "library": [
+          {
+            "id": "p2L0",
+            "cardId": "Plains"
+          },
+          {
+            "id": "p2L1",
+            "cardId": "Plains"
+          },
+          {
+            "id": "p2L2",
+            "cardId": "Plains"
+          }
+        ]
+      }
+    ]
+  },
+  "goal": {
+    "type": "win",
+    "player": "p1",
+    "deadline": "current_turn"
+  },
+  "opponent": {
+    "policy": "pass",
+    "block": "minimize"
+  }
+}
