@@ -4,10 +4,16 @@ import "./ui/style.css";
 import { ForgeEngine } from "./engine/client";
 import { loadCatalog, loadPuzzle } from "./puzzle/catalog";
 import { validatePuzzle, type PuzzleJson } from "./puzzle/schema";
-import { decodePuzzleFromParam, parseShareLocation } from "./puzzle/share";
+import {
+  decodePuzzleFromParam,
+  decodeSolutionFromParam,
+  parsePlayRouteLocation,
+  parseShareLocation,
+} from "./puzzle/share";
+import type { SolutionStep } from "./puzzle/solution";
 import { renderCatalog } from "./ui/catalog";
 import { h } from "./ui/dom";
-import { EditPage } from "./ui/edit";
+import { EditPage, saveEditorDraft } from "./ui/edit";
 import { loadCardImages } from "./ui/images";
 import { onLangChange } from "./i18n";
 import { PlayPage } from "./ui/play";
@@ -48,6 +54,11 @@ async function startTestPlay(puzzle: PuzzleJson) {
       backTitleKey: "editor.backToEdit.title",
       toBackKey: "editor.backToEdit",
       recordClear: false,
+      onRegisterSolution: (steps: SolutionStep[]) => {
+        if (steps.length > 0) puzzle.solution = steps;
+        else delete puzzle.solution;
+        saveEditorDraft(puzzle);
+      },
     },
   );
   page = playPage;
@@ -61,9 +72,17 @@ async function route() {
 
   const share = parseShareLocation(location.hash);
   if (share) {
+    let sharedSolution: SolutionStep[] | undefined;
+    if (share.solutionParam) {
+      try {
+        const sol = await decodeSolutionFromParam(share.solutionParam);
+        if (sol && sol.length > 0) sharedSolution = sol;
+      } catch { /* 無効な s パラメータは無視 */ }
+    }
     if (share.mode === "edit") {
       try {
         const res = await decodePuzzleFromParam(share.param);
+        if (res.ok && sharedSolution) res.puzzle.solution = sharedSolution;
         openEditor(res.ok ? res.puzzle : undefined);
       } catch {
         openEditor();
@@ -72,6 +91,7 @@ async function route() {
     }
     const playPage = new PlayPage(engine, "shared", () => { location.hash = "#/"; }, {
       recordClear: false,
+      sharedSolution,
     });
     page = playPage;
     root.replaceChildren(playPage.el);
@@ -84,10 +104,19 @@ async function route() {
     return;
   }
 
-  const playMatch = /^#\/play\/([\w-]+)$/.exec(location.hash);
-  if (playMatch) {
-    const id = playMatch[1];
-    const playPage = new PlayPage(engine, id, () => { location.hash = "#/"; });
+  const playRoute = parsePlayRouteLocation(location.hash);
+  if (playRoute) {
+    const { id, solutionParam } = playRoute;
+    let sharedSolution: SolutionStep[] | undefined;
+    if (solutionParam) {
+      try {
+        const sol = await decodeSolutionFromParam(solutionParam);
+        if (sol && sol.length > 0) sharedSolution = sol;
+      } catch { /* 無効な s パラメータは無視 */ }
+    }
+    const playPage = new PlayPage(engine, id, () => { location.hash = "#/"; }, {
+      sharedSolution,
+    });
     page = playPage;
     root.replaceChildren(playPage.el);
     try {

@@ -7,6 +7,16 @@ import { markCleared } from "../puzzle/catalog";
 import { verdictText } from "../puzzle/judge";
 import { parseManaPool, ZONES, type PuzzleJson } from "../puzzle/schema";
 import { PuzzleSession, type SessionState } from "../puzzle/session";
+import { buildSolutionShareUrl } from "../puzzle/share";
+import {
+  deleteRegisteredSolution,
+  formatSolutionStep,
+  loadBundledSolution,
+  loadRegisteredSolution,
+  matchSolutionStep,
+  saveRegisteredSolution,
+  type SolutionStep,
+} from "../puzzle/solution";
 import { combatBody, combatSets, detailBody, renderBoard, stackBody, type BoardHooks, type BoardUi, type Mark, type Targeting } from "./board";
 import { TargetArrow } from "./arrow";
 import { localized } from "./localize";
@@ -29,6 +39,19 @@ export interface PlayOptions {
   backTitleKey?: MessageKey;
   toBackKey?: MessageKey;
   recordClear?: boolean;
+  /** URL パラメータ (?s=...) 等で渡された公開解答手順 */
+  sharedSolution?: SolutionStep[] | null;
+  /** 解答手順が登録されたときのコールバック（エディタのテストプレイ連携用） */
+  onRegisterSolution?: (steps: SolutionStep[]) => void;
+}
+
+interface ReplayState {
+  steps: SolutionStep[];
+  index: number;
+  auto: boolean;
+  timer: number;
+  stepOnceAfterReset?: boolean;
+  resetting?: boolean;
 }
 
 export class PlayPage {
@@ -84,6 +107,13 @@ export class PlayPage {
   private promptedTriggers = new Set<string>();
   /** エンジン応答待ち（busy）の間も直前のハイライトを保ち、ちらつきを防ぐ */
   private lastMarks = new Map<string, Mark>();
+  /** 解答手順パネルの開閉と、保持している解答手順（URL共有 / ローカル登録 / 同梱公式） */
+  private solutionOpen = false;
+  private sharedSolution: SolutionStep[] | null = null;
+  private registeredSolution: SolutionStep[] | null = null;
+  private bundledSolution: SolutionStep[] | null = null;
+  private solutionFeedback: { text: string; isError: boolean } | null = null;
+  private replay: ReplayState | null = null;
   private disposed = false;
 
   constructor(engine: ForgeEngine, private readonly puzzleId: string, private readonly onBack: () => void, opts: PlayOptions = {}) {
@@ -92,7 +122,13 @@ export class PlayPage {
       backTitleKey: opts.backTitleKey ?? "header.back.title",
       toBackKey: opts.toBackKey ?? "action.toCatalog",
       recordClear: opts.recordClear ?? true,
+      sharedSolution: opts.sharedSolution ?? null,
+      onRegisterSolution: opts.onRegisterSolution ?? (() => {}),
     };
+    this.sharedSolution = this.opts.sharedSolution;
+    if (this.sharedSolution && this.sharedSolution.length > 0) {
+      this.solutionOpen = true;
+    }
     this.el = h("div.play");
     this.session = new PuzzleSession(engine);
     this.unsubs.push(engine.onStatus((s) => { this.engineStatus = s; this.render(); }));
@@ -108,7 +144,17 @@ export class PlayPage {
   async load(data: unknown) {
     // 画像の一覧に無いカードは Scryfall で引く（問題の読み込みと並行。分かったら描き直す）
     void ensureCardImages(puzzleCardNames(data)).then((changed) => { if (changed && !this.disposed) this.render(); });
+    void loadBundledSolution(this.puzzleId).then((sol) => {
+      if (!this.disposed && sol && sol.length > 0) {
+        this.bundledSolution = sol;
+        this.render();
+      }
+    });
     await this.session.open(data);
+    const p = this.session.state.puzzle;
+    const stored = loadRegisteredSolution(this.puzzleStorageKey());
+    this.registeredSolution = stored ?? (p?.solution && p.solution.length > 0 ? p.solution : null);
+    this.render();
   }
 
   /** 言語を切り替えたときなどに描き直す */
@@ -128,6 +174,7 @@ export class PlayPage {
   }
 
   dispose() {
+    this.stopReplay();
     this.dropArrow();
     this.disposed = true;
     this.unsubs.forEach((u) => u());
@@ -141,10 +188,11 @@ export class PlayPage {
   }
 
   private readonly onKey = (e: KeyboardEvent) => {
-    // Esc: 開いているもの（メニュー・カードの詳細）を閉じる。何も開いていなければ、おまかせをやめるか、取りやめる
+    // Esc: 開いているもの（メニュー・カードの詳細）を閉じる。何も開いていなければ、おまかせ・解答再生をやめるか、取りやめる
     if (e.key === "Escape") {
       if (this.menu && !this.menu.locked) this.closeMenu();
       else if (this.detail) this.detail = null;
+      else if (this.replay) this.stopReplay();
       else if (this.macro) this.macro = null;
       else if (!this.menu) {
         const cancel = this.session.state.phase === "playing" && this.session.state.step?.pending?.options.find((o) => o.ref?.type === "special" && o.ref.value === "cancel");
@@ -232,6 +280,8 @@ export class PlayPage {
     }
     if (s.phase === "finished" && s.verdict.result === "CLEARED" && this.opts.recordClear) markCleared(this.puzzleId);
     if (s.phase === "finished" || s.phase === "error" || s.phase === "loading") this.macro = null;
+    if (s.phase === "playing" && this.replay?.resetting) this.replay.resetting = false;
+    if (s.phase === "finished" || s.phase === "error") this.stopReplay();
     if (s.step === prev && this.playing) {
       this.dirty = true;
       return;
@@ -244,6 +294,16 @@ export class PlayPage {
       this.arrow?.setOrigin(this.el.querySelector<HTMLElement>(".stackbox [data-targeting]"));
       if (s.phase === "finished" && prev?.engine.state !== "GAME_OVER") verdictStamp(s.verdict.result === "CLEARED");
       if (this.macro && s.phase === "playing") queueMicrotask(() => this.stepMacro());
+      if (this.replay && s.phase === "playing") {
+        if (this.replay.stepOnceAfterReset) {
+          this.replay.stepOnceAfterReset = false;
+          queueMicrotask(() => this.stepReplayOnce());
+        } else if (this.replay.auto) {
+          this.scheduleReplayStep(this.motion ? 320 : 80);
+        } else {
+          this.render();
+        }
+      }
     };
     if (!before || !prev || !s.step) {
       after();
@@ -463,7 +523,9 @@ export class PlayPage {
       view ? h("span.turn", null, t("header.turn", { turn: view.turn, phase: phaseName(view.phase) })) : null,
       h("span.spacer"),
       engineBadge(this.engineStatus),
-      h("button", { type: "button", onclick: () => void this.session.reset(), disabled: !s.puzzle || s.phase === "loading" || s.phase === "busy", title: t("header.reset.title") }, t("header.reset")),
+      h("button", { type: "button", onclick: () => { this.stopReplay(); void this.session.reset(); }, disabled: !s.puzzle || s.phase === "loading" || s.phase === "busy", title: t("header.reset.title") }, t("header.reset")),
+      h("button" + (this.solutionOpen || this.replay ? ".on" : ""), { type: "button", "data-action": "toggle-solution", "aria-pressed": String(this.solutionOpen), title: t("header.solution.title"),
+        onclick: () => { this.solutionOpen = !this.solutionOpen; this.solutionFeedback = null; this.render(); } }, t("header.solution")),
       h("button" + (this.images ? ".on" : ""), { type: "button", "aria-pressed": String(this.images), title: t("header.images.title"),
         onclick: () => { this.images = !this.images; setImagesEnabled(this.images); this.render(); } }, t("header.images")),
       h("button" + (this.motion ? ".on" : ""), { type: "button", "aria-pressed": String(this.motion), title: t("header.motion.title"),
@@ -570,8 +632,30 @@ export class PlayPage {
         bar.classList.add(cleared ? "cleared" : "failed");
         bar.append(h("div.result", null, verdictText(s.verdict)),
           h("div.btns", null,
-            h("button.on.big", { type: "button", onclick: () => void this.session.reset() }, t("action.again")),
+            h("button.on.big", { type: "button", onclick: () => { this.stopReplay(); void this.session.reset(); } }, t("action.again")),
             h("button.big", { type: "button", onclick: () => this.onBack() }, t(this.opts.toBackKey))));
+        if (cleared && s.solutionSteps.length > 0) {
+          const isSameRegistered = this.isSameSteps(this.registeredSolution, s.solutionSteps);
+          bar.append(
+            h("div.solcleared", null,
+              h("button" + (isSameRegistered ? ".on" : ""), {
+                type: "button",
+                "data-action": "register-solution",
+                onclick: () => this.registerSolution(s.solutionSteps),
+              }, t(isSameRegistered ? "solution.registered" : "solution.register", { n: s.solutionSteps.length })),
+              h("button", {
+                type: "button",
+                "data-action": "share-solution",
+                onclick: () => void this.shareSolution(s.solutionSteps),
+              }, t("solution.share")),
+              h("button", {
+                type: "button",
+                "data-action": "replay-solution",
+                onclick: () => this.startReplay(s.solutionSteps, true),
+              }, t("solution.replay")),
+            ),
+          );
+        }
         break;
       }
       case "error":
@@ -588,9 +672,64 @@ export class PlayPage {
         break;
     }
     if (s.notice) bar.prepend(h("div.notice", null, s.notice));
+    if (this.replay && (s.phase === "playing" || s.phase === "busy" || s.phase === "loading")) {
+      const curIdx = Math.min(this.replay.index, this.replay.steps.length - 1);
+      const stepText = curIdx >= 0 && this.replay.steps[curIdx]
+        ? formatSolutionStep(this.replay.steps[curIdx], (n) => displayName(n))
+        : "";
+      const statusMsg = t(this.replay.auto ? "solution.replaying" : "solution.replayPaused", {
+        cur: Math.min(this.replay.index + 1, this.replay.steps.length),
+        total: this.replay.steps.length,
+        step: stepText,
+      });
+      bar.prepend(
+        h("div.quick.replaybar", null,
+          h("span", null, statusMsg),
+          h("div.rbtns", null,
+            this.replay.auto
+              ? h("button", {
+                  type: "button",
+                  "data-action": "replay-pause",
+                  onclick: () => {
+                    if (!this.replay) return;
+                    window.clearTimeout(this.replay.timer);
+                    this.replay.auto = false;
+                    this.render();
+                  },
+                }, t("solution.replayPause"))
+              : h("button.on", {
+                  type: "button",
+                  "data-action": "replay-resume",
+                  onclick: () => {
+                    if (!this.replay) return;
+                    this.replay.auto = true;
+                    this.render();
+                    this.scheduleReplayStep(0);
+                  },
+                }, t("solution.replayResume")),
+            !this.replay.auto
+              ? h("button", {
+                  type: "button",
+                  "data-action": "replay-step",
+                  disabled: s.phase !== "playing",
+                  onclick: () => this.stepReplayOnce(),
+                }, t("solution.replayStep"))
+              : null,
+            h("button", {
+              type: "button",
+              "data-action": "replay-stop",
+              onclick: () => { this.stopReplay(); this.render(); },
+            }, t("solution.replayStop")),
+          ),
+        ),
+      );
+    }
     if (this.macro && (s.phase === "playing" || s.phase === "busy")) {
       bar.prepend(h("div.quick", null, h("span", null, t("quick.running", { card: displayName(this.names.get(this.macro.cardId) ?? "") })),
         h("button", { type: "button", onclick: () => { this.macro = null; this.render(); } }, t("quick.stop"))));
+    }
+    if (this.solutionOpen) {
+      bar.append(this.renderSolutionSection(s));
     }
     if (s.puzzle?.description) bar.prepend(h("details.pdesc", null, h("summary", null, s.puzzle.title), h("div.muted", null, s.puzzle.description)));
     return bar;
@@ -782,6 +921,212 @@ export class PlayPage {
     this.selected.clear();
     this.menu = null;
     void this.session.answer(ids);
+  }
+
+  // ---------------------------------------------------------------- 解答手順の登録・公開・再生
+
+  private puzzleStorageKey(): string {
+    if (this.puzzleId && this.puzzleId !== "shared" && this.puzzleId !== "editor-test") {
+      return this.puzzleId;
+    }
+    const title = this.session.state.puzzle?.title?.trim();
+    return title ? `custom:${title}` : this.puzzleId;
+  }
+
+  private isSameSteps(a: SolutionStep[] | null | undefined, b: SolutionStep[] | null | undefined): boolean {
+    if (!a || !b || a.length !== b.length) return false;
+    return a.every((s, i) => s.kind === b[i].kind && s.labels.join("|") === b[i].labels.join("|"));
+  }
+
+  private activeSolution(s: SessionState): { source: "shared" | "registered" | "recorded" | "bundled"; steps: SolutionStep[] } | null {
+    if (this.sharedSolution && this.sharedSolution.length > 0) {
+      return { source: "shared", steps: this.sharedSolution };
+    }
+    if (this.registeredSolution && this.registeredSolution.length > 0) {
+      return { source: "registered", steps: this.registeredSolution };
+    }
+    if (s.verdict.result === "CLEARED" && s.solutionSteps.length > 0) {
+      return { source: "recorded", steps: s.solutionSteps };
+    }
+    if (this.bundledSolution && this.bundledSolution.length > 0) {
+      return { source: "bundled", steps: this.bundledSolution };
+    }
+    return null;
+  }
+
+  private registerSolution(steps: SolutionStep[]) {
+    if (!steps.length) return;
+    const copy = steps.map((s) => ({ kind: s.kind, indexes: [...s.indexes], labels: [...s.labels] }));
+    saveRegisteredSolution(this.puzzleStorageKey(), copy);
+    this.registeredSolution = copy;
+    if (this.session.state.puzzle) {
+      this.session.state.puzzle.solution = copy;
+    }
+    this.opts.onRegisterSolution(copy);
+    this.solutionFeedback = { text: t("solution.registeredToast", { n: copy.length }), isError: false };
+    this.solutionOpen = true;
+    this.render();
+  }
+
+  private deleteSolution() {
+    deleteRegisteredSolution(this.puzzleStorageKey());
+    this.registeredSolution = null;
+    if (this.session.state.puzzle) {
+      delete this.session.state.puzzle.solution;
+    }
+    this.opts.onRegisterSolution([]);
+    this.solutionFeedback = null;
+    this.render();
+  }
+
+  private async shareSolution(steps: SolutionStep[]) {
+    const p = this.session.state.puzzle;
+    if (!p || !steps.length) return;
+    // 公開する手順がまだ未登録なら端末にも登録しておく
+    if (!this.registeredSolution) {
+      const copy = steps.map((s) => ({ kind: s.kind, indexes: [...s.indexes], labels: [...s.labels] }));
+      saveRegisteredSolution(this.puzzleStorageKey(), copy);
+      this.registeredSolution = copy;
+      p.solution = copy;
+      this.opts.onRegisterSolution(copy);
+    }
+    try {
+      const url = await buildSolutionShareUrl({ puzzleId: this.puzzleId, puzzle: p, steps });
+      try {
+        await navigator.clipboard.writeText(url);
+      } catch {
+        // クリップボード権限がない環境でも続行
+      }
+      this.solutionFeedback = { text: t("solution.sharedToast", { n: url.length }), isError: false };
+      this.solutionOpen = true;
+      this.render();
+    } catch (e) {
+      this.solutionFeedback = { text: String(e), isError: true };
+      this.solutionOpen = true;
+      this.render();
+    }
+  }
+
+  private canContinueReplay(s: SessionState, steps: SolutionStep[]): boolean {
+    if (s.phase !== "playing" || s.solutionSteps.length >= steps.length) return false;
+    for (let i = 0; i < s.solutionSteps.length; i++) {
+      const a = s.solutionSteps[i];
+      const b = steps[i];
+      if (a.kind !== b.kind || a.labels.join("|") !== b.labels.join("|")) return false;
+    }
+    return true;
+  }
+
+  private startReplay(steps: SolutionStep[], auto: boolean) {
+    if (!steps.length) return;
+    this.macro = null;
+    this.solutionFeedback = null;
+    const s = this.session.state;
+    if (this.canContinueReplay(s, steps)) {
+      this.replay = { steps, index: s.solutionSteps.length, auto, timer: 0 };
+      this.render();
+      this.stepReplayOnce();
+      return;
+    }
+    this.replay = { steps, index: 0, auto, timer: 0, stepOnceAfterReset: !auto, resetting: true };
+    this.render();
+    void this.session.reset();
+  }
+
+  private stopReplay() {
+    if (!this.replay) return;
+    window.clearTimeout(this.replay.timer);
+    this.replay = null;
+  }
+
+  private scheduleReplayStep(delayMs: number) {
+    if (!this.replay || !this.replay.auto) return;
+    window.clearTimeout(this.replay.timer);
+    this.replay.timer = window.setTimeout(() => {
+      this.stepReplayOnce();
+    }, delayMs);
+  }
+
+  private stepReplayOnce() {
+    const r = this.replay;
+    const s = this.session.state;
+    if (!r || s.phase !== "playing" || !s.step?.pending) return;
+    window.clearTimeout(r.timer);
+    if (r.index >= r.steps.length) {
+      this.stopReplay();
+      this.render();
+      return;
+    }
+    const step = r.steps[r.index];
+    const ids = matchSolutionStep(s.step.pending, step);
+    if (!ids) {
+      this.stopReplay();
+      this.solutionFeedback = { text: t("solution.replayMismatch"), isError: true };
+      this.solutionOpen = true;
+      this.render();
+      return;
+    }
+    r.index++;
+    this.send(ids);
+  }
+
+  private renderSolutionSection(s: SessionState): HTMLElement {
+    const active = this.activeSolution(s);
+    const box = h("div.solbox");
+    if (this.solutionFeedback) {
+      box.append(h("div.solnote" + (this.solutionFeedback.isError ? ".err" : ".ok"), null, this.solutionFeedback.text));
+    }
+    if (!active) {
+      box.append(h("div.muted.solnote", null, t("solution.empty")));
+      return box;
+    }
+    const { source, steps } = active;
+    const sourceLabel = t(`solution.source.${source}` as MessageKey, { n: steps.length });
+    const busy = s.phase === "loading" || s.phase === "busy";
+    const curStepIdx = this.replay ? this.replay.index : (this.canContinueReplay(s, steps) ? s.solutionSteps.length : -1);
+
+    box.append(
+      h("div.solhead", null,
+        h("strong.solsrc", null, sourceLabel),
+        h("div.solbtns", null,
+          h("button.on", {
+            type: "button",
+            "data-action": "replay-auto",
+            disabled: busy,
+            onclick: () => this.startReplay(steps, true),
+          }, t("solution.replayAuto")),
+          h("button", {
+            type: "button",
+            "data-action": "replay-step",
+            disabled: busy,
+            onclick: () => this.startReplay(steps, false),
+          }, t("solution.replayStep")),
+          h("button", {
+            type: "button",
+            "data-action": "share-solution",
+            onclick: () => void this.shareSolution(steps),
+          }, t("solution.share")),
+          source === "registered"
+            ? h("button", {
+                type: "button",
+                "data-action": "delete-solution",
+                onclick: () => this.deleteSolution(),
+              }, t("solution.delete"))
+            : null,
+        ),
+      ),
+      h("details.solsteps", { open: "open" },
+        h("summary", null, t("solution.stepsList", { n: steps.length })),
+        h("ol.sollist", null,
+          steps.map((st, idx) =>
+            h("li" + (idx === curStepIdx ? ".cur" : idx < curStepIdx ? ".done" : ""), null,
+              formatSolutionStep(st, (n) => displayName(n)),
+            ),
+          ),
+        ),
+      ),
+    );
+    return box;
   }
 }
 

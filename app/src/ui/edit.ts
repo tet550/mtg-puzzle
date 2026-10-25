@@ -31,6 +31,7 @@ import {
   MAX_SHARE_URL_LENGTH,
   parsePuzzleInput,
 } from "../puzzle/share";
+import { formatSolutionStep } from "../puzzle/solution";
 import { detailBody, renderBoard, type BoardHooks, type BoardUi, type Mark } from "./board";
 import { h } from "./dom";
 import { fitHands, setupFloat } from "./float";
@@ -1164,10 +1165,15 @@ export class EditPage {
       }, t("editor.data.resetEmpty")),
     );
 
-    const copyShareUrl = async (mode: "play" | "edit") => {
+    const copyShareUrl = async (mode: "play" | "edit", includeSolutionParam = false) => {
       try {
         const normalized = normalizePuzzleForEngine(this.puzzle);
-        const url = await buildShareUrl(normalized, mode);
+        const url = await buildShareUrl(
+          normalized,
+          mode,
+          undefined,
+          includeSolutionParam ? this.puzzle.solution : undefined,
+        );
         try {
           await navigator.clipboard.writeText(url);
         } catch {
@@ -1175,12 +1181,12 @@ export class EditPage {
         }
         if (url.length > MAX_SHARE_URL_LENGTH) {
           this.dataFeedback = {
-            text: t("editor.data.urlTooLong", { length: url.length, max: MAX_SHARE_URL_LENGTH }),
+            text: t("editor.data.urlTooLong", { n: url.length, length: url.length, max: MAX_SHARE_URL_LENGTH }),
             isError: true,
           };
         } else {
           this.dataFeedback = {
-            text: t("editor.data.copiedUrl", { length: url.length }),
+            text: t("editor.data.copiedUrl", { n: url.length, length: url.length }),
             isError: false,
           };
         }
@@ -1203,6 +1209,39 @@ export class EditPage {
         onclick: () => void copyShareUrl("edit"),
       }, t("editor.data.copyEditUrl")),
     );
+
+    const solSteps = this.puzzle.solution ?? [];
+    const solutionSection = solSteps.length > 0
+      ? h("div.esolbox", null,
+          h("div.erow", null,
+            h("span.chip", null, t("editor.solution.registered", { n: solSteps.length })),
+            h("div.ebtns", null,
+              h("button.on", {
+                type: "button",
+                "data-action": "copy-solution-url",
+                onclick: () => void copyShareUrl("play", true),
+              }, t("editor.solution.copyUrl")),
+              h("button.warnbtn", {
+                type: "button",
+                "data-action": "clear-solution",
+                onclick: () => {
+                  const next = clonePuzzle(this.puzzle);
+                  delete next.solution;
+                  this.updatePuzzle(next);
+                },
+              }, t("editor.solution.clear")),
+            ),
+          ),
+          h("details.solsteps", null,
+            h("summary", null, t("solution.stepsList", { n: solSteps.length })),
+            h("ol.sollist", null,
+              solSteps.map((st) =>
+                h("li", null, formatSolutionStep(st, displayName)),
+              ),
+            ),
+          ),
+        )
+      : h("div.muted.enote", { "data-solution-empty": "1" }, t("editor.solution.none"));
 
     const jsonArea = h("textarea.ejson", {
       rows: 7,
@@ -1261,6 +1300,8 @@ export class EditPage {
     return h("div.edata", null,
       h("h3", null, t("editor.data.template")),
       templateRow,
+      h("h3", null, t("editor.solution.title")),
+      solutionSection,
       h("h3", null, t("editor.data.url")),
       urlButtons,
       h("h3", null, t("editor.data.json")),

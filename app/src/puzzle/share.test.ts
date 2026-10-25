@@ -2,13 +2,18 @@ import { describe, expect, it } from "vitest";
 import { createEmptyPuzzle, addCardToPuzzle, setCardCounter, adjustPlayerMana } from "../ui/edit";
 import {
   buildShareUrl,
+  buildSolutionShareUrl,
   decodePuzzleFromParam,
+  decodeSolutionFromParam,
   encodePuzzleToParam,
+  encodeSolutionToParam,
   fromBase64Url,
+  parsePlayRouteLocation,
   parsePuzzleInput,
   parseShareLocation,
   toBase64Url,
 } from "./share";
+import type { SolutionStep } from "./solution";
 
 describe("puzzle URL sharing", () => {
   it("round-trips Base64URL byte encoding", () => {
@@ -97,5 +102,37 @@ describe("puzzle URL sharing", () => {
 
     const fromToken = await parsePuzzleInput(param);
     expect(fromToken.ok).toBe(true);
+  });
+
+  it("encodes and decodes solution steps in bundled and shared URLs", async () => {
+    const steps: SolutionStep[] = [
+      { kind: "PRIORITY", indexes: [1], labels: ["Mountain [1] — {T}: Add {R}."] },
+      { kind: "PRIORITY", indexes: [1], labels: ["Burst Lightning [2] — Burst Lightning deals 2 damage to any target."] },
+      { kind: "TARGET", indexes: [1], labels: ["p2 (2 life)"] },
+      { kind: "PRIORITY", indexes: [0], labels: ["Pass"] },
+    ];
+
+    const sParam = await encodeSolutionToParam(steps);
+    const decodedSteps = await decodeSolutionFromParam(sParam);
+    expect(decodedSteps).toEqual(steps);
+
+    const bundledUrl = await buildSolutionShareUrl("t01-burn", steps, "https://example.com/mtg-puzzle/#/");
+    expect(bundledUrl).toMatch(/^https:\/\/example\.com\/mtg-puzzle\/#\/play\/t01-burn\?s=[A-Za-z0-9_-]+$/);
+    const playRoute = parsePlayRouteLocation(bundledUrl);
+    expect(playRoute?.id).toBe("t01-burn");
+    expect(playRoute?.solutionParam).toBe(sParam);
+
+    const p = createEmptyPuzzle("With Solution");
+    const sharedUrl = await buildShareUrl(p, "play", "https://example.com/mtg-puzzle/", steps);
+    expect(sharedUrl).toContain("&s=");
+    const parsedShared = parseShareLocation(sharedUrl);
+    expect(parsedShared?.mode).toBe("play");
+    expect(parsedShared?.solutionParam).toBe(sParam);
+
+    const imported = await parsePuzzleInput(sharedUrl);
+    expect(imported.ok).toBe(true);
+    if (imported.ok) {
+      expect(imported.puzzle.solution).toEqual(steps);
+    }
   });
 });

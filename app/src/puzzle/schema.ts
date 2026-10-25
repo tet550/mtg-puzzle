@@ -4,6 +4,7 @@
 
 import type { ManaColor } from "../engine/protocol";
 import { t } from "../i18n";
+import { validateSolutionSteps, type SolutionStep } from "./solution";
 
 export const SCHEMA_VERSION = 1;
 /** このアプリが同梱しているエンジンの Forge のバージョン */
@@ -49,6 +50,8 @@ export interface PuzzleJson {
   };
   goal: PuzzleGoal;
   opponent?: { policy: "pass"; block?: "minimize" | "none" };
+  /** 登録済みの解答手順（任意） */
+  solution?: SolutionStep[];
 }
 
 export const ZONES = ["hand", "battlefield", "graveyard", "exile", "library"] as const;
@@ -143,6 +146,13 @@ export function validatePuzzle(data: unknown): ValidationResult {
     errors.push(t("schema.goal"));
   } else if (typeof goal.player !== "string" || !playerIds.has(goal.player)) {
     errors.push(t("schema.goalPlayer"));
+  }
+
+  if (data.solution !== undefined) {
+    const validSol = validateSolutionSteps(data.solution);
+    if (!validSol) {
+      errors.push(t("schema.solution"));
+    }
   }
 
   return errors.length ? { ok: false, errors } : { ok: true, puzzle: data as unknown as PuzzleJson };

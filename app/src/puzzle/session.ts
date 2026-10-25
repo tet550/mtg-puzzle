@@ -4,6 +4,7 @@ import type { GameEvent, StepResult } from "../engine/protocol";
 import { t } from "../i18n";
 import { judge, type Verdict } from "./judge";
 import { validatePuzzle, type PuzzleJson } from "./schema";
+import { recordDecisionStep, type SolutionStep } from "./solution";
 
 /** エンジンのうちセッションが使う部分（テストで差し替える） */
 export interface EngineLike {
@@ -30,6 +31,8 @@ export interface SessionState {
   startTurn: number;
   /** 開いてからの出来事（Log に出す） */
   history: GameEvent[];
+  /** 開いてからプレイヤーが行った選択手順の記録（解答登録・公開・再生用） */
+  solutionSteps: SolutionStep[];
   /** デバッグ用の全記録（アクション・生イベント・GameLog・選択要求・判定・経過時間など） */
   debugHistory: string[];
   /** 直前の回答が受け付けられなかったときなど、続けられる問題のお知らせ */
@@ -45,6 +48,7 @@ const INITIAL: SessionState = {
   verdict: { result: "IN_PROGRESS" },
   startTurn: 0,
   history: [],
+  solutionSteps: [],
   debugHistory: [],
   notice: null,
   errors: [],
@@ -86,12 +90,13 @@ export class PuzzleSession {
   async answer(optionIds: string[]): Promise<void> {
     if (this.s.phase !== "playing") return;
     const d = this.s.step?.pending;
+    const recordedStep = d ? recordDecisionStep(d, optionIds) : null;
     const detail = optionIds.map((id) => {
       const o = d?.options.find((x) => x.id === id);
       return o ? `${id} (${o.label})` : id;
     }).join(", ");
     this.set({ phase: "busy", notice: null });
-    await this.run(() => this.engine.submit(optionIds), false, [`[Submit] seq=${d?.seq ?? "?"} ids=[${detail}]`]);
+    await this.run(() => this.engine.submit(optionIds), false, [`[Submit] seq=${d?.seq ?? "?"} ids=[${detail}]`], recordedStep);
   }
 
   /** 初期盤面からやり直す。エンジンが異常のときは、エンジンを作り直してから読み込み直す */
@@ -113,7 +118,12 @@ export class PuzzleSession {
     await this.run(() => this.engine.reset(), true, [`[Reset] title=${JSON.stringify(puzzle.title)}`]);
   }
 
-  private async run(call: () => Promise<StepResult>, fresh: boolean, actionLines: string[] = []) {
+  private async run(
+    call: () => Promise<StepResult>,
+    fresh: boolean,
+    actionLines: string[] = [],
+    recordedStep: SolutionStep | null = null,
+  ) {
     const prevStep = this.s.step;
     let step: StepResult;
     try {
@@ -134,6 +144,7 @@ export class PuzzleSession {
     const goal = this.s.puzzle!.goal;
     const verdict = judge({ goal, startTurn, events: step.events, engine: step.engine });
     const history = fresh ? step.events : [...this.s.history, ...step.events];
+    const solutionSteps = fresh ? [] : (recordedStep ? [...this.s.solutionSteps, recordedStep] : this.s.solutionSteps);
     const stepDebug = formatStepDebug(actionLines, fresh ? null : prevStep, step, verdict);
     const debugHistory = fresh ? stepDebug : [...this.s.debugHistory, ...stepDebug];
     const phase: SessionPhase =
@@ -145,6 +156,7 @@ export class PuzzleSession {
       verdict,
       startTurn,
       history,
+      solutionSteps,
       debugHistory,
       errors: phase === "error" ? [verdict.result === "ERROR" ? verdict.message : t("status.stalled")] : [],
       notice: noticeOf(step.fallback, goal.player),

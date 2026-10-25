@@ -57,6 +57,9 @@ describe("PuzzleSession", () => {
     expect(s.state.phase).toBe("finished");
     expect(s.state.verdict).toEqual({ result: "CLEARED", reason: "win" });
     expect(s.state.history).toHaveLength(1);
+    expect(s.state.solutionSteps).toEqual([
+      { kind: "PRIORITY", indexes: [0], labels: ["Pass"] },
+    ]);
   });
 
   it("形の誤りはエンジンを呼ばずにエラー", async () => {

@@ -3,6 +3,7 @@
 // - "#/play?p=<data>" / "#p=<data>"（プレイ用）および "#/edit?p=<data>"（編集用）の双方に対応する
 
 import { validatePuzzle, ZONES, type PlayerDef, type PuzzleJson, type ValidationResult } from "./schema";
+import { validateSolutionSteps, type SolutionStep } from "./solution";
 
 /** 一般的なブラウザ・チャットツール等で安全に共有できる URL 長の上限目安 */
 export const MAX_SHARE_URL_LENGTH = 8000;
@@ -95,26 +96,88 @@ export async function decodePuzzleFromParam(param: string): Promise<ValidationRe
   return { ok: true, puzzle: expandPuzzleZones(res.puzzle) };
 }
 
+/** SolutionStep 配列を deflate-raw 圧縮 + Base64URL 文字列に変換する */
+export async function encodeSolutionToParam(steps: SolutionStep[]): Promise<string> {
+  const clean = steps.map((s) => ({
+    kind: s.kind,
+    indexes: s.indexes,
+    labels: s.labels,
+  }));
+  const json = JSON.stringify(clean);
+  const rawBytes = new TextEncoder().encode(json);
+  const compressed = await deflateRaw(rawBytes);
+  return toBase64Url(compressed);
+}
+
+/** Base64URL 文字列から SolutionStep 配列を復元・検証する（不正なら null） */
+export async function decodeSolutionFromParam(param: string): Promise<SolutionStep[] | null> {
+  try {
+    const bytes = fromBase64Url(param);
+    let jsonBytes: Uint8Array;
+    // 先頭が '[' (0x5b) または '{' (0x7b) の場合は非圧縮 UTF-8 JSON として扱う
+    if (bytes[0] === 0x5b || bytes[0] === 0x7b) {
+      jsonBytes = bytes;
+    } else {
+      jsonBytes = await inflateRaw(bytes);
+    }
+    const text = new TextDecoder().decode(jsonBytes);
+    const parsed: unknown = JSON.parse(text);
+    return validateSolutionSteps(parsed);
+  } catch {
+    return null;
+  }
+}
+
 /** 共有用 URL（play または edit）を生成する */
 export async function buildShareUrl(
   puzzle: PuzzleJson,
   mode: "play" | "edit" = "play",
   baseHref?: string,
+  solutionSteps?: SolutionStep[],
 ): Promise<string> {
   const param = await encodePuzzleToParam(puzzle);
+  const sParam = solutionSteps && solutionSteps.length > 0 ? await encodeSolutionToParam(solutionSteps) : null;
   const base = (baseHref ?? (typeof location !== "undefined" ? `${location.origin}${location.pathname}${location.search}` : "")).replace(/#.*$/, "");
-  const hash = mode === "edit" ? `#/edit?p=${param}` : `#/play?p=${param}`;
+  const route = mode === "edit" ? "#/edit" : "#/play";
+  const hash = sParam ? `${route}?p=${param}&s=${sParam}` : `${route}?p=${param}`;
   return `${base}${hash}`;
 }
 
 /**
- * URL 文字列や location.hash から共有パラメータ（mode と p）を取り出す。
+ * 解答手順を公開する共有 URL を生成する。
+ * - 同梱パズル（id が "shared" / "editor-test" 以外）: "#/play/<id>?s=<solution>"
+ * - カスタム・共有パズル: "#/play?p=<puzzle>&s=<solution>"
+ */
+export async function buildSolutionShareUrl(
+  optsOrId:
+    | { puzzleId: string; puzzle?: PuzzleJson; steps: SolutionStep[]; baseHref?: string }
+    | string,
+  stepsArg?: SolutionStep[],
+  baseHrefArg?: string,
+): Promise<string> {
+  const opts = typeof optsOrId === "string"
+    ? { puzzleId: optsOrId, steps: stepsArg ?? [], baseHref: baseHrefArg }
+    : optsOrId;
+  const base = (opts.baseHref ?? (typeof location !== "undefined" ? `${location.origin}${location.pathname}${location.search}` : "")).replace(/#.*$/, "");
+  const sParam = await encodeSolutionToParam(opts.steps);
+  if (opts.puzzleId && opts.puzzleId !== "shared" && opts.puzzleId !== "editor-test" && /^[\w-]+$/.test(opts.puzzleId)) {
+    return `${base}#/play/${opts.puzzleId}?s=${sParam}`;
+  }
+  if (!opts.puzzle) {
+    throw new Error("Custom puzzle requires puzzle data to build share URL");
+  }
+  const pParam = await encodePuzzleToParam(opts.puzzle);
+  return `${base}#/play?p=${pParam}&s=${sParam}`;
+}
+
+/**
+ * URL 文字列や location.hash から共有パラメータ（mode, p, 任意の s）を取り出す。
  * 対応形式:
  * - "#p=<data>" / "https://.../#p=<data>" -> { mode: "play", param: "<data>" }
- * - "#/play?p=<data>" / "https://.../#/play?p=<data>" -> { mode: "play", param: "<data>" }
- * - "#/edit?p=<data>" / "https://.../#/edit?p=<data>" -> { mode: "edit", param: "<data>" }
+ * - "#/play?p=<data>(&s=<sol>)" -> { mode: "play", param: "<data>", solutionParam?: "<sol>" }
+ * - "#/edit?p=<data>(&s=<sol>)" -> { mode: "edit", param: "<data>", solutionParam?: "<sol>" }
  */
-export function parseShareLocation(input: string): { mode: "play" | "edit"; param: string } | null {
+export function parseShareLocation(input: string): { mode: "play" | "edit"; param: string; solutionParam?: string } | null {
   const trimmed = input.trim();
   if (!trimmed) return null;
   const hashIdx = trimmed.indexOf("#");
@@ -122,20 +185,43 @@ export function parseShareLocation(input: string): { mode: "play" | "edit"; para
   if (!frag) return null;
 
   if (frag.startsWith("p=")) {
-    const param = new URLSearchParams(frag).get("p");
-    return param ? { mode: "play", param } : null;
+    const sp = new URLSearchParams(frag);
+    const param = sp.get("p");
+    const sParam = sp.get("s");
+    return param ? { mode: "play", param, ...(sParam ? { solutionParam: sParam } : {}) } : null;
   }
 
   const qIdx = frag.indexOf("?");
   if (qIdx >= 0) {
     const path = frag.slice(0, qIdx);
     const qs = frag.slice(qIdx + 1);
-    const param = new URLSearchParams(qs).get("p");
+    const sp = new URLSearchParams(qs);
+    const param = sp.get("p");
+    const sParam = sp.get("s");
     if (!param) return null;
-    if (path === "/edit" || path === "edit") return { mode: "edit", param };
-    if (path === "/play" || path === "play" || path === "/" || path === "") return { mode: "play", param };
+    if (path === "/edit" || path === "edit") {
+      return { mode: "edit", param, ...(sParam ? { solutionParam: sParam } : {}) };
+    }
+    if (path === "/play" || path === "play" || path === "/" || path === "") {
+      return { mode: "play", param, ...(sParam ? { solutionParam: sParam } : {}) };
+    }
   }
   return null;
+}
+
+/**
+ * 同梱パズルのプレイ URL（"#/play/<id>" または "#/play/<id>?s=<sol>"）を解析する。
+ */
+export function parsePlayRouteLocation(input: string): { id: string; solutionParam?: string } | null {
+  const trimmed = input.trim();
+  const hashIdx = trimmed.indexOf("#");
+  const frag = hashIdx >= 0 ? trimmed.slice(hashIdx + 1) : trimmed;
+  const m = /^\/play\/([\w-]+)(?:\?(.*))?$/.exec(frag);
+  if (!m) return null;
+  const id = m[1];
+  const qs = m[2];
+  const sParam = qs ? new URLSearchParams(qs).get("s") : null;
+  return { id, ...(sParam ? { solutionParam: sParam } : {}) };
 }
 
 /**
@@ -155,7 +241,12 @@ export async function parsePuzzleInput(text: string): Promise<ValidationResult> 
   // 2. 共有 URL（https://...#/play?p=... や #p=...）の場合
   const share = parseShareLocation(trimmed);
   if (share) {
-    return decodePuzzleFromParam(share.param);
+    const res = await decodePuzzleFromParam(share.param);
+    if (res.ok && share.solutionParam) {
+      const sol = await decodeSolutionFromParam(share.solutionParam);
+      if (sol && sol.length > 0) res.puzzle.solution = sol;
+    }
+    return res;
   }
 
   // 3. p=<data> または生の Base64URL パラメータの場合

@@ -301,6 +301,7 @@ export const ja = {
   "schema.phase": "phase がありません",
   "schema.goal": "対応していない勝利条件です（このターン中に勝利、のみ対応）",
   "schema.goalPlayer": "goal.player がプレイヤーの id と一致しません",
+  "schema.solution": "solution の形式が正しくありません",
 
   // エンジン・読み込みのエラー
   "error.catalog": "問題の一覧を読めません（{status}）",
@@ -377,6 +378,40 @@ export const ja = {
   "editor.data.import": "下の JSON / URL を盤面に反映",
   "editor.data.imported": "盤面データを読み込みました",
   "editor.data.invalidJson": "データまたは URL の形式が正しくありません: {message}",
+
+  // 解答手順の登録・公開・再生
+  "header.solution": "解答",
+  "header.solution.title": "解答手順の再生・公開・確認",
+  "solution.panel.title": "解答手順",
+  "solution.source.shared": "公開された解答（{n} 手）",
+  "solution.source.registered": "登録済みの解答（{n} 手）",
+  "solution.source.bundled": "公式の解答例（{n} 手）",
+  "solution.source.recorded": "今回のクリア手順（{n} 手）",
+  "solution.register": "✓ 解答手順を登録（{n} 手）",
+  "solution.registered": "✓ 解答登録済み（{n} 手）",
+  "solution.registeredToast": "解答手順（{n} 手）を登録しました",
+  "solution.share": "🔗 解答を公開（URLコピー）",
+  "solution.sharedToast": "解答公開用URLをコピーしました（{n} 文字）",
+  "solution.replay": "▶ 解答を再生",
+  "solution.replayAuto": "▶ 自動再生",
+  "solution.replayStep": "⏭ 1手進める",
+  "solution.replayPause": "⏸ 一時停止",
+  "solution.replayResume": "▶ 再開",
+  "solution.replayStop": "■ 停止",
+  "solution.replaying": "解答を再生中 ({cur}/{total}): {step}",
+  "solution.replayPaused": "一時停止中 ({cur}/{total}): 次は「{step}」",
+  "solution.replayMismatch": "現在の盤面と解答手順が一致しないため、自動再生を止めました",
+  "solution.stepsList": "手順一覧（{n} 手）",
+  "solution.step.target": "対象",
+  "solution.step.targetDone": "対象決定",
+  "solution.step.mana": "マナ支払い",
+  "solution.empty": "まだ解答手順が登録されていません。パズルをクリアすると手順を登録・公開できます。",
+  "solution.delete": "登録を解除",
+  "editor.solution.title": "解答手順",
+  "editor.solution.registered": "登録済み（{n} 手）",
+  "editor.solution.none": "未登録（テストプレイでクリアすると解答手順を登録できます）",
+  "editor.solution.copyUrl": "🔗 解答付きプレイURLをコピー",
+  "editor.solution.clear": "解答手順を消去",
 };
 
 export type Messages = Record<keyof typeof ja, string>;

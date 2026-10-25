@@ -786,4 +786,26 @@ svg.fx.arrow polygon.fill { fill: #fff; }
 .ecval { min-width: 1.5ch; text-align: center; font-weight: 700; }
 .epblock { display: flex; flex-direction: column; gap: 5px; padding: 6px 8px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; }
 .mpipbtn { display: inline-flex; align-items: center; gap: 2px; padding: 2px 6px; }
+.esolbox { display: flex; flex-direction: column; gap: 6px; padding: 6px 8px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; }
+
+/* ---- 解答手順（登録・公開・再生） ---- */
+.actions .solcleared { padding-top: 2px; border-top: 1px dashed var(--line); }
+.actions .solcleared button { font-size: 12px; padding: 4px 8px; }
+.actions .replaybar { flex-wrap: wrap; gap: 4px 6px; padding: 4px 6px; background: color-mix(in srgb, var(--accent) 14%, var(--bg)); border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line)); border-radius: 6px; }
+.actions .replaybar button { padding: 2px 7px; font-size: 11.5px; }
+.solbox { display: flex; flex-direction: column; gap: 6px; padding: 6px 8px; margin-top: 2px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; font-size: 12px; }
+.solhead { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.solhead > strong { font-size: 12px; }
+.solhead > .spacer { flex: 1; }
+.solhead > button { padding: 0 6px; border: 0; font-size: 14px; line-height: 1.2; }
+.solbtns button { padding: 3px 8px; font-size: 11.5px; }
+.solnote { font-size: 11.5px; }
+.solnote.ok { color: var(--ok); font-weight: 600; }
+.solnote.err { color: var(--warn); font-weight: 600; }
+.solsteps summary { cursor: pointer; font-size: 11.5px; font-weight: 600; color: var(--muted); user-select: none; }
+.sollist { margin: 4px 0 0; padding-left: 20px; font-size: 11.5px; line-height: 1.45; max-height: 120px; overflow: auto; }
+.sollist li { padding: 1px 0; }
+.sollist li.done { color: var(--muted); }
+.sollist li.cur { color: var(--accent); font-weight: 700; }
+
 
