@@ -22,8 +22,11 @@ export interface BoardHooks {
   /** 長押し・右クリック: 詳細 */
   detail(c: CardView): void;
   player(id: string): void;
-  /** 相手の要約（土地・墓地・追放）を開く・閉じる */
-  toggle(key: string): void;
+  /**
+   * 相手の要約（土地・墓地・追放）と自分の束を開く・閉じる。
+   * closing は閉じるときだけ渡す、その束の選択の印（markSig）。同じ印のあいだは開いたままにしない（BoardUi.dismissed）
+   */
+  toggle(key: string, closing?: string): void;
 }
 
 export interface BoardUi {
@@ -31,6 +34,8 @@ export interface BoardUi {
   marks: Map<string, Mark>;
   /** 開いている相手の要約（"lands" / "graveyard" / "exile"）と自分の束（"my-graveyard" / "my-exile"） */
   open: Set<string>;
+  /** 選択の候補を含むので開いていた束を利用者が閉じたときの、その束の印（markSig）。印が変わるまで閉じたままにする */
+  dismissed?: Map<string, string>;
   /** 期限（このターン中）の表示用 */
   startTurn: number;
   /** 直前の出来事で変わったカード（短く光らせる） */
@@ -116,21 +121,19 @@ function opponentSide(view: GameView, p: PlayerView, ui: BoardUi, hooks: BoardHo
   const lib = p.cards.filter((c) => c.zone === "Library");
   const gy = p.cards.filter((c) => c.zone === "Graveyard");
   const ex = p.cards.filter((c) => c.zone === "Exile");
-  // 選択の候補・選んだものを含む要約は開いて見せる
-  const forced = (cards: CardView[]) => cards.some((c) => ui.marks.has(c.instanceId));
-  const isOpen = (key: string, cards: CardView[]) => ui.open.has(key) || forced(cards);
+  const isOpen = (key: string, cards: CardView[]) => pileOpen(key, cards, ui);
 
   const untapped = lands.filter((c) => !c.tapped).length;
   const summary = h("div.osum", null,
-    summaryChip(t("opp.lands", { n: lands.length, untapped }), "lands", isOpen("lands", lands), lands.length > 0 || !!ui.editable, hooks, p.id),
+    summaryChip(t("opp.lands", { n: lands.length, untapped }), "lands", lands, lands.length > 0 || !!ui.editable, ui, hooks, p.id),
     ui.editable
-      ? summaryChip(t("opp.hand", { n: p.handCount }), "hand", isOpen("hand", hand), true, hooks, p.id)
+      ? summaryChip(t("opp.hand", { n: p.handCount }), "hand", hand, true, ui, hooks, p.id)
       : h("span.chip", { title: t("opp.hand.title"), "data-pile": "hand", "data-owner": p.id }, t("opp.hand", { n: p.handCount })),
     ui.editable
-      ? summaryChip(t("opp.library", { n: p.libraryCount }), "library", isOpen("library", lib), true, hooks, p.id)
+      ? summaryChip(t("opp.library", { n: p.libraryCount }), "library", lib, true, ui, hooks, p.id)
       : h("span.chip", { title: t("opp.library.title"), "data-pile": "library", "data-owner": p.id }, t("opp.library", { n: p.libraryCount })),
-    summaryChip(t("opp.graveyard", { n: gy.length }), "graveyard", isOpen("graveyard", gy), gy.length > 0 || !!ui.editable, hooks, p.id),
-    summaryChip(t("opp.exile", { n: ex.length }), "exile", isOpen("exile", ex), ex.length > 0 || !!ui.editable, hooks, p.id),
+    summaryChip(t("opp.graveyard", { n: gy.length }), "graveyard", gy, gy.length > 0 || !!ui.editable, ui, hooks, p.id),
+    summaryChip(t("opp.exile", { n: ex.length }), "exile", ex, ex.length > 0 || !!ui.editable, ui, hooks, p.id),
   );
   head.insertBefore(summary, head.querySelector(".pextra"));
   side.append(head);
@@ -149,11 +152,29 @@ function opponentSide(view: GameView, p: PlayerView, ui: BoardUi, hooks: BoardHo
   return side;
 }
 
-function summaryChip(text: string, key: string, open: boolean, enabled: boolean, hooks: BoardHooks, owner: string): HTMLElement {
+function summaryChip(text: string, key: string, cards: CardView[], enabled: boolean, ui: BoardUi, hooks: BoardHooks, owner: string): HTMLElement {
+  const open = pileOpen(key, cards, ui);
   return h("button.chip.sumchip" + (open ? ".on" : ""), {
     type: "button", disabled: !enabled, "aria-expanded": String(open), "data-pile": key, "data-owner": owner,
-    onclick: (ev: Event) => { ev.stopPropagation(); hooks.toggle(key); },
+    onclick: (ev: Event) => { ev.stopPropagation(); togglePile(key, cards, ui, hooks); },
   }, text);
+}
+
+/** 束の中のカードに付いた選択の印（候補・選んだもの）。印が無ければ "" */
+export function markSig(cards: CardView[], ui: BoardUi): string {
+  return cards.filter((c) => ui.marks.has(c.instanceId)).map((c) => `${c.instanceId}:${ui.marks.get(c.instanceId)}`).join(",");
+}
+
+/** 開いているか。選択の候補・選んだものを含む束は開いて見せる（利用者が閉じたら、印が変わるまで閉じたまま） */
+function pileOpen(key: string, cards: CardView[], ui: BoardUi): boolean {
+  if (ui.open.has(key)) return true;
+  const sig = markSig(cards, ui);
+  return sig !== "" && ui.dismissed?.get(key) !== sig;
+}
+
+function togglePile(key: string, cards: CardView[], ui: BoardUi, hooks: BoardHooks): void {
+  if (pileOpen(key, cards, ui)) hooks.toggle(key, markSig(cards, ui));
+  else hooks.toggle(key);
 }
 
 // ---------------------------------------------------------------- 自分の側
@@ -169,13 +190,13 @@ function mySide(view: GameView, p: PlayerView, ui: BoardUi, hooks: BoardHooks): 
   const ex = p.cards.filter((c) => c.zone === "Exile" && !c.exiledBy);
   const hand = p.cards.filter((c) => c.zone === "Hand");
 
-  const libOpen = !!ui.editable && (ui.open.has("my-library") || lib.some((c) => ui.marks.has(c.instanceId)));
-  const gyOpen = ui.open.has("my-graveyard") || gy.some((c) => ui.marks.has(c.instanceId));
-  const exOpen = ui.open.has("my-exile") || ex.some((c) => ui.marks.has(c.instanceId));
+  const libOpen = !!ui.editable && pileOpen("my-library", lib, ui);
+  const gyOpen = pileOpen("my-graveyard", gy, ui);
+  const exOpen = pileOpen("my-exile", ex, ui);
   const piles = h("div.piles", null,
-    pile(t("pile.library"), p.libraryCount, ui.editable ? (lib[0] ?? null) : null, libOpen, ui.editable ? () => hooks.toggle("my-library") : null, ui, "library", p.id),
-    pile(t("pile.graveyard"), gy.length, gy[gy.length - 1] ?? null, gyOpen, () => hooks.toggle("my-graveyard"), ui, "graveyard", p.id),
-    pile(t("pile.exile"), ex.length, ex[ex.length - 1] ?? null, exOpen, () => hooks.toggle("my-exile"), ui, "exile", p.id),
+    pile(t("pile.library"), p.libraryCount, ui.editable ? (lib[0] ?? null) : null, libOpen, ui.editable ? () => togglePile("my-library", lib, ui, hooks) : null, ui, "library", p.id),
+    pile(t("pile.graveyard"), gy.length, gy[gy.length - 1] ?? null, gyOpen, () => togglePile("my-graveyard", gy, ui, hooks), ui, "graveyard", p.id),
+    pile(t("pile.exile"), ex.length, ex[ex.length - 1] ?? null, exOpen, () => togglePile("my-exile", ex, ui, hooks), ui, "exile", p.id),
   );
   const field = h("div.field", null,
     h("div.row.bfrow", null, kindGroups(others, p, ui, hooks)),

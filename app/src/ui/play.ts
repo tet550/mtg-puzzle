@@ -62,6 +62,8 @@ export class PlayPage {
   private selected = new Set<string>();
   private decisionSeq = -1;
   private open = new Set<string>();
+  /** 選択の候補を含む束を閉じたときの印（BoardUi.dismissed） */
+  private dismissed = new Map<string, string>();
   private flash = new Set<string>();
   private detail: CardView | null = null;
   private logOpen = window.matchMedia("(min-width: 900px) and (orientation: landscape)").matches;
@@ -226,6 +228,8 @@ export class PlayPage {
     }
     if (s.history.length < this.lastHistoryLength) {
       this.lastHistoryLength = 0;
+      // やり直し・リセットで同じ ID のカードが戻るので、閉じた束の印も忘れる
+      this.dismissed.clear();
       this.activating = null;
       this.casting = null;
       this.resolving = null;
@@ -501,6 +505,7 @@ export class PlayPage {
       viewer: VIEWER,
       marks: this.lastMarks,
       open: this.open,
+      dismissed: this.dismissed,
       startTurn: s.startTurn || view?.turn || 1,
       flash: this.flash,
       art: (name) => (this.images ? cardImage(name)?.normal ?? null : null),
@@ -510,7 +515,16 @@ export class PlayPage {
       card: (c) => this.onCard(c, interaction),
       detail: (c) => { this.detail = c; this.render(); },
       player: (id) => this.onPlayer(id, interaction),
-      toggle: (key) => { this.open.has(key) ? this.open.delete(key) : this.open.add(key); this.render(); },
+      toggle: (key, closing) => {
+        if (closing === undefined) {
+          this.open.add(key);
+          this.dismissed.delete(key);
+        } else {
+          this.open.delete(key);
+          if (closing) this.dismissed.set(key, closing);
+        }
+        this.render();
+      },
     };
     const scroll = this.el.querySelector<HTMLElement>(".hand")?.scrollLeft ?? 0;
     const logScroll = this.el.querySelector<HTMLElement>(".log");
