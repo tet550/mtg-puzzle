@@ -94,6 +94,18 @@
   "normal": "https://cards.scryfall.io/normal/front/0/0/0035082e-bb86-4f95-be48-ffc87fe5286d.jpg?1783910821",
   "small": "https://cards.scryfall.io/small/front/0/0/0035082e-bb86-4f95-be48-ffc87fe5286d.jpg?1783910821"
  },
+ "Enter the Infinite": {
+  "artist": "Terese Nielsen",
+  "ja": {
+   "artist": "Jake Murray",
+   "name": "無限への突入",
+   "normal": "https://cards.scryfall.io/normal/front/3/2/32f40241-39ca-429a-b2ea-6499c922f3c7.jpg?1782804228",
+   "small": "https://cards.scryfall.io/small/front/3/2/32f40241-39ca-429a-b2ea-6499c922f3c7.jpg?1782804228",
+   "text": "あなたのライブラリーにあるカードの枚数に等しい枚数のカードを引く。その後、あなたの手札にあるカード１枚をあなたのライブラリーの一番上に置く。次のあなたのターンまで、あなたの手札の上限は無くなる。"
+  },
+  "normal": "https://cards.scryfall.io/normal/front/6/1/612beb8f-2ab1-4a8b-84c5-c47d19d400ab.jpg?1783940138",
+  "small": "https://cards.scryfall.io/small/front/6/1/612beb8f-2ab1-4a8b-84c5-c47d19d400ab.jpg?1783940138"
+ },
  "Fanatical Firebrand": {
   "artist": "Wayne Reynolds",
   "ja": {
@@ -116,6 +128,11 @@
   },
   "normal": "https://cards.scryfall.io/normal/front/2/e/2e781bfd-f8cb-4d20-b977-4359f3a21311.jpg?1791578317",
   "small": "https://cards.scryfall.io/small/front/2/e/2e781bfd-f8cb-4d20-b977-4359f3a21311.jpg?1791578317"
+ },
+ "Fractal Token": {
+  "artist": "Rudy Siswanto",
+  "normal": "https://cards.scryfall.io/normal/front/8/b/8b5f1fdb-04df-4224-acb4-7819c37565f5.jpg?1783903564",
+  "small": "https://cards.scryfall.io/small/front/8/b/8b5f1fdb-04df-4224-acb4-7819c37565f5.jpg?1783903564"
  },
  "Full Bore": {
   "artist": "Olivier Bernard",
@@ -211,6 +228,42 @@
   "normal": "https://cards.scryfall.io/normal/front/1/3/1335d293-3dd2-4f13-bd2c-22181f4528ee.jpg?1791578424",
   "small": "https://cards.scryfall.io/small/front/1/3/1335d293-3dd2-4f13-bd2c-22181f4528ee.jpg?1791578424"
  },
+ "Jace's Machinations": {
+  "artist": "Serena Malyon",
+  "ja": {
+   "artist": "Serena Malyon",
+   "name": "ジェイスの策謀",
+   "normal": "https://cards.scryfall.io/normal/front/d/d/dd3f7013-3dbf-4bdd-919a-20db092854e2.jpg?1790681825",
+   "small": "https://cards.scryfall.io/small/front/d/d/dd3f7013-3dbf-4bdd-919a-20db092854e2.jpg?1790681825",
+   "text": "ターン終了時まで、あなたはあなたがコントロールしているジェイス・プレインズウォーカーの忠誠度能力を、どのプレイヤーのターン中であってもあなたがインスタントを唱えられるときならいつでも起動してもよい。\nジェイス付与８を行う。 （あなたがコントロールしているジェイス・トークン１体の上に忠誠カウンター８個を置く。あなたがジェイス・トークンをコントロールしていないなら、その前に、「\\[-1]：諜報１を行う。」と「\\[-3]：カード１枚を引く。」を持つ青のジェイス・プレインズウォーカー・トークン１体を生成する。）"
+  },
+  "normal": "https://cards.scryfall.io/normal/front/2/8/282588b9-3656-453b-aa25-2419e078ddc1.jpg?1788878150",
+  "small": "https://cards.scryfall.io/small/front/2/8/282588b9-3656-453b-aa25-2419e078ddc1.jpg?1788878150"
+ },
+ "Kasmina, Enigma Sage": {
+  "artist": "Tyler Jacobson",
+  "ja": {
+   "artist": "Tyler Jacobson",
+   "name": "謎の賢者、カズミナ",
+   "normal": "https://cards.scryfall.io/normal/front/8/1/81db0af1-cbd3-4e86-a090-e2f9497d2470.jpg?1782883392",
+   "small": "https://cards.scryfall.io/small/front/8/1/81db0af1-cbd3-4e86-a090-e2f9497d2470.jpg?1782883392",
+   "text": "これ以外であなたがコントロールしているすべてのプレインズウォーカーは謎の賢者、カズミナのすべての忠誠度能力を持つ。\n+2：占術１を行う。\n-X：緑青の０/０のフラクタル・クリーチャー・トークン１体を生成する。それの上に＋１/＋１カウンターＸ個を置く。\n-8：あなたのライブラリーからこのプレインズウォーカーと共通の色を持ちインスタントかソーサリーであるカード１枚を探し、追放する。その後、ライブラリーを切り直す。あなたはそのカードを、マナ・コストを支払うことなく唱えてもよい。"
+  },
+  "normal": "https://cards.scryfall.io/normal/front/1/7/178bf300-38cf-4ab2-9e66-6fcaa112b649.jpg?1783927310",
+  "small": "https://cards.scryfall.io/small/front/1/7/178bf300-38cf-4ab2-9e66-6fcaa112b649.jpg?1783927310"
+ },
+ "Kona, Rescue Beastie": {
+  "artist": "Brian Valeza",
+  "ja": {
+   "artist": "Sam Wolfe Connelly",
+   "name": "救助のけだもの、コーナ",
+   "normal": "https://cards.scryfall.io/normal/front/7/a/7a05364e-4323-474a-ade5-3774814ac968.jpg?1782783934",
+   "small": "https://cards.scryfall.io/small/front/7/a/7a05364e-4323-474a-ade5-3774814ac968.jpg?1782783934",
+   "text": "生存 — あなたの第２メイン・フェイズの開始時に、救助のけだもの、コーナがタップ状態である場合、あなたの手札にあるパーマネント・カード１枚を戦場に出してもよい。"
+  },
+  "normal": "https://cards.scryfall.io/normal/front/6/f/6f035294-2787-4719-8520-227bf03e84e7.jpg?1783909453",
+  "small": "https://cards.scryfall.io/small/front/6/f/6f035294-2787-4719-8520-227bf03e84e7.jpg?1783909453"
+ },
  "Llanowar Elves": {
   "artist": "Kev Walker",
   "ja": {
@@ -227,6 +280,11 @@
   "artist": "Francesca Baerald",
   "normal": "https://cards.scryfall.io/normal/front/9/1/91613970-c25c-4959-b5b0-b6e2a7657634.jpg?1789737819",
   "small": "https://cards.scryfall.io/small/front/9/1/91613970-c25c-4959-b5b0-b6e2a7657634.jpg?1789737819"
+ },
+ "Marang River Regent": {
+  "artist": "John Tedrick",
+  "normal": "https://cards.scryfall.io/normal/front/f/8/f890bdc7-32e6-4492-bac7-7cabf54a8bfd.jpg?1783907393",
+  "small": "https://cards.scryfall.io/small/front/f/8/f890bdc7-32e6-4492-bac7-7cabf54a8bfd.jpg?1783907393"
  },
  "Monastery Swiftspear": {
   "artist": "Gabor Szikszai",
@@ -250,6 +308,30 @@
   },
   "normal": "https://cards.scryfall.io/normal/front/8/5/85177bd7-6c50-48da-b692-ae5fe7bd357c.jpg?1791578439",
   "small": "https://cards.scryfall.io/small/front/8/5/85177bd7-6c50-48da-b692-ae5fe7bd357c.jpg?1791578439"
+ },
+ "Mox Amber": {
+  "artist": "Steven Belledin",
+  "ja": {
+   "artist": "Steven Belledin",
+   "name": "モックス・アンバー",
+   "normal": "https://cards.scryfall.io/normal/front/5/5/5562c38d-0a25-4f74-b6c0-f695855d1e64.jpg?1782838438",
+   "small": "https://cards.scryfall.io/small/front/5/5/5562c38d-0a25-4f74-b6c0-f695855d1e64.jpg?1782838438",
+   "text": "{T}：あなたがコントロールしている伝説のクリーチャーやプレインズウォーカーの色の中の好きな色１色のマナ１点を加える。"
+  },
+  "normal": "https://cards.scryfall.io/normal/front/6/6/66024e69-ad60-4c9a-a0ca-da138d33ad80.jpg?1783934955",
+  "small": "https://cards.scryfall.io/small/front/6/6/66024e69-ad60-4c9a-a0ca-da138d33ad80.jpg?1783934955"
+ },
+ "Omniscience": {
+  "artist": "Jason Chan",
+  "ja": {
+   "artist": "Jason Chan",
+   "name": "全知",
+   "normal": "https://cards.scryfall.io/normal/front/d/c/dc6c2636-1743-4449-b43a-aef5b09a6da2.jpg?1782931059",
+   "small": "https://cards.scryfall.io/small/front/d/c/dc6c2636-1743-4449-b43a-aef5b09a6da2.jpg?1782931059",
+   "text": "あなたは、あなたの手札から呪文を、それらのマナ・コストを支払うことなく唱えてもよい。"
+  },
+  "normal": "https://cards.scryfall.io/normal/front/d/3/d33d91d0-1506-45e4-9def-975bf901815e.jpg?1783909079",
+  "small": "https://cards.scryfall.io/small/front/d/3/d33d91d0-1506-45e4-9def-975bf901815e.jpg?1783909079"
  },
  "Plains": {
   "artist": "Shahab Alizadeh",
@@ -379,6 +461,42 @@
   },
   "normal": "https://cards.scryfall.io/normal/front/3/d/3de55b97-059c-4d7b-afd0-44fd8380df4c.jpg?1787562986",
   "small": "https://cards.scryfall.io/small/front/3/d/3de55b97-059c-4d7b-afd0-44fd8380df4c.jpg?1787562986"
+ },
+ "Terror of the Peaks": {
+  "artist": "Joshua Raphael",
+  "ja": {
+   "artist": "Joshua Raphael",
+   "name": "峰の恐怖",
+   "normal": "https://cards.scryfall.io/normal/front/4/f/4f2d5ab2-6541-4cdd-adf2-959576af832d.jpg?1782795878",
+   "small": "https://cards.scryfall.io/small/front/4/f/4f2d5ab2-6541-4cdd-adf2-959576af832d.jpg?1782795878",
+   "text": "飛行\n対戦相手が峰の恐怖を対象として呪文を唱えるためのコストはライフ３点だけ多くなる。\nこれでないクリーチャー１体があなたのコントロール下で戦場に出るたび、１つを対象とする。峰の恐怖はそれに、その戦場に出たクリーチャーのパワーに等しい点数のダメージを与える。"
+  },
+  "normal": "https://cards.scryfall.io/normal/front/9/0/904ff94a-4db4-44a6-8593-89c32905b3fc.jpg?1783911813",
+  "small": "https://cards.scryfall.io/small/front/9/0/904ff94a-4db4-44a6-8593-89c32905b3fc.jpg?1783911813"
+ },
+ "Thassa's Oracle": {
+  "artist": "Jesper Ejsing",
+  "ja": {
+   "artist": "Jesper Ejsing",
+   "name": "タッサの神託者",
+   "normal": "https://cards.scryfall.io/normal/front/5/b/5bc47197-a561-4fdb-8324-88a5ce274926.jpg?1782911620",
+   "small": "https://cards.scryfall.io/small/front/5/b/5bc47197-a561-4fdb-8324-88a5ce274926.jpg?1782911620",
+   "text": "タッサの神託者が戦場に出たとき、あなたのライブラリーの一番上からＸ枚のカードを見る。Ｘはあなたの青への信心に等しい。そのうち最大１枚をあなたのライブラリーの一番上に置き、残りをあなたのライブラリーの一番下に無作為の順番で置く。Ｘの値があなたのライブラリーにあるカードの枚数以上であるなら、あなたはこのゲームに勝利する。（あなたの青への信心とは、あなたがコントロールしているパーマネントのマナ・コストに含まれる{U}の総数である。）"
+  },
+  "normal": "https://cards.scryfall.io/normal/front/7/2/726e8b29-13e9-4138-b6a9-d2a0d8188d1c.jpg?1783931575",
+  "small": "https://cards.scryfall.io/small/front/7/2/726e8b29-13e9-4138-b6a9-d2a0d8188d1c.jpg?1783931575"
+ },
+ "Uthros, Titanic Godcore": {
+  "artist": "Adam Paquette",
+  "ja": {
+   "artist": "Adam Paquette",
+   "name": "巨大な神核、ウスロス",
+   "normal": "https://cards.scryfall.io/normal/front/d/1/d1ce21cd-c1e0-4d6d-9225-d8ee54f72b26.jpg?1782766903",
+   "small": "https://cards.scryfall.io/small/front/d/1/d1ce21cd-c1e0-4d6d-9225-d8ee54f72b26.jpg?1782766903",
+   "text": "This land enters tapped.\n{T}: Add {U}.\nStation (Tap another creature you control: Put charge counters equal to its power on this Planet. Station only as a sorcery.)\n12+ | {U}, {T}: Add {U} for each artifact you control."
+  },
+  "normal": "https://cards.scryfall.io/normal/front/1/1/11da39d6-cfa6-498d-91b1-11454cc7e5a3.jpg?1783905913",
+  "small": "https://cards.scryfall.io/small/front/1/1/11da39d6-cfa6-498d-91b1-11454cc7e5a3.jpg?1783905913"
  },
  "Vampire Nighthawk": {
   "artist": "Jason Chan",

@@ -78,6 +78,18 @@ describe("solution steps", () => {
     expect(matchSolutionStep(d, wrongKind)).toBeNull();
   });
 
+  it("prefers the recorded index when several options share the same label", () => {
+    const d = makeDecision({
+      kind: "CHOOSE_ENTITY",
+      options: [
+        { id: "e_1", label: "Mox Amber (Battlefield, p1)", ref: null },
+        { id: "e_2", label: "Mox Amber (Battlefield, p1)", ref: null },
+      ],
+    });
+    const step: SolutionStep = { kind: "CHOOSE_ENTITY", indexes: [1], labels: ["Mox Amber (Battlefield, p1)"] };
+    expect(matchSolutionStep(d, step)).toEqual(["e_2"]);
+  });
+
   it("validates solution steps arrays and PuzzleSolution wrappers", () => {
     const steps: SolutionStep[] = [
       { kind: "PRIORITY", indexes: [1], labels: ["Mountain [1] — {T}: Add {R}."] },

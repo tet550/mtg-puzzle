@@ -1,5 +1,6 @@
 package mtgpuzzle.adapter;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -40,6 +41,8 @@ import forge.game.event.GameEventSpellResolved;
 import forge.game.event.GameEventTurnBegan;
 import forge.game.event.GameEventTurnPhase;
 import forge.game.spellability.SpellAbilityStackInstance;
+import forge.game.phase.PhaseHandler;
+import forge.game.phase.PhaseType;
 import forge.game.player.IGameEntitiesFactory;
 import forge.game.player.Player;
 import forge.game.player.PlayerController;
@@ -396,6 +399,7 @@ public final class ForgeSession implements AutoCloseable {
             match.startGame(g, () -> {
                 // ゲームスレッド上なので同期実行される。カードを作るときに日本語の訳の対応表ができるよう、日本語にしておく
                 Ja.run(() -> state.applyToGame(g));
+                setMainPhaseCount(g.getPhaseHandler());
                 startTurn = g.getPhaseHandler().getTurn();
                 mapInstances(g);
                 logCursor = g.getGameLog().getAllEntries().size();
@@ -406,6 +410,23 @@ public final class ForgeSession implements AutoCloseable {
             // reset / close
         } catch (Throwable t) {
             ch.failed(t);
+        }
+    }
+
+    /**
+     * このターンに始まったメイン・フェイズの数を、開始フェイズに合わせる。
+     * applyToGame（PhaseHandler.devModeSet）はフェイズの開始処理を通らないため、数が 0 のままになる。
+     * 0 のままだと、メイン 1 から始めた問題で「第2メイン・フェイズの開始時」の誘発（救助のけだもの、コーナ など）が起きない
+     */
+    static void setMainPhaseCount(PhaseHandler ph) {
+        PhaseType phase = ph.getPhase();
+        int count = phase == null || phase.isBefore(PhaseType.MAIN1) ? 0 : phase.isBefore(PhaseType.MAIN2) ? 1 : 2;
+        try {
+            Field f = PhaseHandler.class.getDeclaredField("nMainsThisTurn");
+            f.setAccessible(true);
+            f.setInt(ph, count);
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            System.err.println("メイン・フェイズの数を直せません: " + e);
         }
     }
 

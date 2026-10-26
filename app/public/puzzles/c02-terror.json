@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "title": "コンボ問題 2：峰の恐怖と執政の往復",
+  "description": "《救助のけだもの、コーナ》は第2メイン・フェイズの開始時にタップ状態なら、手札のパーマネント・カードを戦場に出せます。《巨大な神核、ウスロス》の「配備」でコーナをタップし、《全知》から《峰の恐怖》と《マラング川の執政》2枚で20点を削り切りましょう。",
+  "engine": {
+    "type": "forge",
+    "version": "2.0.15"
+  },
+  "game": {
+    "activePlayer": "p1",
+    "phase": "main1",
+    "players": [
+      {
+        "id": "p1",
+        "life": 20,
+        "hand": [
+          {
+            "id": "c1",
+            "cardId": "Kona, Rescue Beastie"
+          },
+          {
+            "id": "c2",
+            "cardId": "Omniscience"
+          },
+          {
+            "id": "c3",
+            "cardId": "Terror of the Peaks"
+          },
+          {
+            "id": "c4",
+            "cardId": "Marang River Regent"
+          },
+          {
+            "id": "c5",
+            "cardId": "Marang River Regent"
+          }
+        ],
+        "battlefield": [
+          {
+            "id": "c6",
+            "cardId": "Uthros, Titanic Godcore"
+          },
+          {
+            "id": "c7",
+            "cardId": "Forest"
+          },
+          {
+            "id": "c8",
+            "cardId": "Island"
+          },
+          {
+            "id": "c9",
+            "cardId": "Island"
+          }
+        ],
+        "library": [
+          {
+            "id": "p1L0",
+            "cardId": "Island"
+          },
+          {
+            "id": "p1L1",
+            "cardId": "Island"
+          },
+          {
+            "id": "p1L2",
+            "cardId": "Island"
+          }
+        ]
+      },
+      {
+        "id": "p2",
+        "life": 20,
+        "library": [
+          {
+            "id": "p2L0",
+            "cardId": "Plains"
+          },
+          {
+            "id": "p2L1",
+            "cardId": "Plains"
+          },
+          {
+            "id": "p2L2",
+            "cardId": "Plains"
+          }
+        ]
+      }
+    ]
+  },
+  "goal": {
+    "type": "win",
+    "player": "p1",
+    "deadline": "current_turn"
+  },
+  "opponent": {
+    "policy": "pass",
+    "block": "minimize"
+  }
+}

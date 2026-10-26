@@ -77,6 +77,18 @@ const PUZZLE_META: Record<string, PuzzleMeta> = {
     life: [10, 6],
     series: "Easy #05",
   },
+  "c01-oracle": {
+    cards: ["Thassa's Oracle", "Kasmina, Enigma Sage", "Jace's Machinations"],
+    colors: "{G}{U}",
+    life: [20, 20],
+    series: "Combo #01",
+  },
+  "c02-terror": {
+    cards: ["Terror of the Peaks", "Marang River Regent", "Kona, Rescue Beastie"],
+    colors: "{G}{U}{R}",
+    life: [20, 20],
+    series: "Combo #02",
+  },
   "c03-showoff": {
     cards: ["Slickshot Show-Off", "Full Bore", "Callous Sell-Sword"],
     colors: "{R}",

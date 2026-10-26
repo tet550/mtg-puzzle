@@ -83,9 +83,14 @@ export function matchSolutionStep(d: Decision, step: SolutionStep): string[] | n
   for (let i = 0; i < count; i++) {
     const wantLabel = step.labels[i];
     const wantIdx = step.indexes[i];
-    let found = wantLabel !== undefined
-      ? d.options.find((o) => !picked.has(o.id) && norm(o.label) === norm(wantLabel))
+    // 同じラベルの選択肢が複数ある（同名カード 2 枚など）ときは、記録した位置の選択肢を優先する
+    const atIdx = typeof wantIdx === "number" ? d.options[wantIdx] : undefined;
+    let found = wantLabel !== undefined && atIdx && !picked.has(atIdx.id) && norm(atIdx.label) === norm(wantLabel)
+      ? atIdx
       : undefined;
+    if (!found && wantLabel !== undefined) {
+      found = d.options.find((o) => !picked.has(o.id) && norm(o.label) === norm(wantLabel));
+    }
     if (!found && wantLabel !== undefined) {
       // "c2: Heartfire Hero" や "Burst Lightning [2] — ..." のようにインスタンス ID や番号が異なる同種カードへのフォールバック
       const targetNoInst = normNoInst(wantLabel);

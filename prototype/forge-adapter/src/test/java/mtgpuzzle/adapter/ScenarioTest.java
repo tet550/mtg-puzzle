@@ -554,6 +554,28 @@ class ScenarioTest {
     }
 
     @Test
+    void secondMainPhaseTriggerFiresWhenStartingInMain1() throws Exception {
+        // メイン 1 から始めても、メイン 2 が「第2メイン・フェイズ」として数えられる（救助のけだもの、コーナ の生存）
+        PuzzleDefinition p = customPuzzle(
+                List.of("Grizzly Bears"),
+                List.of("Kona, Rescue Beastie"),
+                List.of(),
+                List.of("Island"),
+                20,
+                List.of());
+        p.game.players.get(0).battlefield.get(0).tapped = true;
+        try (ForgeSession s = ForgeSession.load(p)) {
+            for (int i = 0; i < 6 && s.getPendingDecision() != null
+                    && s.getPendingDecision().kind() == Decision.Kind.PRIORITY; i++) {
+                s.submit("pass");
+            }
+            Decision d = expect(s, Decision.Kind.CHOOSE_ENTITY);
+            assertEquals("MAIN2", s.getState().phase());
+            assertNotNull(d.findByLabelPrefix("Grizzly Bears"), d.toString());
+        }
+    }
+
+    @Test
     void dividedDamageAsksForAllocation() throws Exception {
         PuzzleDefinition p = customPuzzle(
                 List.of("Pyrotechnics"),

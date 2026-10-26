@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "title": "コンボ問題 1：神託者と無限への突入",
+  "description": "《ジェイスの策謀》で生まれたジェイス・トークンは《謎の賢者、カズミナ》の忠誠度能力を得ます。ライブラリーを引き切り、《タッサの神託者》で特殊勝利しましょう。",
+  "engine": {
+    "type": "forge",
+    "version": "2.0.15"
+  },
+  "game": {
+    "activePlayer": "p1",
+    "phase": "main1",
+    "players": [
+      {
+        "id": "p1",
+        "life": 20,
+        "hand": [
+          {
+            "id": "c1",
+            "cardId": "Jace's Machinations"
+          }
+        ],
+        "battlefield": [
+          {
+            "id": "c2",
+            "cardId": "Kasmina, Enigma Sage",
+            "counters": {
+              "LOYALTY": 2
+            }
+          },
+          {
+            "id": "c3",
+            "cardId": "Island"
+          },
+          {
+            "id": "c4",
+            "cardId": "Island"
+          },
+          {
+            "id": "c5",
+            "cardId": "Forest"
+          }
+        ],
+        "library": [
+          {
+            "id": "p1L0",
+            "cardId": "Island"
+          },
+          {
+            "id": "p1L1",
+            "cardId": "Thassa's Oracle"
+          },
+          {
+            "id": "p1L2",
+            "cardId": "Mox Amber"
+          },
+          {
+            "id": "p1L3",
+            "cardId": "Mox Amber"
+          },
+          {
+            "id": "p1L4",
+            "cardId": "Enter the Infinite"
+          }
+        ]
+      },
+      {
+        "id": "p2",
+        "life": 20,
+        "library": [
+          {
+            "id": "p2L0",
+            "cardId": "Plains"
+          },
+          {
+            "id": "p2L1",
+            "cardId": "Plains"
+          },
+          {
+            "id": "p2L2",
+            "cardId": "Plains"
+          }
+        ]
+      }
+    ]
+  },
+  "goal": {
+    "type": "win",
+    "player": "p1",
+    "deadline": "current_turn"
+  },
+  "opponent": {
+    "policy": "pass",
+    "block": "minimize"
+  }
+}
