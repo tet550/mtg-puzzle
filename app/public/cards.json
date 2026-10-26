@@ -1,4 +1,16 @@
 {
+ "Agatha's Soul Cauldron": {
+  "artist": "Jason A. Engle",
+  "ja": {
+   "artist": "Jason A. Engle",
+   "name": "アガサの魂の大釜",
+   "normal": "https://cards.scryfall.io/normal/front/b/b/bb6cb995-d0d8-4d4b-bc1f-ac0276ddce23.jpg?1782812946",
+   "small": "https://cards.scryfall.io/small/front/b/b/bb6cb995-d0d8-4d4b-bc1f-ac0276ddce23.jpg?1782812946",
+   "text": "あなたがコントロールしているクリーチャーの能力を起動するためにマナを望む色のマナであるかのように支払ってもよい。\nあなたがコントロールしていて＋１/＋１カウンターが置かれているすべてのクリーチャーは、アガサの魂の大釜によって追放されているすべてのクリーチャー・カードのすべての起動型能力を持つ。\n{T}：墓地にあるカード１枚を対象とする。それを追放する。これによりクリーチャー・カード１枚が追放されたとき、あなたがコントロールしているクリーチャー１体を対象とする。それの上に＋１/＋１カウンター１個を置く。"
+  },
+  "normal": "https://cards.scryfall.io/normal/front/0/1/019b51b0-e5c6-4208-922b-7736686dddcd.jpg?1783915059",
+  "small": "https://cards.scryfall.io/small/front/0/1/019b51b0-e5c6-4208-922b-7736686dddcd.jpg?1783915059"
+ },
  "Ajani's Pridemate": {
   "artist": "Kevin Sidharta",
   "ja": {
@@ -110,6 +122,18 @@
   "artist": "Clint Lockwood",
   "normal": "https://cards.scryfall.io/normal/front/1/4/1481e938-7763-4109-b313-2a21053a82df.jpg?1789754721",
   "small": "https://cards.scryfall.io/small/front/1/4/1481e938-7763-4109-b313-2a21053a82df.jpg?1789754721"
+ },
+ "Does Machines": {
+  "artist": "Aeron Ng",
+  "ja": {
+   "artist": "Aeron Ng",
+   "name": "メカの天才",
+   "normal": "https://cards.scryfall.io/normal/front/8/4/8451a51a-5c7a-406c-bd99-4fdfa114de39.jpg?1782761125",
+   "small": "https://cards.scryfall.io/small/front/8/4/8451a51a-5c7a-406c-bd99-4fdfa114de39.jpg?1782761125",
+   "text": "（次のレベルになることはソーサリーとして行う。そのレベルの能力を得る。）\nこのクラスが戦場に出たとき、カード２枚を切削し、カード２枚を引き、その後、カード２枚を捨てる。\n{1U}：レベル２"
+  },
+  "normal": "https://cards.scryfall.io/normal/front/9/8/989da63a-2cbd-41a9-9bbb-99f4ad1c6a25.jpg?1783904118",
+  "small": "https://cards.scryfall.io/small/front/9/8/989da63a-2cbd-41a9-9bbb-99f4ad1c6a25.jpg?1783904118"
  },
  "Emberheart Challenger": {
   "artist": "Chris Rahn",
@@ -344,6 +368,18 @@
   "normal": "https://cards.scryfall.io/normal/front/f/8/f890bdc7-32e6-4492-bac7-7cabf54a8bfd.jpg?1783907393",
   "small": "https://cards.scryfall.io/small/front/f/8/f890bdc7-32e6-4492-bac7-7cabf54a8bfd.jpg?1783907393"
  },
+ "Mona Lisa, Science Geek": {
+  "artist": "Oriana Menendez",
+  "ja": {
+   "artist": "Oriana Menendez",
+   "name": "科学オタク、モナリザ",
+   "normal": "https://cards.scryfall.io/normal/front/d/a/da1c1620-6faf-4f12-af62-01efb73bf8ff.jpg?1782760784",
+   "small": "https://cards.scryfall.io/small/front/d/a/da1c1620-6faf-4f12-af62-01efb73bf8ff.jpg?1782760784",
+   "text": "到達\n{T}：好きな色１色のマナＸ点を加える。Ｘは、これのパワーに等しい。"
+  },
+  "normal": "https://cards.scryfall.io/normal/front/c/2/c2164204-120c-4dff-86ac-46ca9012ccd9.jpg?1783904085",
+  "small": "https://cards.scryfall.io/small/front/c/2/c2164204-120c-4dff-86ac-46ca9012ccd9.jpg?1783904085"
+ },
  "Monastery Swiftspear": {
   "artist": "Gabor Szikszai",
   "ja": {
@@ -453,6 +489,18 @@
   },
   "normal": "https://cards.scryfall.io/normal/front/b/8/b8c5e74c-96e7-4a1f-93b7-14d776fe4b2d.jpg?1787563091",
   "small": "https://cards.scryfall.io/small/front/b/8/b8c5e74c-96e7-4a1f-93b7-14d776fe4b2d.jpg?1787563091"
+ },
+ "Sewer-veillance Cam": {
+  "artist": "Nicholas Gregory",
+  "ja": {
+   "artist": "Nicholas Gregory",
+   "name": "監視亀ラ",
+   "normal": "https://cards.scryfall.io/normal/front/3/4/34b51906-fb4d-4124-a908-35027a7d7147.jpg?1782761056",
+   "small": "https://cards.scryfall.io/small/front/3/4/34b51906-fb4d-4124-a908-35027a7d7147.jpg?1782761056",
+   "text": "瞬速\nこのアーティファクトが戦場に出たか戦場を離れたとき、クリーチャー１体を対象とする。それをタップまたはアンタップしてもよい。\n{3U}, このアーティファクトを生け贄に捧げる：カード２枚を引く。"
+  },
+  "normal": "https://cards.scryfall.io/normal/front/a/b/ab47a37b-b66d-4f70-9bf0-4d5ed6b518f3.jpg?1783904112",
+  "small": "https://cards.scryfall.io/small/front/a/b/ab47a37b-b66d-4f70-9bf0-4d5ed6b518f3.jpg?1783904112"
  },
  "Sheltered by Ghosts": {
   "artist": "Mirko Failoni",
