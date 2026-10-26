@@ -16,6 +16,8 @@ export interface CardDef {
   cardId: string;
   tapped?: boolean;
   summoningSick?: boolean;
+  /** 計画済み（追放領域のカードだけ。後のターンにソーサリーとしてマナ・コストを支払わずに唱えられる） */
+  plotted?: boolean;
   counters?: Record<string, number>;
 }
 

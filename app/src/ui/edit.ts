@@ -266,6 +266,8 @@ export function moveCardInPuzzle(
   const srcList = next.game.players[loc.playerIndex][loc.zone]!;
   const [card] = srcList.splice(loc.index, 1);
   // 戦場以外の領域へ移す場合はタップ・召喚酔い・カウンターを外す。戦場へ移す場合は初期カウンターを補完する
+  // 計画済みは追放領域だけの状態なので、追放領域から出すときに外す
+  if (targetZone !== "exile") delete card.plotted;
   if (targetZone !== "battlefield") {
     delete card.tapped;
     delete card.summoningSick;
@@ -306,7 +308,7 @@ export function moveCardOrderInZone(
 export function toggleCardProp(
   p: PuzzleJson,
   instanceId: string,
-  prop: "tapped" | "summoningSick",
+  prop: "tapped" | "summoningSick" | "plotted",
 ): PuzzleJson {
   const next = clonePuzzle(p);
   const loc = findCardLocation(next, instanceId);
@@ -944,7 +946,7 @@ export class EditPage {
         )
       : null;
 
-    // 戦場での状態（タップ・召喚酔い）とカウンター
+    // 戦場での状態（タップ・召喚酔い）とカウンター。追放領域では計画済み
     const stateRow = zone === "battlefield"
       ? h("div.erow", null,
           h("span.elbl", null, t("editor.card.state")),
@@ -963,7 +965,18 @@ export class EditPage {
               : null,
           ),
         )
-      : null;
+      : zone === "exile"
+        ? h("div.erow", null,
+            h("span.elbl", null, t("editor.card.state")),
+            h("div.ebtns", null,
+              h("button" + (card.plotted ? ".on" : ""), {
+                type: "button",
+                "data-toggle": "plotted",
+                onclick: () => this.updatePuzzle(toggleCardProp(this.puzzle, card.id, "plotted")),
+              }, t("card.plotted")),
+            ),
+          )
+        : null;
 
     const countersRow = zone === "battlefield"
       ? h("div.erow", null,

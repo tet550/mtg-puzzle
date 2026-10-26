@@ -77,6 +77,12 @@ const PUZZLE_META: Record<string, PuzzleMeta> = {
     life: [10, 6],
     series: "Easy #05",
   },
+  "c03-showoff": {
+    cards: ["Slickshot Show-Off", "Full Bore", "Callous Sell-Sword"],
+    colors: "{R}",
+    life: [20, 18],
+    series: "Combo #03",
+  },
 };
 
 const HERO_FALLBACK_CARDS = [

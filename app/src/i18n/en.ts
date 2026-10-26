@@ -110,6 +110,7 @@ export const en: Messages = {
   "card.tapped": " (tapped)",
   "card.token": "Token",
   "card.sick": "Summoning sick",
+  "card.plotted": "Plotted",
   "card.owner": "Owner {owner}",
   "card.damage": "Damage {n}",
   "card.noText": "(no rules text)",

@@ -35,6 +35,41 @@
   "normal": "https://cards.scryfall.io/normal/front/c/e/ce860ed4-a5bd-4347-9eab-dd716ea84db1.jpg?1783909112",
   "small": "https://cards.scryfall.io/small/front/c/e/ce860ed4-a5bd-4347-9eab-dd716ea84db1.jpg?1783909112"
  },
+ "Bulk Up": {
+  "artist": "Warren Mahy",
+  "ja": {
+   "artist": "Warren Mahy",
+   "name": "かさ上げ",
+   "normal": "https://cards.scryfall.io/normal/front/f/1/f10ba0f8-9ecf-40f8-89a5-254bf4364a25.jpg?1791683822",
+   "small": "https://cards.scryfall.io/small/front/f/1/f10ba0f8-9ecf-40f8-89a5-254bf4364a25.jpg?1791683822",
+   "text": "クリーチャー１体を対象とする。ターン終了時まで、それのパワーを２倍にする。\nフラッシュバック{4}{R}{R}（あなたの墓地にあるこのカードをフラッシュバック・コストで唱えてもよい。その後、これを追放する。）"
+  },
+  "normal": "https://cards.scryfall.io/normal/front/9/7/977dcc50-da10-4281-b522-9240c1204f5d.jpg?1783909106",
+  "small": "https://cards.scryfall.io/small/front/9/7/977dcc50-da10-4281-b522-9240c1204f5d.jpg?1783909106"
+ },
+ "Burst Lightning": {
+  "artist": "Vance Kovacs",
+  "ja": {
+   "artist": "Vance Kovacs",
+   "name": "噴出の稲妻",
+   "normal": "https://cards.scryfall.io/normal/front/f/7/f7d51b12-7a6f-43dd-8b13-bf92664f6983.jpg?1791688091",
+   "small": "https://cards.scryfall.io/small/front/f/7/f7d51b12-7a6f-43dd-8b13-bf92664f6983.jpg?1791688091",
+   "text": "キッカー{4}（この呪文を唱えるに際し、追加で{4}を支払ってもよい。）\n１つを対象とする。噴出の稲妻はそれに２点のダメージを与える。この呪文がキッカーされていたなら、これは代わりに４点のダメージを与える。"
+  },
+  "normal": "https://cards.scryfall.io/normal/front/a/e/aec5d380-d354-4750-931a-6c91853e2edc.jpg?1783909068",
+  "small": "https://cards.scryfall.io/small/front/a/e/aec5d380-d354-4750-931a-6c91853e2edc.jpg?1783909068"
+ },
+ "Callous Sell-Sword": {
+  "artist": "Valera Lutfullina",
+  "ja": {
+   "artist": "Valera Lutfullina",
+   "normal": "https://cards.scryfall.io/normal/front/4/8/48bd368e-3bb0-4186-b15b-3fdc725e499d.jpg?1782813494",
+   "small": "https://cards.scryfall.io/small/front/4/8/48bd368e-3bb0-4186-b15b-3fdc725e499d.jpg?1782813494",
+   "text": "無感情の売剣は、このターンにあなたのコントロール下で死亡したクリーチャー１体につき１個の＋１/＋１カウンターが置かれた状態で戦場に出る。"
+  },
+  "normal": "https://cards.scryfall.io/normal/front/7/7/770ee3da-d33e-466f-9a2e-ad2d08ef5012.jpg?1783915066",
+  "small": "https://cards.scryfall.io/small/front/7/7/770ee3da-d33e-466f-9a2e-ad2d08ef5012.jpg?1783915066"
+ },
  "Chrome Dome": {
   "artist": "Mathias Kollros",
   "ja": {
@@ -46,6 +81,18 @@
   },
   "normal": "https://cards.scryfall.io/normal/front/9/9/994a01eb-2689-49e7-be23-0713da9da9a8.jpg?1783904069",
   "small": "https://cards.scryfall.io/small/front/9/9/994a01eb-2689-49e7-be23-0713da9da9a8.jpg?1783904069"
+ },
+ "Emberheart Challenger": {
+  "artist": "Chris Rahn",
+  "ja": {
+   "artist": "Chris Rahn",
+   "name": "熾火心の挑戦者",
+   "normal": "https://cards.scryfall.io/normal/front/5/5/5560e0de-b7cd-4d29-a787-972b43b7e20d.jpg?1782789399",
+   "small": "https://cards.scryfall.io/small/front/5/5/5560e0de-b7cd-4d29-a787-972b43b7e20d.jpg?1782789399",
+   "text": "速攻\n果敢（あなたがクリーチャーでない呪文１つを唱えるたび、ターン終了時まで、このクリーチャーは＋１/＋１の修整を受ける。）\n雄姿 ― 熾火心の挑戦者が各ターン内で初めてあなたがコントロールしている呪文や能力の対象になるたび、あなたのライブラリーの一番上にあるカード１枚を追放する。ターン終了時まで、そのカードをプレイしてもよい。"
+  },
+  "normal": "https://cards.scryfall.io/normal/front/0/0/0035082e-bb86-4f95-be48-ffc87fe5286d.jpg?1783910821",
+  "small": "https://cards.scryfall.io/small/front/0/0/0035082e-bb86-4f95-be48-ffc87fe5286d.jpg?1783910821"
  },
  "Fanatical Firebrand": {
   "artist": "Wayne Reynolds",
@@ -69,6 +116,18 @@
   },
   "normal": "https://cards.scryfall.io/normal/front/2/e/2e781bfd-f8cb-4d20-b977-4359f3a21311.jpg?1791578317",
   "small": "https://cards.scryfall.io/small/front/2/e/2e781bfd-f8cb-4d20-b977-4359f3a21311.jpg?1791578317"
+ },
+ "Full Bore": {
+  "artist": "Olivier Bernard",
+  "ja": {
+   "artist": "Olivier Bernard",
+   "name": "急抗直下",
+   "normal": "https://cards.scryfall.io/normal/front/6/f/6fcc1f6d-888c-4782-a3ad-4cff193c07b3.jpg?1782767443",
+   "small": "https://cards.scryfall.io/small/front/6/f/6fcc1f6d-888c-4782-a3ad-4cff193c07b3.jpg?1782767443",
+   "text": "Target creature you control gets +3/+2 until end of turn. If that creature was cast for its warp cost, it also gains trample and haste until end of turn."
+  },
+  "normal": "https://cards.scryfall.io/normal/front/c/f/cfee64ef-d22d-4024-bc65-59cbd1731d1c.jpg?1783905954",
+  "small": "https://cards.scryfall.io/small/front/c/f/cfee64ef-d22d-4024-bc65-59cbd1731d1c.jpg?1783905954"
  },
  "Giant Growth": {
   "artist": "Andreia Ugrai",
@@ -163,6 +222,11 @@
   },
   "normal": "https://cards.scryfall.io/normal/front/6/a/6a0b230b-d391-4998-a3f7-7b158a0ec2cd.jpg?1783909057",
   "small": "https://cards.scryfall.io/small/front/6/a/6a0b230b-d391-4998-a3f7-7b158a0ec2cd.jpg?1783909057"
+ },
+ "Map Token": {
+  "artist": "Francesca Baerald",
+  "normal": "https://cards.scryfall.io/normal/front/9/1/91613970-c25c-4959-b5b0-b6e2a7657634.jpg?1789737819",
+  "small": "https://cards.scryfall.io/small/front/9/1/91613970-c25c-4959-b5b0-b6e2a7657634.jpg?1789737819"
  },
  "Monastery Swiftspear": {
   "artist": "Gabor Szikszai",
@@ -268,6 +332,30 @@
   },
   "normal": "https://cards.scryfall.io/normal/front/b/2/b23900fb-efe9-43ab-9f67-4545dd01fb9c.jpg?1783903007",
   "small": "https://cards.scryfall.io/small/front/b/2/b23900fb-efe9-43ab-9f67-4545dd01fb9c.jpg?1783903007"
+ },
+ "Slickshot Show-Off": {
+  "artist": "Augusto Quirino",
+  "ja": {
+   "artist": "Augusto Quirino",
+   "name": "精鋭射手団の目立ちたがり",
+   "normal": "https://cards.scryfall.io/normal/front/0/0/00e413f4-5dce-4fd4-bfa1-83c6b778c810.jpg?1782795886",
+   "small": "https://cards.scryfall.io/small/front/0/0/00e413f4-5dce-4fd4-bfa1-83c6b778c810.jpg?1782795886",
+   "text": "飛行、速攻\nあなたがクリーチャーでない呪文１つを唱えるたび、ターン終了時まで、精鋭射手団の目立ちたがりは＋２/＋０の修整を受ける。\n計画{1}{R}"
+  },
+  "normal": "https://cards.scryfall.io/normal/front/7/0/7054012b-4f9d-44a0-aaf9-7fd3bddc7b2d.jpg?1783911814",
+  "small": "https://cards.scryfall.io/small/front/7/0/7054012b-4f9d-44a0-aaf9-7fd3bddc7b2d.jpg?1783911814"
+ },
+ "Spyglass Siren": {
+  "artist": "David Astruga",
+  "ja": {
+   "artist": "David Astruga",
+   "name": "遠眼鏡のセイレーン",
+   "normal": "https://cards.scryfall.io/normal/front/6/e/6e9556be-5aaa-460b-bd55-8c39b3053467.jpg?1782808748",
+   "small": "https://cards.scryfall.io/small/front/6/e/6e9556be-5aaa-460b-bd55-8c39b3053467.jpg?1782808748",
+   "text": "飛行\n遠眼鏡のセイレーンが戦場に出たとき、地図・トークン１つを生成する。（それは「{1}, {T}, このアーティファクトを生け贄に捧げる：あなたがコントロールしているクリーチャー１体を対象とする。それは探検を行う。起動はソーサリーとしてのみ行う。」を持つアーティファクトである。）"
+  },
+  "normal": "https://cards.scryfall.io/normal/front/4/1/41e54343-95e5-4dc4-9f18-e4a415fe5e0a.jpg?1783913788",
+  "small": "https://cards.scryfall.io/small/front/4/1/41e54343-95e5-4dc4-9f18-e4a415fe5e0a.jpg?1783913788"
  },
  "Swamp": {
   "artist": "Maojin Lee",

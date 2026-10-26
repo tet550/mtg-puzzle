@@ -112,6 +112,7 @@ export const ja = {
   "card.tapped": "（タップ）",
   "card.token": "トークン",
   "card.sick": "召喚酔い",
+  "card.plotted": "計画済み",
   "card.owner": "持ち主 {owner}",
   "card.damage": "ダメージ {n}",
   "card.noText": "（ルール文なし）",

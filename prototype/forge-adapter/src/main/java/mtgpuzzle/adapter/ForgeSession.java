@@ -435,6 +435,9 @@ public final class ForgeSession implements AutoCloseable {
                 return;
             }
             instanceToForgeId.put(defs.get(i).id, c.getId());
+            if (defs.get(i).plotted && zone == ZoneType.Exile) {
+                c.setPlotted(true);
+            }
         }
     }
 

@@ -138,6 +138,11 @@ def token_image(name):
     return images(cards[0], base) if cards else None
 
 
+def strip_ruby(text):
+    """Scryfall の日本語名に付いている読み仮名を外す（例: 急（きゅう）抗（こう）直（ちょっ）下（か） → 急抗直下）"""
+    return re.sub(r"（[ぁ-ゖァ-ヺー]+）", "", text)
+
+
 def japanese(name, token=False):
     """日本語版のうち、通常の版で最新のもの（無ければ特殊な版。日本語版が無ければ None）"""
     base = token_base_name(name) if token else name
@@ -151,7 +156,11 @@ def japanese(name, token=False):
         faces = card.get("card_faces") or [card]
         face = next((f for f in faces if token and (f.get("name") or "").lower() == base.lower()), faces[0])
         img = images(card, base if token else None) or {}
-        return {"name": card.get("printed_name") or face.get("printed_name"), "normal": img.get("normal"),
+        printed = strip_ruby(card.get("printed_name") or face.get("printed_name") or "")
+        # 英語のままの名前（出来事カードの 1 面目など、Scryfall に訳が無い）は入れない。画面は Forge の訳を使う
+        if printed.lower() == (face.get("name") or base).lower():
+            printed = None
+        return {"name": printed, "normal": img.get("normal"),
                 "small": img.get("small"), "artist": img.get("artist"),
                 "text": card.get("printed_text") or face.get("printed_text")}
     return None

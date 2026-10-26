@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 1,
+  "title": "コンボ問題 3：目立ちたがりの独演会",
+  "description": "計画済みの《精鋭射手団の目立ちたがり》は、クリーチャーでない呪文を唱えるたび+2/+0の修整を受けます。山3枚で呪文を重ね、戦闘と出来事《Burn Together》で18点を削り切りましょう。",
+  "engine": {
+    "type": "forge",
+    "version": "2.0.15"
+  },
+  "game": {
+    "activePlayer": "p1",
+    "phase": "main1",
+    "players": [
+      {
+        "id": "p1",
+        "life": 20,
+        "hand": [
+          {
+            "id": "c1",
+            "cardId": "Full Bore"
+          },
+          {
+            "id": "c2",
+            "cardId": "Burst Lightning"
+          },
+          {
+            "id": "c3",
+            "cardId": "Callous Sell-Sword"
+          },
+          {
+            "id": "c4",
+            "cardId": "Emberheart Challenger"
+          },
+          {
+            "id": "c5",
+            "cardId": "Bulk Up"
+          }
+        ],
+        "battlefield": [
+          {
+            "id": "c6",
+            "cardId": "Mountain"
+          },
+          {
+            "id": "c7",
+            "cardId": "Mountain"
+          },
+          {
+            "id": "c8",
+            "cardId": "Mountain"
+          }
+        ],
+        "exile": [
+          {
+            "id": "c9",
+            "cardId": "Slickshot Show-Off",
+            "plotted": true
+          }
+        ],
+        "library": [
+          {
+            "id": "p1L0",
+            "cardId": "Island"
+          },
+          {
+            "id": "p1L1",
+            "cardId": "Island"
+          },
+          {
+            "id": "p1L2",
+            "cardId": "Island"
+          }
+        ]
+      },
+      {
+        "id": "p2",
+        "life": 18,
+        "battlefield": [
+          {
+            "id": "c10",
+            "cardId": "Spyglass Siren",
+            "counters": {
+              "P1P1": 1
+            }
+          }
+        ],
+        "library": [
+          {
+            "id": "p2L0",
+            "cardId": "Plains"
+          },
+          {
+            "id": "p2L1",
+            "cardId": "Plains"
+          },
+          {
+            "id": "p2L2",
+            "cardId": "Plains"
+          }
+        ]
+      }
+    ]
+  },
+  "goal": {
+    "type": "win",
+    "player": "p1",
+    "deadline": "current_turn"
+  },
+  "opponent": {
+    "policy": "pass",
+    "block": "minimize"
+  }
+}
