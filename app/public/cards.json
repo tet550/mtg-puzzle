@@ -11,6 +11,18 @@
   "normal": "https://cards.scryfall.io/normal/front/2/2/222c1a68-e34c-4103-b1be-17d4ceaef6ce.jpg?1783909088",
   "small": "https://cards.scryfall.io/small/front/2/2/222c1a68-e34c-4103-b1be-17d4ceaef6ce.jpg?1783909088"
  },
+ "Biotech Specialist": {
+  "artist": "Alexandre Honoré",
+  "ja": {
+   "artist": "Alexandre Honoré",
+   "name": "生体工学の専門家",
+   "normal": "https://cards.scryfall.io/normal/front/d/f/df718983-d46c-4110-9c4c-247ef8e46424.jpg?1782766585",
+   "small": "https://cards.scryfall.io/small/front/d/f/df718983-d46c-4110-9c4c-247ef8e46424.jpg?1782766585",
+   "text": "When this creature enters, create a Lander token.\nWhenever you sacrifice an artifact, this creature deals 2 damage to target opponent."
+  },
+  "normal": "https://cards.scryfall.io/normal/front/1/2/127c221f-94e7-4a0e-a7a6-79ef399862d3.jpg?1783905929",
+  "small": "https://cards.scryfall.io/small/front/1/2/127c221f-94e7-4a0e-a7a6-79ef399862d3.jpg?1783905929"
+ },
  "Bite Down": {
   "artist": "Kitt Lapeña",
   "ja": {
@@ -59,6 +71,18 @@
   "normal": "https://cards.scryfall.io/normal/front/a/e/aec5d380-d354-4750-931a-6c91853e2edc.jpg?1783909068",
   "small": "https://cards.scryfall.io/small/front/a/e/aec5d380-d354-4750-931a-6c91853e2edc.jpg?1783909068"
  },
+ "Callous Inspector": {
+  "artist": "Enishi",
+  "ja": {
+   "artist": "Enishi",
+   "name": "無慈悲な監査官",
+   "normal": "https://cards.scryfall.io/normal/front/2/d/2da5683b-1c5f-472d-a2f7-4ffd5ebad91c.jpg?1784187508",
+   "small": "https://cards.scryfall.io/small/front/2/d/2da5683b-1c5f-472d-a2f7-4ffd5ebad91c.jpg?1784187508",
+   "text": "威迫（このクリーチャーは２体以上のクリーチャーにしかブロックされない。）\nこのクリーチャーが死亡したとき、これはあなたに１点のダメージを与える。手掛かり・トークン１つを生成する。（それは、「{2}, このトークンを生け贄に捧げる：カード１枚を引く。」を持つアーティファクトである。）"
+  },
+  "normal": "https://cards.scryfall.io/normal/front/f/2/f22610e9-6b14-4914-bb67-bd6723bec9aa.jpg?1783904975",
+  "small": "https://cards.scryfall.io/small/front/f/2/f22610e9-6b14-4914-bb67-bd6723bec9aa.jpg?1783904975"
+ },
  "Callous Sell-Sword": {
   "artist": "Valera Lutfullina",
   "ja": {
@@ -81,6 +105,11 @@
   },
   "normal": "https://cards.scryfall.io/normal/front/9/9/994a01eb-2689-49e7-be23-0713da9da9a8.jpg?1783904069",
   "small": "https://cards.scryfall.io/small/front/9/9/994a01eb-2689-49e7-be23-0713da9da9a8.jpg?1783904069"
+ },
+ "Clue Token": {
+  "artist": "Clint Lockwood",
+  "normal": "https://cards.scryfall.io/normal/front/1/4/1481e938-7763-4109-b313-2a21053a82df.jpg?1789754721",
+  "small": "https://cards.scryfall.io/small/front/1/4/1481e938-7763-4109-b313-2a21053a82df.jpg?1789754721"
  },
  "Emberheart Challenger": {
   "artist": "Chris Rahn",
@@ -146,6 +175,18 @@
   "normal": "https://cards.scryfall.io/normal/front/c/f/cfee64ef-d22d-4024-bc65-59cbd1731d1c.jpg?1783905954",
   "small": "https://cards.scryfall.io/small/front/c/f/cfee64ef-d22d-4024-bc65-59cbd1731d1c.jpg?1783905954"
  },
+ "Gene Pollinator": {
+  "artist": "Milivoj Ćeran",
+  "ja": {
+   "artist": "Milivoj Ćeran",
+   "name": "遺伝子送粉機",
+   "normal": "https://cards.scryfall.io/normal/front/3/4/346ff91b-b7f2-4384-9adb-12b6a9a59f34.jpg?1782767234",
+   "small": "https://cards.scryfall.io/small/front/3/4/346ff91b-b7f2-4384-9adb-12b6a9a59f34.jpg?1782767234",
+   "text": "{T}, Tap an untapped permanent you control: Add one mana of any color."
+  },
+  "normal": "https://cards.scryfall.io/normal/front/c/e/ce7a8eec-a029-4ee1-b2d6-405d903d4640.jpg?1783905937",
+  "small": "https://cards.scryfall.io/small/front/c/e/ce7a8eec-a029-4ee1-b2d6-405d903d4640.jpg?1783905937"
+ },
  "Giant Growth": {
   "artist": "Andreia Ugrai",
   "ja": {
@@ -169,6 +210,18 @@
   },
   "normal": "https://cards.scryfall.io/normal/front/5/4/5446e1ba-c745-45b2-ad05-b22abf04daec.jpg?1783917160",
   "small": "https://cards.scryfall.io/small/front/5/4/5446e1ba-c745-45b2-ad05-b22abf04daec.jpg?1783917160"
+ },
+ "Greedy Freebooter": {
+  "artist": "David Palumbo",
+  "ja": {
+   "artist": "David Palumbo",
+   "name": "強欲な掠め盗り",
+   "normal": "https://cards.scryfall.io/normal/front/4/5/45cfda5f-e934-422b-9e5c-2a468fefd49a.jpg?1782808543",
+   "small": "https://cards.scryfall.io/small/front/4/5/45cfda5f-e934-422b-9e5c-2a468fefd49a.jpg?1782808543",
+   "text": "強欲な掠め盗りが死亡したとき、占術１を行い、宝物・トークン１つを生成する。（占術１を行うとは、「あなたのライブラリーの一番上にあるカード１枚を見る。そのカードをあなたのライブラリーの一番下に置いてもよい。」ということである。宝物・トークンは「「{T}, このアーティファクトを生け贄に捧げる：好きな色１色のマナ１点を加える。」を持つアーティファクトである。）"
+  },
+  "normal": "https://cards.scryfall.io/normal/front/6/9/692fe4e8-13b4-4bec-938e-a8073a7fbd71.jpg?1783913776",
+  "small": "https://cards.scryfall.io/small/front/6/9/692fe4e8-13b4-4bec-938e-a8073a7fbd71.jpg?1783913776"
  },
  "Grizzly Bears": {
   "artist": "D. J. Cleland-Hura",
@@ -264,6 +317,11 @@
   "normal": "https://cards.scryfall.io/normal/front/6/f/6f035294-2787-4719-8520-227bf03e84e7.jpg?1783909453",
   "small": "https://cards.scryfall.io/small/front/6/f/6f035294-2787-4719-8520-227bf03e84e7.jpg?1783909453"
  },
+ "Lander Token": {
+  "artist": "Jorge Jacinto",
+  "normal": "https://cards.scryfall.io/normal/front/8/5/85ef1950-219f-401b-8ff5-914f9aaec122.jpg?1783905784",
+  "small": "https://cards.scryfall.io/small/front/8/5/85ef1950-219f-401b-8ff5-914f9aaec122.jpg?1783905784"
+ },
  "Llanowar Elves": {
   "artist": "Kev Walker",
   "ja": {
@@ -320,6 +378,23 @@
   },
   "normal": "https://cards.scryfall.io/normal/front/6/6/66024e69-ad60-4c9a-a0ca-da138d33ad80.jpg?1783934955",
   "small": "https://cards.scryfall.io/small/front/6/6/66024e69-ad60-4c9a-a0ca-da138d33ad80.jpg?1783934955"
+ },
+ "Mutagen Man, Living Ooze": {
+  "artist": "Ignatius Budi",
+  "ja": {
+   "artist": "Ignatius Budi",
+   "name": "生けるスライム、ミュータンジェンマン",
+   "normal": "https://cards.scryfall.io/normal/front/1/e/1e8b20b8-8b18-4b9a-8cb4-da99ccf3d417.jpg?1782760778",
+   "small": "https://cards.scryfall.io/small/front/1/e/1e8b20b8-8b18-4b9a-8cb4-da99ccf3d417.jpg?1782760778",
+   "text": "トランプル\nあなたがコントロールしているアーティファクト・トークンの起動型能力を起動するためのコストは{1}少なくなる。\nこれが戦場に出たとき、ミュータンジェン・トークンＸ個を生成する。（それらは、「{1}, {T}, このトークンを生け贄に捧げる：クリーチャー１体を対象とする。それの上に＋１/＋１カウンター１個を置く。起動はソーサリーとしてのみ行う。」を持つアーティファクトである。）"
+  },
+  "normal": "https://cards.scryfall.io/normal/front/9/f/9f9085f0-3702-462c-8c81-b4576236792d.jpg?1783904085",
+  "small": "https://cards.scryfall.io/small/front/9/f/9f9085f0-3702-462c-8c81-b4576236792d.jpg?1783904085"
+ },
+ "Mutagen Token": {
+  "artist": "Madeline Boni",
+  "normal": "https://cards.scryfall.io/normal/front/6/5/6559c423-449c-4e8e-8384-3ce78183e317.jpg?1783904002",
+  "small": "https://cards.scryfall.io/small/front/6/5/6559c423-449c-4e8e-8384-3ce78183e317.jpg?1783904002"
  },
  "Omniscience": {
   "artist": "Jason Chan",
@@ -485,6 +560,40 @@
   },
   "normal": "https://cards.scryfall.io/normal/front/7/2/726e8b29-13e9-4138-b6a9-d2a0d8188d1c.jpg?1783931575",
   "small": "https://cards.scryfall.io/small/front/7/2/726e8b29-13e9-4138-b6a9-d2a0d8188d1c.jpg?1783931575"
+ },
+ "The Sackville-Bagginses": {
+  "artist": "Denman Rooke",
+  "ja": {
+   "artist": "Denman Rooke",
+   "name": "サックビル＝バギンズ一家",
+   "normal": "https://cards.scryfall.io/normal/front/e/4/e4a1fd0e-88fe-4771-9e4e-5c477ee4163c.jpg?1786558193",
+   "small": "https://cards.scryfall.io/small/front/e/4/e4a1fd0e-88fe-4771-9e4e-5c477ee4163c.jpg?1786558193",
+   "text": "サックビル＝バギンズ一家が戦場に出たとき、クリーチャーやアーティファクトでありこれでない１つを生け贄に捧げてもよい。そうしたなら、カード１枚を引き、宝物・トークン１つを生成する。\nあなたがトークン１つを生け贄に捧げるたび、対戦相手１人を対象とする。そのプレイヤーは１点のライフを失う。"
+  },
+  "normal": "https://cards.scryfall.io/normal/front/e/d/ed87b471-79f9-45ec-9188-69e970f6121e.jpg?1784894871",
+  "small": "https://cards.scryfall.io/small/front/e/d/ed87b471-79f9-45ec-9188-69e970f6121e.jpg?1784894871"
+ },
+ "Treasure Token": {
+  "artist": "Alayna Danner",
+  "ja": {
+   "artist": "Esuthio",
+   "normal": "https://cards.scryfall.io/normal/front/0/c/0ca2f44c-fdc9-475e-bac5-56392ad01854.jpg?1783912749",
+   "small": "https://cards.scryfall.io/small/front/0/c/0ca2f44c-fdc9-475e-bac5-56392ad01854.jpg?1783912749"
+  },
+  "normal": "https://cards.scryfall.io/normal/front/0/3/03992f88-7a15-4234-9bed-b7617d7ff09c.jpg?1789735245",
+  "small": "https://cards.scryfall.io/small/front/0/3/03992f88-7a15-4234-9bed-b7617d7ff09c.jpg?1789735245"
+ },
+ "Umbral Collar Zealot": {
+  "artist": "Dmitry Burmak",
+  "ja": {
+   "artist": "Dmitry Burmak",
+   "name": "影の帯の盲信者",
+   "normal": "https://cards.scryfall.io/normal/front/a/2/a2555b0e-b0a0-4af3-9f77-267713ac4aa1.jpg?1782759202",
+   "small": "https://cards.scryfall.io/small/front/a/2/a2555b0e-b0a0-4af3-9f77-267713ac4aa1.jpg?1782759202",
+   "text": "クリーチャーやアーティファクトでありこれでない１つを生け贄に捧げる：諜報１を行う。（あなたのライブラリーの一番上にあるカード１枚を見る。それをあなたの墓地に置いてもよい。）"
+  },
+  "normal": "https://cards.scryfall.io/normal/front/9/8/98648b8a-2cf0-4c10-ab13-c88b2e03fc15.jpg?1783903781",
+  "small": "https://cards.scryfall.io/small/front/9/8/98648b8a-2cf0-4c10-ab13-c88b2e03fc15.jpg?1783903781"
  },
  "Uthros, Titanic Godcore": {
   "artist": "Adam Paquette",

@@ -581,6 +581,10 @@ body.nosel, body.nosel * { user-select: none !important; -webkit-user-select: no
   filter: drop-shadow(0 10px 16px rgba(0, 0, 0, .5)); }
 .card.ghost.tapped:not(.withart) { transform: rotate(6deg); }
 .float.ghost { right: auto; bottom: auto; margin: 0; pointer-events: none; }
+/* 墓地・追放の束の一番上のカード（誘発の発生源が束にあるとき）。.pstack の外に写すので、束の見た目をここで付け直す */
+.face.ghost { position: absolute; z-index: 1; border-radius: 6px; border: 1px solid var(--card-line); background: var(--card);
+  display: grid; place-items: center; overflow: hidden; filter: drop-shadow(0 10px 16px rgba(0, 0, 0, .5)); }
+.face.ghost img { width: 100%; height: 100%; object-fit: cover; }
 /* 光: 解決・スタックに着いた呪文 */
 .fx.glow { border-radius: 14px; background: radial-gradient(closest-side, color-mix(in srgb, var(--c) 70%, #fff), color-mix(in srgb, var(--c) 40%, transparent) 60%, transparent);
   mix-blend-mode: screen; }

@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "title": "コンボ問題 4：トークン大爆発",
+  "description": "《生体工学の専門家》と《サックビル＝バギンズ一家》が揃えば、アーティファクト・トークン1個の生け贄で3点。手札の《生けるスライム、ミュータンジェンマン》でトークンを並べ、20点を一気に削り切りましょう。",
+  "engine": {
+    "type": "forge",
+    "version": "2.0.15"
+  },
+  "game": {
+    "activePlayer": "p1",
+    "phase": "main2",
+    "players": [
+      {
+        "id": "p1",
+        "life": 20,
+        "hand": [
+          {
+            "id": "c1",
+            "cardId": "Mutagen Man, Living Ooze"
+          }
+        ],
+        "battlefield": [
+          {
+            "id": "c2",
+            "cardId": "Biotech Specialist"
+          },
+          {
+            "id": "c3",
+            "cardId": "The Sackville-Bagginses"
+          },
+          {
+            "id": "c4",
+            "cardId": "Umbral Collar Zealot"
+          },
+          {
+            "id": "c5",
+            "cardId": "Greedy Freebooter"
+          },
+          {
+            "id": "c6",
+            "cardId": "Callous Inspector"
+          },
+          {
+            "id": "c7",
+            "cardId": "Gene Pollinator"
+          },
+          {
+            "id": "c8",
+            "cardId": "Forest"
+          },
+          {
+            "id": "c9",
+            "cardId": "Forest"
+          },
+          {
+            "id": "c10",
+            "cardId": "Swamp"
+          },
+          {
+            "id": "c11",
+            "cardId": "Swamp"
+          }
+        ],
+        "library": [
+          {
+            "id": "p1L0",
+            "cardId": "Swamp"
+          },
+          {
+            "id": "p1L1",
+            "cardId": "Forest"
+          },
+          {
+            "id": "p1L2",
+            "cardId": "Swamp"
+          }
+        ]
+      },
+      {
+        "id": "p2",
+        "life": 20,
+        "library": [
+          {
+            "id": "p2L0",
+            "cardId": "Plains"
+          },
+          {
+            "id": "p2L1",
+            "cardId": "Plains"
+          },
+          {
+            "id": "p2L2",
+            "cardId": "Plains"
+          }
+        ]
+      }
+    ]
+  },
+  "goal": {
+    "type": "win",
+    "player": "p1",
+    "deadline": "current_turn"
+  },
+  "opponent": {
+    "policy": "pass",
+    "block": "minimize"
+  }
+}

@@ -95,6 +95,18 @@ const PUZZLE_META: Record<string, PuzzleMeta> = {
     life: [20, 18],
     series: "Combo #03",
   },
+  "c04-tokens": {
+    cards: ["Biotech Specialist", "The Sackville-Bagginses", "Mutagen Man, Living Ooze"],
+    colors: "{B}{R}{G}",
+    life: [20, 20],
+    series: "Combo #04",
+  },
+  "c05-redshift": {
+    cards: ["Redshift, Rocketeer Chief", "Agatha's Soul Cauldron", "Sewer-veillance Cam"],
+    colors: "{U}{R}{G}",
+    life: [20, 20],
+    series: "Combo #05",
+  },
 };
 
 const HERO_FALLBACK_CARDS = [

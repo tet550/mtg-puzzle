@@ -1,0 +1,160 @@
+{
+  "schemaVersion": 1,
+  "title": "コンボ問題 5：レッドシフトと監視亀ラ",
+  "description": "《アガサの魂の大釜》で墓地の《科学オタク、モナリザ》の能力を《ロケッティアの隊長、レッドシフト》に与え、《監視亀ラ》と《メカの天才》でマナと手札を伸ばして《ワカモレとマシュマロのピザ》と《クロームドーム》のコンボを揃えましょう。",
+  "engine": {
+    "type": "forge",
+    "version": "2.0.15"
+  },
+  "game": {
+    "activePlayer": "p1",
+    "phase": "main1",
+    "players": [
+      {
+        "id": "p1",
+        "life": 20,
+        "hand": [
+          {
+            "id": "c1",
+            "cardId": "Island"
+          },
+          {
+            "id": "c2",
+            "cardId": "Sewer-veillance Cam"
+          },
+          {
+            "id": "c3",
+            "cardId": "Chrome Dome"
+          },
+          {
+            "id": "c4",
+            "cardId": "Does Machines"
+          },
+          {
+            "id": "c5",
+            "cardId": "Mona Lisa, Science Geek"
+          },
+          {
+            "id": "c6",
+            "cardId": "Agatha's Soul Cauldron"
+          }
+        ],
+        "battlefield": [
+          {
+            "id": "c7",
+            "cardId": "Redshift, Rocketeer Chief"
+          },
+          {
+            "id": "c8",
+            "cardId": "Mountain"
+          },
+          {
+            "id": "c9",
+            "cardId": "Island"
+          },
+          {
+            "id": "c10",
+            "cardId": "Forest"
+          }
+        ],
+        "library": [
+          {
+            "id": "p1L0",
+            "cardId": "Sewer-veillance Cam"
+          },
+          {
+            "id": "p1L1",
+            "cardId": "Island"
+          },
+          {
+            "id": "p1L2",
+            "cardId": "Island"
+          },
+          {
+            "id": "p1L3",
+            "cardId": "Island"
+          },
+          {
+            "id": "p1L4",
+            "cardId": "Island"
+          },
+          {
+            "id": "p1L5",
+            "cardId": "Island"
+          },
+          {
+            "id": "p1L6",
+            "cardId": "Island"
+          },
+          {
+            "id": "p1L7",
+            "cardId": "Does Machines"
+          },
+          {
+            "id": "p1L8",
+            "cardId": "Island"
+          },
+          {
+            "id": "p1L9",
+            "cardId": "Island"
+          },
+          {
+            "id": "p1L10",
+            "cardId": "Island"
+          },
+          {
+            "id": "p1L11",
+            "cardId": "Island"
+          },
+          {
+            "id": "p1L12",
+            "cardId": "Island"
+          },
+          {
+            "id": "p1L13",
+            "cardId": "Guac & Marshmallow Pizza"
+          },
+          {
+            "id": "p1L14",
+            "cardId": "Island"
+          },
+          {
+            "id": "p1L15",
+            "cardId": "Island"
+          },
+          {
+            "id": "p1L16",
+            "cardId": "Island"
+          }
+        ]
+      },
+      {
+        "id": "p2",
+        "life": 20,
+        "library": [
+          {
+            "id": "p2L0",
+            "cardId": "Plains"
+          },
+          {
+            "id": "p2L1",
+            "cardId": "Plains"
+          },
+          {
+            "id": "p2L2",
+            "cardId": "Plains"
+          }
+        ]
+      }
+    ]
+  },
+  "goal": {
+    "type": "win",
+    "player": "p1",
+    "deadline": "current_turn"
+  },
+  "opponent": {
+    "policy": "pass",
+    "block": "minimize"
+  }
+}
