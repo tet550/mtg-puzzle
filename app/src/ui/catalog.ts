@@ -72,9 +72,9 @@ const PUZZLE_META: Record<string, PuzzleMeta> = {
     series: "Easy #04",
   },
   "e05-tempest": {
-    cards: ["Tempest Djinn", "Monastery Swiftspear", "Shock"],
-    colors: "{U}{R}",
-    life: [10, 6],
+    cards: ["Monastery Swiftspear", "Go for the Throat", "Bite Down"],
+    colors: "{B}{R}{G}",
+    life: [10, 3],
     series: "Easy #05",
   },
   "c01-oracle": {
@@ -106,6 +106,24 @@ const PUZZLE_META: Record<string, PuzzleMeta> = {
     colors: "{U}{R}{G}",
     life: [20, 20],
     series: "Combo #05",
+  },
+  "c06-squirrel": {
+    cards: ["The Unbeatable Squirrel Girl", "Nature's Rhythm", "Badgermole Cub"],
+    colors: "{G}",
+    life: [20, 20],
+    series: "Combo #06",
+  },
+  "c07-battlecrier": {
+    cards: ["Temur Battlecrier", "Outcaster Trailblazer", "Devastating Onslaught"],
+    colors: "{G}{U}{R}",
+    life: [20, 12],
+    series: "Combo #07",
+  },
+  "c08-lifegain": {
+    cards: ["Essence Channeler", "Delney, Streetwise Lookout", "Ajani Resolute"],
+    colors: "{W}{B}",
+    life: [20, 155],
+    series: "Combo #08",
   },
 };
 

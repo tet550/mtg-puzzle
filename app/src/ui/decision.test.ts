@@ -3,6 +3,7 @@ import { setLang } from "../i18n";
 
 setLang("ja"); // 文を確かめるテストは日本語で
 import type { CardView, Decision, GameView, Option } from "../engine/protocol";
+import { splitManaPool } from "./board";
 import { buildInteraction, colorName, isColorAsk, isDirectManaLand, manaLabel, marksOf, optionLabel } from "./decision";
 import { decisionPrompt } from "./text";
 
@@ -148,5 +149,29 @@ describe("isDirectManaLand", () => {
     expect(isDirectManaLand(land({ name: "Llanowar Elves", kinds: ["creature"], text: "{T}: Add {G}." }), [
       manaOpt("Llanowar Elves | {T}: Add {G}."),
     ])).toBe(false);
+  });
+});
+
+describe("splitManaPool", () => {
+  it("通常マナと用途制限付きマナを分けて並べる", () => {
+    const items = splitManaPool({
+      manaPool: { U: 5, G: 2 },
+      restrictedMana: [{ color: "U", count: 2, restriction: "Activated" }],
+    });
+    expect(items).toEqual([
+      { color: "U", count: 3, title: "{U} ×3" },
+      { color: "U", count: 2, restriction: "Activated", label: "起動能力限定", title: "{U} ×2（用途制限: 起動能力限定）" },
+      { color: "G", count: 2, title: "{G} ×2" },
+    ]);
+  });
+
+  it("すべて用途制限付きマナの場合は通常マナのチップを出さない", () => {
+    const items = splitManaPool({
+      manaPool: { U: 2 },
+      restrictedMana: [{ color: "U", count: 2, restriction: "Activated" }],
+    });
+    expect(items).toEqual([
+      { color: "U", count: 2, restriction: "Activated", label: "起動能力限定", title: "{U} ×2（用途制限: 起動能力限定）" },
+    ]);
   });
 });

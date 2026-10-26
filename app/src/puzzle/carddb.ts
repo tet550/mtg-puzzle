@@ -2,7 +2,7 @@
 // 英語名・日本語名の両方でインクリメンタル検索でき、盤面エディタやプレビュー表示に使う。
 
 import type { CardKind } from "../engine/protocol";
-import { setJaFallback } from "../ui/images";
+import { isTokenName, setJaFallback } from "../ui/images";
 
 export interface RawCardEntry {
   f: string;
@@ -13,10 +13,17 @@ export interface RawCardEntry {
   j?: string;
 }
 
+export interface RawTokenEntry {
+  s: string;
+  t?: string[];
+  j?: string;
+}
+
 export interface RawCardData {
   forge?: string;
   keys: Record<string, number>;
   cards: RawCardEntry[];
+  tokens?: Record<string, RawTokenEntry>;
 }
 
 export interface CardMeta {
@@ -99,6 +106,8 @@ const DEFAULT_CARDS = [
 
 let indexed: IndexedCard[] = [];
 const byName = new Map<string, CardMeta>();
+const faceJaByName = new Map<string, { name?: string; text?: string }>();
+const tokenJaByName = new Map<string, { name?: string; text?: string }>();
 let loadPromise: Promise<CardMeta[]> | null = null;
 
 /** ひらがなをカタカナに揃え、全角英数を半角小文字に揃える（日本語・英語のあいまい検索用） */
@@ -135,6 +144,24 @@ export function parseForgeTypes(raw: string): { kinds: CardKind[]; typeLine: str
   }
   const typeLine = sub.length ? `${main.join(" ")} — ${sub.join(" ")}` : main.join(" ");
   return { kinds, typeLine };
+}
+
+/** entry.j の各行（"English Name|日本語名|日本語タイプ|日本語テキスト"）を解析する */
+function parseJaLines(rawJa: string): { enKey: string; jName: string; jType: string; jTxt: string }[] {
+  const out: { enKey: string; jName: string; jType: string; jTxt: string }[] = [];
+  for (const line of rawJa.split(/\r?\n/)) {
+    if (!line) continue;
+    const parts = line.split("|");
+    if (parts.length < 2) continue;
+    const enKey = parts[0].split(/\s*\$/)[0].trim().toLowerCase();
+    const jName = parts[1]?.trim() ?? "";
+    const jType = parts[2]?.trim() ?? "";
+    const jTxt = (parts[3]?.trim() ?? "").replace(/\\n/g, "\n");
+    if (enKey && jName) {
+      out.push({ enKey, jName, jType, jTxt });
+    }
+  }
+  return out;
 }
 
 /** 1 枚の RawCardEntry から CardMeta を作る */
@@ -218,15 +245,7 @@ export function parseCardEntry(entry: RawCardEntry): CardMeta | null {
 
   if (entry.j) {
     const primaryLower = primaryName.toLowerCase();
-    for (const line of entry.j.split(/\r?\n/)) {
-      if (!line) continue;
-      const parts = line.split("|");
-      if (parts.length < 2) continue;
-      const enKey = parts[0].split(/\s*\$/)[0].trim().toLowerCase();
-      const jName = parts[1]?.trim();
-      const jType = parts[2]?.trim();
-      const jTxt = parts[3]?.trim().replace(/\\n/g, "\n");
-      if (!jName) continue;
+    for (const { enKey, jName, jType, jTxt } of parseJaLines(entry.j)) {
       if (enKey === primaryLower && !jaName) {
         jaName = jName;
         if (jType) jaTypeLine = jType;
@@ -268,6 +287,8 @@ export function parseCardEntry(entry: RawCardEntry): CardMeta | null {
 export function indexCardData(data: RawCardData): CardMeta[] {
   indexed = [];
   byName.clear();
+  faceJaByName.clear();
+  tokenJaByName.clear();
   for (const raw of data.cards) {
     const meta = parseCardEntry(raw);
     if (!meta) continue;
@@ -280,8 +301,32 @@ export function indexCardData(data: RawCardData): CardMeta[] {
     for (const alt of altEnLowers) {
       if (!byName.has(alt)) byName.set(alt, meta);
     }
+    if (meta.jaName && !faceJaByName.has(enLower)) {
+      faceJaByName.set(enLower, { name: meta.jaName, ...(meta.jaText ? { text: meta.jaText } : {}) });
+    }
+    if (raw.j) {
+      for (const { enKey, jName, jTxt } of parseJaLines(raw.j)) {
+        if (!faceJaByName.has(enKey)) {
+          faceJaByName.set(enKey, { name: jName, ...(jTxt ? { text: jTxt } : {}) });
+        }
+      }
+    }
+  }
+  for (const tk of Object.values(data.tokens ?? {})) {
+    if (!tk.j) continue;
+    for (const { enKey, jName, jTxt } of parseJaLines(tk.j)) {
+      if (!tokenJaByName.has(enKey)) {
+        tokenJaByName.set(enKey, { name: jName, ...(jTxt ? { text: jTxt } : {}) });
+      }
+    }
   }
   setJaFallback((cardName: string) => {
+    const key = cardName.trim().toLowerCase();
+    if (isTokenName(cardName)) {
+      return tokenJaByName.get(key) ?? null;
+    }
+    const faceJa = faceJaByName.get(key);
+    if (faceJa) return faceJa;
     const m = cardMeta(cardName);
     if (!m) return null;
     return { name: m.jaName, text: m.jaText };

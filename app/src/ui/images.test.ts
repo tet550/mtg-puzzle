@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { cardImage, ensureCardImages, imageOf, isTokenName, japaneseOf, tokenBaseName, tokenImageOf, type ScryfallCard } from "./images";
+import { cardImage, ensureCardImages, imageOf, isTokenName, japaneseOf, stripRuby, tokenBaseName, tokenImageOf, type ScryfallCard } from "./images";
 import { puzzleCardNames } from "../engine/client";
 
 const uris = (k: string) => ({ normal: `https://img/${k}/normal.jpg`, small: `https://img/${k}/small.jpg` });
@@ -20,6 +20,35 @@ describe("Scryfall の応答から画像を取り出す", () => {
     expect(japaneseOf({ data: [promo] })?.name).toBe("プロモ");
     expect(japaneseOf({ data: [noName] })).toBeUndefined();
     expect(japaneseOf(null)).toBeUndefined();
+  });
+
+  it("読み仮名（ルビ）を外し、英語のままの printed_name や printed_text は日本語として扱わない", () => {
+    expect(stripRuby("急（きゅう）抗（こう）直（ちょっ）下（か）")).toBe("急抗直下");
+    const rubyCard: ScryfallCard = {
+      name: "Full Bore",
+      printed_name: "急（きゅう）抗（こう）直（ちょっ）下（か）",
+      printed_text: "Target creature gets +3/+2 until end of turn.",
+      image_uris: uris("fb"),
+    };
+    // 英語の printed_text は ja.text に入れない（carddb の日本語テキストへフォールバックさせる）
+    expect(japaneseOf({ data: [rubyCard] }, false, "Full Bore")).toEqual({
+      name: "急抗直下",
+      ...uris("fb"),
+    });
+
+    // 1面目の printed_name が英語のまま（Callous Sell-Sword など）のときは name を省き、画像と日本語テキストだけ採用する
+    const adventureCard: ScryfallCard = {
+      name: "Callous Sell-Sword // Burn Together",
+      image_uris: uris("css"),
+      card_faces: [
+        { name: "Callous Sell-Sword", printed_name: "Callous Sell-Sword", printed_text: "このクリーチャーは強い。" },
+        { name: "Burn Together", printed_name: "諸共焼尽", printed_text: "ダメージを与える。" },
+      ],
+    };
+    expect(japaneseOf({ data: [adventureCard] }, false, "Callous Sell-Sword")).toEqual({
+      text: "このクリーチャーは強い。",
+      ...uris("css"),
+    });
   });
 
   it("トークンは '<Name> Token' から元の名前を取り出し、片面・通常版を優先して画像を取り出す", () => {
@@ -55,6 +84,55 @@ describe("Scryfall の応答から画像を取り出す", () => {
       const changed = await ensureCardImages(["Otter Token"]);
       expect(changed).toBe(true);
       expect(cardImage("Otter Token")?.normal).toMatch(/otter-(ja|en)\/normal\.jpg$/);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("ensureCardImages は前兆・出来事カード（A // B）をフルネームで lang:ja 検索し、該当面の日本語名を取得する", async () => {
+    const urls: string[] = [];
+    const fetchMock = vi.fn(async (url: string | URL | Request) => {
+      const s = String(url);
+      urls.push(s);
+      if (s.endsWith("/cards/collection")) {
+        return new Response(
+          JSON.stringify({
+            data: [
+              {
+                name: "Marang River Regent // Coil and Catch",
+                image_uris: uris("mrr-en"),
+                card_faces: [{ name: "Marang River Regent" }, { name: "Coil and Catch" }],
+              },
+            ],
+          }),
+          { status: 200 },
+        );
+      }
+      if (s.includes("lang%3Aja")) {
+        return new Response(
+          JSON.stringify({
+            data: [
+              {
+                name: "Marang River Regent // Coil and Catch",
+                image_uris: uris("mrr-ja"),
+                card_faces: [
+                  { name: "Marang River Regent", printed_name: "マラング川の執政", printed_text: "飛行" },
+                  { name: "Coil and Catch", printed_name: "渦巻きと捕捉", printed_text: "カードを引く。" },
+                ],
+              },
+            ],
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("not found", { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    try {
+      const changed = await ensureCardImages(["Marang River Regent"]);
+      expect(changed).toBe(true);
+      expect(urls.some((u) => u.includes(encodeURIComponent('!"Marang River Regent // Coil and Catch" lang:ja')))).toBe(true);
+      expect(cardImage("Marang River Regent")?.normal).toMatch(/mrr-(ja|en)\/normal\.jpg$/);
     } finally {
       vi.unstubAllGlobals();
     }

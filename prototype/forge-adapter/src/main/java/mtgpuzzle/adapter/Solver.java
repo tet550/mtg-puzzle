@@ -122,9 +122,22 @@ public final class Solver {
                     break;
                 }
                 List<Map<String, Object>> options = (List<Map<String, Object>>) d.get("options");
+                List<Object> idxs = (List<Object>) st.get("indexes");
+                List<Object> lbls = (List<Object>) st.getOrDefault("labels", List.of());
                 List<String> ids = new ArrayList<>();
-                for (Object i : (List<Object>) st.get("indexes")) {
-                    ids.add(String.valueOf(options.get(((Number) i).intValue()).get("id")));
+                for (int k = 0; k < idxs.size(); k++) {
+                    int idx = ((Number) idxs.get(k)).intValue();
+                    String want = k < lbls.size() ? String.valueOf(lbls.get(k)).trim() : null;
+                    Map<String, Object> chosen = idx < options.size() ? options.get(idx) : null;
+                    if (want != null && (chosen == null || !String.valueOf(chosen.get("label")).trim().equals(want))) {
+                        for (Map<String, Object> o : options) {
+                            if (String.valueOf(o.get("label")).trim().equals(want) && !ids.contains(String.valueOf(o.get("id")))) {
+                                chosen = o;
+                                break;
+                            }
+                        }
+                    }
+                    ids.add(String.valueOf(chosen.get("id")));
                 }
                 step = Json.parseObject(WebApi.submit(Json.stringify(ids)));
             }

@@ -332,6 +332,17 @@ public final class WebApi {
             pm.put("life", p.life());
             pm.put("poison", p.poison());
             pm.put("manaPool", p.manaPool());
+            if (!p.restrictedMana().isEmpty()) {
+                List<Map<String, Object>> rm = new ArrayList<>();
+                for (ForgeSession.RestrictedMana r : p.restrictedMana()) {
+                    Map<String, Object> m2 = new LinkedHashMap<>();
+                    m2.put("color", r.color());
+                    m2.put("count", r.count());
+                    m2.put("restriction", r.restriction());
+                    rm.add(m2);
+                }
+                pm.put("restrictedMana", rm);
+            }
             pm.put("handCount", p.handCount());
             pm.put("libraryCount", p.libraryCount());
             List<Map<String, Object>> cards = new ArrayList<>();

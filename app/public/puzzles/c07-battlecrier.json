@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "title": "コンボ問題 7：戦告者と絶望的猛攻の連鎖",
+  "description": "《ティムールの戦告者》のコスト軽減と計画済みの《荒野無頼団の先駆者》からチェインコンボを始動しましょう。墓地の《幻獣との交わり》と《量子の謎かけ屋》のワープでパワー4軍団を並べ、2発の《絶望的猛攻》でこのターン中に12点のライフを削り切ってください（《荒野無頼団の先駆者》の強制ドローによるライブラリーアウトに注意！）。",
+  "engine": {
+    "type": "forge",
+    "version": "2.0.15"
+  },
+  "game": {
+    "activePlayer": "p1",
+    "phase": "main1",
+    "players": [
+      {
+        "id": "p1",
+        "life": 20,
+        "hand": [
+          {
+            "id": "p1H0",
+            "cardId": "Temur Battlecrier"
+          },
+          {
+            "id": "p1H1",
+            "cardId": "Outcaster Trailblazer"
+          }
+        ],
+        "battlefield": [
+          {
+            "id": "p1B0",
+            "cardId": "Forest"
+          },
+          {
+            "id": "p1B1",
+            "cardId": "Island"
+          },
+          {
+            "id": "p1B2",
+            "cardId": "Mountain"
+          },
+          {
+            "id": "p1B3",
+            "cardId": "Mountain"
+          }
+        ],
+        "graveyard": [
+          {
+            "id": "p1G0",
+            "cardId": "Esper Origins"
+          }
+        ],
+        "exile": [
+          {
+            "id": "p1E0",
+            "cardId": "Outcaster Trailblazer",
+            "plotted": true
+          }
+        ],
+        "library": [
+          { "id": "p1L0", "cardId": "Quantum Riddler" },
+          { "id": "p1L1", "cardId": "Island" },
+          { "id": "p1L2", "cardId": "Island" },
+          { "id": "p1L3", "cardId": "Island" },
+          { "id": "p1L4", "cardId": "Island" },
+          { "id": "p1L5", "cardId": "Island" },
+          { "id": "p1L6", "cardId": "Devastating Onslaught" },
+          { "id": "p1L7", "cardId": "Forest" },
+          { "id": "p1L8", "cardId": "Forest" },
+          { "id": "p1L9", "cardId": "Forest" },
+          { "id": "p1L10", "cardId": "Quantum Riddler" },
+          { "id": "p1L11", "cardId": "Forest" },
+          { "id": "p1L12", "cardId": "Forest" },
+          { "id": "p1L13", "cardId": "Forest" },
+          { "id": "p1L14", "cardId": "Forest" },
+          { "id": "p1L15", "cardId": "Devastating Onslaught" },
+          { "id": "p1L16", "cardId": "Forest" },
+          { "id": "p1L17", "cardId": "Forest" },
+          { "id": "p1L18", "cardId": "Forest" },
+          { "id": "p1L19", "cardId": "Forest" },
+          { "id": "p1L20", "cardId": "Forest" },
+          { "id": "p1L21", "cardId": "Forest" },
+          { "id": "p1L22", "cardId": "Forest" },
+          { "id": "p1L23", "cardId": "Forest" },
+          { "id": "p1L24", "cardId": "Forest" },
+          { "id": "p1L25", "cardId": "Forest" },
+          { "id": "p1L26", "cardId": "Forest" },
+          { "id": "p1L27", "cardId": "Forest" },
+          { "id": "p1L28", "cardId": "Forest" },
+          { "id": "p1L29", "cardId": "Forest" },
+          { "id": "p1L30", "cardId": "Forest" },
+          { "id": "p1L31", "cardId": "Forest" },
+          { "id": "p1L32", "cardId": "Forest" },
+          { "id": "p1L33", "cardId": "Forest" },
+          { "id": "p1L34", "cardId": "Forest" }
+        ]
+      },
+      {
+        "id": "p2",
+        "life": 12,
+        "battlefield": [
+          { "id": "p2B0", "cardId": "Grizzly Bears" },
+          { "id": "p2B1", "cardId": "Grizzly Bears" },
+          { "id": "p2B2", "cardId": "Grizzly Bears" }
+        ],
+        "library": [
+          { "id": "p2L0", "cardId": "Forest" },
+          { "id": "p2L1", "cardId": "Forest" },
+          { "id": "p2L2", "cardId": "Forest" }
+        ]
+      }
+    ]
+  },
+  "goal": {
+    "type": "win",
+    "player": "p1",
+    "deadline": "current_turn"
+  },
+  "opponent": {
+    "policy": "pass",
+    "block": "minimize"
+  }
+}

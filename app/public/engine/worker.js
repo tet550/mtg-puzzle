@@ -257,6 +257,7 @@ function selectCards(data, names) {
     const t = data.tokens[name];
     if (!t || name in tokens) continue;
     tokens[name] = t.s;
+    if (t.j) ja += t.j;
     if (t.t) tokenTodo.push(...t.t);
   }
   return { key: lower.join(","), cards, editions, tokens, ja };

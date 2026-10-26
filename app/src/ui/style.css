@@ -39,8 +39,29 @@ button svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke
 .bar > .spacer { flex: 1 1 auto; }
 /* マナ・シンボル（Scryfall の画像）。文の大きさに合わせる */
 img.ms { width: 1.05em; height: 1.05em; vertical-align: -0.15em; margin: 0 1px; -webkit-user-drag: none; user-select: none; }
-.chip.mana { display: inline-flex; align-items: center; gap: 2px; font-size: 12px; }
-.chip.mana img.ms { width: 15px; height: 15px; }
+.chip.mana { display: inline-flex; align-items: center; gap: 3px; font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums;
+  padding: 2px 8px 2px 5px; border-radius: 999px; margin: 0; line-height: 1.1; color: #f8f6f0;
+  background: linear-gradient(180deg, #323c4a 0%, #1b222c 100%);
+  border: 1px solid color-mix(in srgb, var(--mc, var(--gold)) 68%, rgba(255, 255, 255, .22));
+  box-shadow: 0 3px 8px rgba(0, 0, 0, .52), 0 0 10px color-mix(in srgb, var(--mc, transparent) 28%, transparent), inset 0 1px 0 rgba(255, 255, 255, .16); }
+.chip.mana img.ms { width: 16px; height: 16px; margin: 0; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .45)); }
+.chip.mana.restricted {
+  background: linear-gradient(180deg, #3a3226 0%, #211c16 100%);
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--mc, var(--gold)) 55%, var(--cand));
+}
+.chip.mana .mrestr {
+  font-size: 10px; font-weight: 700; line-height: 1.15; letter-spacing: .01em;
+  padding: 0 5px; margin-left: 2px; border-radius: 999px;
+  color: #fde68a; background: rgba(245, 166, 35, .2);
+  border: 1px solid rgba(245, 166, 35, .42);
+}
+.chip.mana.mW { --mc: #f3e5ab; }
+.chip.mana.mU { --mc: #60a5fa; }
+.chip.mana.mB { --mc: #a78bfa; }
+.chip.mana.mR { --mc: #f87171; }
+.chip.mana.mG { --mc: #4ade80; }
+.chip.mana.mC { --mc: #cbd5e1; }
 .card .cost img.ms { width: 1.15em; height: 1.15em; margin: 0; }
 .chip.goal { background: var(--accent); color: var(--on-accent); font-weight: 600; }
 .engine { font-size: 12px; color: var(--muted); }
@@ -256,7 +277,6 @@ img.ms { width: 1.05em; height: 1.05em; vertical-align: -0.15em; margin: 0 1px; 
 .ph.fill svg { fill: currentColor; stroke: none; }
 .ph.cur { background: var(--accent); color: #fff; }
 .ph .pstep { font-size: 11px; font-weight: 700; width: 6em; text-align: center; overflow: hidden; text-overflow: clip; }
-.chip.deadline { background: var(--cand); color: #fff; font-weight: 600; margin: 0; }
 /* 見出しの右側: マナなどは残りの幅の中だけ（入らない分は切る） */
 .phead > .pextra { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 6px; overflow: hidden;
   -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 16px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 16px), transparent); }
@@ -269,9 +289,90 @@ img.ms { width: 1.05em; height: 1.05em; vertical-align: -0.15em; margin: 0 1px; 
 .sumchip { border: 1px solid var(--line); background: var(--badge); border-radius: 10px; padding: 1px 9px; font-size: 12px; margin: 0; }
 .sumchip.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 .sumchip:disabled { opacity: .6; }
+.holdstack { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; color: var(--muted); }
+.holdstack svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.holdstack:hover { border-color: var(--accent); color: var(--ink); }
+.holdstack.on { font-weight: 600; }
 .side.opp { flex: none; overflow: hidden; }
 .side.opp .bfrow { margin-top: 2px; height: calc(var(--h) * 1.12 + 14px); padding: 3px 6px; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; flex: none; }
 .side.opp .zone.opened { position: absolute; left: 10px; right: 10px; bottom: 6px; max-height: calc(100% - 34px); overflow: auto; z-index: 5; margin: 0; --h: 106px; }
+/* 相手の戦場の右隅に出す勝利期限（紋章・目標カード風） */
+.goalcard {
+  position: relative;
+  flex: none;
+  margin-left: auto;
+  width: calc(var(--h) * .78 + 8px);
+  height: calc(var(--h) + 6px);
+  padding: 5px 6px;
+  border-radius: 7px;
+  border: 1px solid color-mix(in srgb, var(--gold) 72%, var(--cand));
+  background:
+    radial-gradient(circle at 50% 28%, color-mix(in srgb, var(--cand) 22%, transparent) 0%, transparent 62%),
+    linear-gradient(180deg, #2d261c 0%, #1f2530 62%, #171c24 100%);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--gold) 28%, transparent),
+    0 4px 12px rgba(0, 0, 0, .38);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  text-align: center;
+  user-select: none;
+  overflow: hidden;
+}
+.gckicker {
+  width: 100%;
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--gold);
+  line-height: 1.1;
+  padding-bottom: 2px;
+  border-bottom: 1px solid color-mix(in srgb, var(--gold) 32%, transparent);
+}
+.gcicon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--cand) 28%, #2b2318) 0%, #1a1f28 100%);
+  border: 1px solid color-mix(in srgb, var(--gold) 65%, var(--cand));
+  color: var(--cand);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--cand) 28%, transparent);
+  flex: none;
+}
+.gcicon svg {
+  width: 14px;
+  height: 14px;
+  fill: color-mix(in srgb, var(--cand) 28%, transparent);
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.gctitle {
+  font-size: 11.5px;
+  font-weight: 800;
+  line-height: 1.15;
+  color: #fef3c7;
+  letter-spacing: .02em;
+  text-wrap: balance;
+}
+.gctext {
+  width: 100%;
+  padding: 3px 4px;
+  border-radius: 4px;
+  background: rgba(15, 19, 25, .62);
+  border: 1px solid color-mix(in srgb, var(--gold) 24%, transparent);
+  font-size: 8.5px;
+  line-height: 1.2;
+  color: var(--ink);
+  overflow-wrap: break-word;
+  text-wrap: pretty;
+}
 
 /* ---- 自分の側: 左の列に束（左端で左半分が見切れるように配置）、右に戦場・土地・手札 ---- */
 .side.mine { --ph: 105px; }
@@ -282,6 +383,13 @@ img.ms { width: 1.05em; height: 1.05em; vertical-align: -0.15em; margin: 0 1px; 
 .bfrow { align-items: flex-end; }
 .bfrow > .kgap { margin-left: 18px; }
 .lands { gap: 10px; align-items: center; }
+/* 浮きマナ: 戦場（土地以外）と土地の隙間に配置（空でも高さを保ち、マナの増減で土地や手札が上下に揺れないようにする） */
+.manapool { display: flex; align-items: center; gap: 6px; height: 26px; margin-bottom: -6px; padding: 0 6px;
+  flex: none; z-index: 2; pointer-events: none; }
+.manapool:empty { visibility: hidden; }
+.manapool > * { pointer-events: auto; flex: none; }
+.manapool::after { content: ""; flex: 0 1 140px; height: 1px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--gold) 50%, rgba(255, 255, 255, .22)), transparent); }
 .pile { cursor: pointer; }
 .pile.empty { cursor: default; }
 .pstack { position: relative; width: calc(var(--ph) * .72 + 6px); height: calc(var(--ph) + 6px); }

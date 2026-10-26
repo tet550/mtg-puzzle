@@ -79,9 +79,12 @@ public final class ForgeSession implements AutoCloseable {
                             Integer baseToughness, int damage, boolean token, boolean faceDown, String attachedTo,
                             String exiledBy, String text) { }
 
-    /** manaPool は色（W / U / B / R / G / C）ごとの量 */
+    /** 用途制限のある浮きマナ（色と制限ごとにまとめたもの） */
+    public record RestrictedMana(String color, int count, String restriction) { }
+
+    /** manaPool は色（W / U / B / R / G / C）ごとの合計量。restrictedMana はそのうち用途制限がある分 */
     public record PlayerState(String id, String name, int life, int poison, Map<String, Integer> manaPool,
-                              int handCount, int libraryCount, List<CardState> cards) { }
+                              List<RestrictedMana> restrictedMana, int handCount, int libraryCount, List<CardState> cards) { }
 
     /** index 0 が一番上。targets はインスタンス ID かプレイヤー ID */
     public record StackState(int index, String sourceId, String controller, String description, boolean spell,
@@ -244,14 +247,25 @@ public final class ForgeSession implements AutoCloseable {
                 }
             }
             Map<String, Integer> pool = new LinkedHashMap<>();
+            List<RestrictedMana> restricted = new ArrayList<>();
             for (Map.Entry<String, Byte> e : MANA_COLORS.entrySet()) {
                 int n = p.getManaPool().getAmountOfColor(e.getValue());
                 if (n > 0) {
                     pool.put(e.getKey(), n);
                 }
+                Map<String, Integer> byRestr = new LinkedHashMap<>();
+                for (forge.game.mana.Mana m : p.getManaPool()) {
+                    if (m.getColor() == e.getValue() && m.isRestricted()) {
+                        String r = m.getManaAbility().getManaRestrictions();
+                        String ex = m.getManaAbility().getExtraManaRestriction();
+                        String key = ex.isEmpty() ? r : (r.isEmpty() ? ex : r + "," + ex);
+                        byRestr.merge(key, 1, Integer::sum);
+                    }
+                }
+                byRestr.forEach((r, cnt) -> restricted.add(new RestrictedMana(e.getKey(), cnt, r)));
             }
             players.add(new PlayerState(puzzleIdOf(p), p.getName(), p.getLife(), p.getPoisonCounters(), pool,
-                    p.getCardsIn(ZoneType.Hand).size(), p.getCardsIn(ZoneType.Library).size(), cards));
+                    restricted, p.getCardsIn(ZoneType.Hand).size(), p.getCardsIn(ZoneType.Library).size(), cards));
         }
         List<StackState> stack = new ArrayList<>();
         int index = 0;
@@ -458,6 +472,13 @@ public final class ForgeSession implements AutoCloseable {
             instanceToForgeId.put(defs.get(i).id, c.getId());
             if (defs.get(i).plotted && zone == ZoneType.Exile) {
                 c.setPlotted(true);
+            }
+            if (defs.get(i).token && zone == ZoneType.Battlefield) {
+                c.setGamePieceType(forge.card.GamePieceType.TOKEN);
+                if (c.hasKeyword(forge.game.keyword.Keyword.OFFSPRING)) {
+                    c.setBasePower(1);
+                    c.setBaseToughness(1);
+                }
             }
         }
     }

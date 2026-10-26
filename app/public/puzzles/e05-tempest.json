@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "title": "簡単な問題 5：大嵐のジンと果敢の連携",
-  "description": "《大嵐のジン》はあなたがコントロールする基本《島》の数だけパワーが上がります。手札の《島》と《ショック》を活かして6点のライフを削り切りましょう。",
+  "title": "簡単な問題 5：スタック上の追撃",
+  "description": "1枚目の除去呪文が解決して《灰色熊》が倒れてしまうと、2枚目の呪文の対象がいなくなってしまいます。プレイヤーバナーの「スタックで止める」をONにし、1枚目が解決する前に2枚目の呪文を重ねて「果敢」を2回誘発させましょう。",
   "engine": {
     "type": "forge",
     "version": "2.0.15"
@@ -16,68 +16,71 @@
         "hand": [
           {
             "id": "c1",
-            "cardId": "Island"
+            "cardId": "Go for the Throat"
           },
           {
             "id": "c2",
-            "cardId": "Shock"
+            "cardId": "Bite Down"
           }
         ],
         "battlefield": [
           {
             "id": "c3",
-            "cardId": "Tempest Djinn"
-          },
-          {
-            "id": "c4",
             "cardId": "Monastery Swiftspear"
           },
           {
+            "id": "c4",
+            "cardId": "Swamp"
+          },
+          {
             "id": "c5",
-            "cardId": "Island"
+            "cardId": "Swamp"
           },
           {
             "id": "c6",
-            "cardId": "Mountain"
+            "cardId": "Forest"
+          },
+          {
+            "id": "c7",
+            "cardId": "Forest"
           }
         ],
         "library": [
           {
             "id": "p1L0",
-            "cardId": "Island"
+            "cardId": "Mountain"
           },
           {
             "id": "p1L1",
-            "cardId": "Island"
+            "cardId": "Mountain"
           },
           {
             "id": "p1L2",
-            "cardId": "Island"
+            "cardId": "Mountain"
           }
         ]
       },
       {
         "id": "p2",
-        "life": 6,
+        "life": 3,
         "battlefield": [
           {
-            "id": "c7",
-            "cardId": "Serra Angel",
-            "tapped": true
+            "id": "c8",
+            "cardId": "Grizzly Bears"
           }
         ],
         "library": [
           {
             "id": "p2L0",
-            "cardId": "Plains"
+            "cardId": "Forest"
           },
           {
             "id": "p2L1",
-            "cardId": "Plains"
+            "cardId": "Forest"
           },
           {
             "id": "p2L2",
-            "cardId": "Plains"
+            "cardId": "Forest"
           }
         ]
       }

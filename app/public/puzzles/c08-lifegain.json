@@ -1,0 +1,145 @@
+{
+  "schemaVersion": 1,
+  "title": "コンボ問題 8：オルゾフ・ライフゲインの怒涛の誘発",
+  "description": "《世慣れた見張り、デルニー》により、パワー2以下の《内陸の聖別者》《星景の僧侶》（＋新生1/1トークン）《脈の新学部長、モセオ》、そして成長前の《本質の媒介者》の誘発型能力がすべて2倍に！まずは《月の集会》で2点のライフを支払って《光に導かれし者、ハリーヤ》を引き込みつつ《本質の媒介者》に飛行を与えましょう。《意志堅固なるアジャニ》の[-10]紋章（全体+2/+2）を起動するタイミングが早すぎるとクリーチャーのパワーが3以上になってデルニーの倍化が消えてしまいます。コンボパーツをすべて展開し終えてからアジャニの奥義を起動し、相手のライフ155点を削り切りましょう。",
+  "engine": {
+    "type": "forge",
+    "version": "2.0.15"
+  },
+  "game": {
+    "activePlayer": "p1",
+    "phase": "main1",
+    "players": [
+      {
+        "id": "p1",
+        "life": 20,
+        "hand": [
+          {
+            "id": "c1",
+            "cardId": "Ajani Resolute"
+          },
+          {
+            "id": "c2",
+            "cardId": "Moseo, Vein's New Dean"
+          },
+          {
+            "id": "c3",
+            "cardId": "Vindictive Triumph"
+          }
+        ],
+        "battlefield": [
+          {
+            "id": "c6",
+            "cardId": "Hinterland Sanctifier"
+          },
+          {
+            "id": "c7",
+            "cardId": "Case of the Uneaten Feast"
+          },
+          {
+            "id": "c8",
+            "cardId": "Lunar Convocation"
+          },
+          {
+            "id": "c10",
+            "cardId": "Essence Channeler"
+          },
+          {
+            "id": "c11",
+            "cardId": "Starscape Cleric"
+          },
+          {
+            "id": "c12",
+            "cardId": "Starscape Cleric",
+            "token": true
+          },
+          {
+            "id": "c13",
+            "cardId": "Delney, Streetwise Lookout"
+          },
+          {
+            "id": "c14",
+            "cardId": "Plains"
+          },
+          {
+            "id": "c15",
+            "cardId": "Plains"
+          },
+          {
+            "id": "c16",
+            "cardId": "Plains"
+          },
+          {
+            "id": "c17",
+            "cardId": "Plains"
+          },
+          {
+            "id": "c18",
+            "cardId": "Plains"
+          },
+          {
+            "id": "c19",
+            "cardId": "Plains"
+          },
+          {
+            "id": "c20",
+            "cardId": "Plains"
+          },
+          {
+            "id": "c21",
+            "cardId": "Swamp"
+          },
+          {
+            "id": "c22",
+            "cardId": "Swamp"
+          },
+          {
+            "id": "c23",
+            "cardId": "Swamp"
+          },
+          {
+            "id": "c24",
+            "cardId": "Swamp"
+          }
+        ],
+        "library": [
+          { "id": "p1L0", "cardId": "Haliya, Guided by Light" },
+          { "id": "p1L1", "cardId": "Plains" }
+        ]
+      },
+      {
+        "id": "p2",
+        "life": 155,
+        "battlefield": [
+          {
+            "id": "c25",
+            "cardId": "Dark Confidant"
+          }
+        ],
+        "library": [
+          {
+            "id": "p2L0",
+            "cardId": "Swamp"
+          },
+          {
+            "id": "p2L1",
+            "cardId": "Swamp"
+          },
+          {
+            "id": "p2L2",
+            "cardId": "Swamp"
+          }
+        ]
+      }
+    ]
+  },
+  "goal": {
+    "type": "win",
+    "player": "p1",
+    "deadline": "current_turn"
+  },
+  "opponent": {
+    "policy": "pass",
+    "block": "minimize"
+  }
+}

@@ -45,10 +45,34 @@ describe("おまかせ（ドラッグ・ダブルクリック）", () => {
     expect(macroAnswer(startMacro("zz", null), priority, view())).toBe("end");
   });
 
-  it("ほかの物（誘発など）が一番上なら、人に任せて終える", () => {
+  it("唱えたときや解決したときに誘発がスタックに載っても、自動で解決まで進める", () => {
     const m = startMacro("c1", null);
     macroAnswer(m, priority, view());
-    expect(macroAnswer(m, { ...priority, seq: 6 }, view(["t9", "c1"]))).toBe("end");
+    expect(macroAnswer(m, { ...priority, seq: 6 }, view(["t9", "c1"]))).toEqual(["pass"]);
+    expect(macroAnswer(m, { ...priority, seq: 7 }, view(["c1"]))).toEqual(["pass"]);
+    expect(macroAnswer(m, { ...priority, seq: 8 }, view(["t8"]))).toEqual(["pass"]);
+    expect(macroAnswer(m, { ...priority, seq: 9 }, view())).toBe("end");
+  });
+
+  it("スタックで止める設定（holdStack）が ON なら、支払い後にスタックへ積んだところで終える", () => {
+    const m = startMacro("c1", "p2");
+    expect(macroAnswer(m, priority, view(), true)).toEqual(["a0"]);
+    expect(macroAnswer(m, targets, view(), true)).toEqual(["p1"]);
+    expect(macroAnswer(m, pay, view(), true)).toEqual(["auto"]);
+    expect(macroAnswer(m, { ...priority, seq: 4 }, view(["c1"]), true)).toBe("end");
+  });
+
+  it("同時誘発の順番（orderSimultaneous）はデフォルトで自動選択し、orderStack が ON なら人を待つ", () => {
+    const orderSim: Decision = {
+      seq: 5, kind: "CHOOSE_MODE", prompt: "Choose next ability to put on the stack", promptKey: "orderSimultaneous",
+      min: 1, max: 1, options: [
+        { id: "k0", label: "Trigger 1", ref: { type: "card", cardId: "c2" } },
+        { id: "k1", label: "Trigger 2", ref: { type: "card", cardId: "c3" } },
+      ],
+    };
+    const m = startMacro("c1", null);
+    expect(macroAnswer(m, orderSim, view())).toEqual(["k0"]);
+    expect(macroAnswer(m, orderSim, view(), false, true)).toBeNull();
   });
 
   it("メニューで選んだ起動型能力を起動して、解決まで進める（能力が複数あっても選んだものを使う）", () => {

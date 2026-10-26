@@ -44,6 +44,8 @@ public class PuzzleDefinition {
         public boolean summoningSick;
         /** 計画済み（追放領域のカード。Forge の GameState には無いので、盤面を置いたあとに ForgeSession が付ける） */
         public boolean plotted;
+        /** トークン（戦場のカード。新生（Offspring）持ちなら基本P/Tを1/1にする） */
+        public boolean token;
         /** 例: {"P1P1": 2} */
         public Map<String, Integer> counters = new LinkedHashMap<>();
     }
@@ -112,6 +114,7 @@ public class PuzzleDefinition {
             c.tapped = Boolean.TRUE.equals(cm.get("tapped"));
             c.summoningSick = Boolean.TRUE.equals(cm.get("summoningSick"));
             c.plotted = Boolean.TRUE.equals(cm.get("plotted"));
+            c.token = Boolean.TRUE.equals(cm.get("token"));
             Map<String, Object> counters = obj(cm, "counters");
             if (counters != null) {
                 counters.forEach((k, v) -> c.counters.put(k, ((Number) v).intValue()));

@@ -1,10 +1,10 @@
 // 手早く唱えるための操作（mtgtable の手札のドラッグに相当）。
+// - カード（手札・戦場）を押すか、能力のメニューで項目を選ぶか、手札のカードをドラッグ・ダブルクリックすると、
+//   唱える・起動するところから解決まで自動で進める（プレイヤー見出しの「スタックで止める」が ON のときは積んだところで止める）
 // - 手札のカードを対象（盤面のカード・プレイヤー）の上へドラッグして離すと、その対象で唱える。
 //   対象の要らない呪文は、盤面のどこかへ離せば唱える
-// - 使えるカード（手札・戦場）をダブルクリックすると、唱える・起動するところから解決まで進める
-// - 起動型能力のメニューで項目（能力の文）を押すと、その能力を起動して解決まで進める（右の「積む」なら積むだけ）
-// どちらも「おまかせ」（Macro）を始めるだけで、マナは自動で支払い、自分の呪文・能力がスタックの一番上に
-// 来たら優先権を渡して解決する。モード・X・2 つ目の対象など、人が決める選択が出たらそこで待ち、答えた後に続ける。
+// どちらも「おまかせ」（Macro）を始めるだけで、マナは自動で支払い、自分の呪文・能力（およびその誘発）がスタックに
+// あるあいだは優先権を渡して解決まで進める。モード・X・2 つ目の対象など、人が決める選択が出たらそこで待ち、答えた後に続ける。
 
 import type { Decision, GameView } from "../engine/protocol";
 
@@ -18,7 +18,7 @@ export interface Macro {
   targetUsed: boolean;
   /** 唱える・起動する選択肢を送ったか（取りやめで戻ってきたら、もう一度は唱えない） */
   started: boolean;
-  /** 自分の呪文・能力をスタックの一番上で見て、優先権を渡したか */
+  /** 自分の呪文・能力をスタックで見て、優先権を渡したか */
   cast: boolean;
   steps: number;
 }
@@ -29,20 +29,21 @@ export function startMacro(cardId: string, targetKey: string | null, optionId: s
 
 /**
  * 今の選択要求に、おまかせで答える ID。人が決める選択なら null（待つ）。おまかせを終えるなら "end"。
+ * holdStack が true（「スタックで止める」が ON）なら、スタックに積んだ後の優先権ではパスせず終える。
+ * orderStack が true（「積む順を選ぶ」が ON）なら、同時誘発の順番選択（orderSimultaneous）は人が決める。
  * macro は更新する（targetUsed / cast / steps）
  */
-export function macroAnswer(m: Macro, d: Decision, view: GameView): string[] | null | "end" {
-  if (++m.steps > 30) return "end";
+export function macroAnswer(m: Macro, d: Decision, view: GameView, holdStack = false, orderStack = false): string[] | null | "end" {
+  if (++m.steps > 1000) return "end";
   const onStack = view.stack.some((it) => it.sourceId === m.cardId);
-  const top = view.stack[0];
   switch (d.kind) {
     case "PRIORITY": {
-      if (top && top.sourceId === m.cardId) {
-        // 自分の呪文・能力が一番上: 優先権を渡して解決する
+      if (!holdStack && (onStack || (m.cast && view.stack.length > 0))) {
+        // 自分の呪文・能力（またはその誘発）がスタックにある: 優先権を渡して解決まで進める
         m.cast = true;
         return d.options.some((o) => o.id === "pass") ? ["pass"] : "end";
       }
-      // 解決した・取りやめた・ほかの物が一番上に来た（誘発など）: ここから先は人が進める
+      // 解決した・取りやめた・スタックで止める設定のとき: ここで終える
       if (m.started || m.cast || onStack) return "end";
       // まだ唱えていない: そのカードの呪文（無ければ、ただ 1 つの起動型能力）を選ぶ
       // マナ能力は数えない（マナは支払いのときに自動で出す）
@@ -64,6 +65,9 @@ export function macroAnswer(m: Macro, d: Decision, view: GameView): string[] | n
     }
     case "PAY_MANA":
       return d.options.some((o) => o.id === "auto") ? ["auto"] : null;
+    case "CHOOSE_MODE":
+      if (!orderStack && d.promptKey === "orderSimultaneous" && d.options.length > 0) return [d.options[0].id];
+      return null;
     default:
       return null; // モード・X・コストのカード・確認などは人が決める
   }

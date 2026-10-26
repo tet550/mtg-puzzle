@@ -19,6 +19,7 @@ const KEY = "mtg-puzzle.images";
 /** 実行時に Scryfall で引いた結果（見つからなかった名前は null）。cards.json と同じ形 */
 const CACHE_KEY = "mtg-puzzle.cardImages.v2";
 const API = "https://api.scryfall.com";
+const HAS_JA_RE = /[ぁ-んァ-ヶー一-龠々]/;
 let table: Record<string, CardImage> = {};
 let fetched: Record<string, CardImage | null> = {};
 const inflight = new Set<string>();
@@ -51,6 +52,11 @@ export function tokenBaseName(name: string): string {
   return name.replace(/\s+Token$/, "");
 }
 
+/** Scryfall の日本語名に付いている読み仮名を外す（例: 急（きゅう）抗（こう）直（ちょっ）下（か） → 急抗直下） */
+export function stripRuby(text: string): string {
+  return text.replace(/（[ぁ-ゖァ-ヺー]+）/g, "");
+}
+
 /**
  * names のうち、画像の一覧にも端末の記録にも無いカード・トークンを Scryfall で引く（tools/card-images.py と同じ引き方）。
  * 通常のカードは /cards/collection でまとめて（75 枚ずつ）、トークン（"<Name> Token" や通常カードに無い名前）は is:token で検索し、
@@ -68,20 +74,31 @@ export async function ensureCardImages(names: string[]): Promise<boolean> {
       const chunk = regular.slice(i, i + 75);
       const data = await api<{ data?: ScryfallCard[] }>("/cards/collection", { identifiers: chunk.map((name) => ({ name })) });
       if (!data) return changed;
-      const found = new Map<string, CardImage>();
+      const found = new Map<string, { img: CardImage; fullName: string }>();
       for (const card of data.data ?? []) {
         const img = imageOf(card);
         if (!img) continue;
-        found.set(card.name, img);
-        // 両面・分割カードは "A // B" の名前で返る。Forge の名前（1 面目）でも引けるようにする
-        if (!found.has(card.name.split(" // ")[0])) found.set(card.name.split(" // ")[0], img);
+        found.set(card.name, { img, fullName: card.name });
+        // 両面・分割・出来事・前兆カードは "A // B" の名前で返る。各面の名前でも引けるようにする
+        for (const part of card.name.split(" // ")) {
+          if (!found.has(part)) {
+            found.set(part, { img: imageOf(card, part) ?? img, fullName: card.name });
+          }
+        }
       }
       for (const n of chunk) {
-        const img = found.get(n) ?? found.get(n.split(" // ")[0]) ?? null;
-        if (img) {
+        const hit = found.get(n) ?? found.get(n.split(" // ")[0]) ?? null;
+        if (hit) {
+          const img: CardImage = { ...hit.img };
           // 検索の API は間隔を空けて呼ぶ（Scryfall のお願い）
           await sleep(100);
-          const ja = japaneseOf(await api<{ data?: ScryfallCard[] }>(`/cards/search?q=${encodeURIComponent(`!"${n}" lang:ja`)}&unique=prints&order=released&dir=desc`));
+          const ja = japaneseOf(
+            await api<{ data?: ScryfallCard[] }>(
+              `/cards/search?q=${encodeURIComponent(`!"${hit.fullName}" lang:ja`)}&unique=prints&order=released&dir=desc`,
+            ),
+            false,
+            n,
+          );
           if (ja) img.ja = ja;
           fetched[n] = img;
           changed = true;
@@ -158,19 +175,42 @@ export function tokenImageOf(result: { data?: ScryfallCard[] } | null, tokenName
 
 /** 日本語版の検索結果（新しい順）から、通常の版で最新のもの（無ければ特殊な版。日本語版が無ければ undefined） */
 export function japaneseOf(result: { data?: ScryfallCard[] } | null, token = false, faceName?: string): CardImage["ja"] {
-  const cards = (result?.data ?? []).filter((c) => c.printed_name || c.card_faces?.[0]?.printed_name || (token && imageOf(c, faceName)));
+  const isSplitQuery = !!faceName?.includes(" // ");
+  const matchFace = (c: ScryfallCard): ScryfallFace =>
+    (!isSplitQuery && faceName ? c.card_faces?.find((f) => f.name?.toLowerCase() === faceName.toLowerCase()) : undefined)
+    ?? c.card_faces?.[0] ?? c;
+  const translatedName = (c: ScryfallCard): string | undefined => {
+    if (isSplitQuery && !c.printed_name && c.card_faces && c.card_faces.length > 1) {
+      const parts = c.card_faces.map((f) => {
+        const p = stripRuby(f.printed_name ?? "");
+        return p && p.toLowerCase() !== (f.name ?? "").toLowerCase() ? p : "";
+      });
+      return parts.every(Boolean) ? parts.join(" // ") : undefined;
+    }
+    const f = matchFace(c);
+    const raw = stripRuby(c.printed_name ?? f.printed_name ?? "");
+    if (!raw) return undefined;
+    const enName = f.name ?? faceName ?? c.name;
+    return raw.toLowerCase() === enName.toLowerCase() ? undefined : raw;
+  };
+  const cards = (result?.data ?? []).filter(
+    (c) => translatedName(c) || c.printed_name || c.card_faces?.[0]?.printed_name || (token && imageOf(c, faceName)),
+  );
   const single = (c: ScryfallCard) => !!c.image_uris?.normal;
-  const card = (token ? cards.find((c) => single(c) && plain(c)) ?? cards.find(single) : undefined)
+  const card = (token
+    ? cards.find((c) => single(c) && plain(c)) ?? cards.find(single)
+    : cards.find((c) => translatedName(c) && plain(c)) ?? cards.find((c) => !!translatedName(c)))
     ?? cards.find(plain) ?? cards[0];
   if (!card) return undefined;
-  const face = (faceName ? card.card_faces?.find((f) => f.name?.toLowerCase() === faceName.toLowerCase()) : undefined)
-    ?? card.card_faces?.[0] ?? card;
-  const img = imageOf(card, faceName);
-  const name = card.printed_name ?? face.printed_name;
+  const face = matchFace(card);
+  const img = imageOf(card, isSplitQuery ? undefined : faceName);
+  const name = translatedName(card);
   const ja: NonNullable<CardImage["ja"]> = name ? { name } : {};
   if (img) Object.assign(ja, { normal: img.normal, small: img.small }, img.artist ? { artist: img.artist } : {});
-  const text = card.printed_text ?? face.printed_text;
-  if (text) ja.text = text;
+  const rawText = isSplitQuery && !card.printed_text && card.card_faces && card.card_faces.length > 1
+    ? card.card_faces.map((f) => f.printed_text ?? "").filter((t) => HAS_JA_RE.test(t)).join("\n//\n")
+    : (card.printed_text ?? face.printed_text);
+  if (rawText && HAS_JA_RE.test(rawText)) ja.text = rawText;
   return Object.keys(ja).length ? ja : undefined;
 }
 

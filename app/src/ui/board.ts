@@ -27,6 +27,10 @@ export interface BoardHooks {
    * closing は閉じるときだけ渡す、その束の選択の印（markSig）。同じ印のあいだは開いたままにしない（BoardUi.dismissed）
    */
   toggle(key: string, closing?: string): void;
+  /** 自分の見出しの「スタックで止める」を切り替える */
+  toggleHoldStack?(): void;
+  /** 自分の見出しの「積む順を選ぶ」を切り替える */
+  toggleOrderStack?(): void;
 }
 
 export interface BoardUi {
@@ -47,6 +51,10 @@ export interface BoardUi {
   blocking: Set<string>;
   /** エディタ表示（裏向きの領域も開けて編集できるようにし、同名カードも束ねず広げる） */
   editable?: boolean;
+  /** 呪文や能力を自動で解決せず、スタックに積んだところで止めるか */
+  holdStack?: boolean;
+  /** 同時に誘発した能力をスタックに積む順番を手動で選ぶか（false なら自動） */
+  orderStack?: boolean;
 }
 
 export function combatSets(view: GameView): { attacking: Set<string>; blocking: Set<string> } {
@@ -84,18 +92,91 @@ function playerHead(view: GameView, p: PlayerView, ui: BoardUi, hooks: BoardHook
   const prio = h("span.prio" + (view.priorityPlayer === p.id ? "" : ".off"), { title: t("player.priority"), "aria-label": t("player.priority") });
   prio.append(icon("priority"));
   head.append(prio);
-  if (view.activePlayer === p.id) head.append(phaseStrip(view, ui));
-  const extra = h("span.pextra");
-  for (const c of MANA_ORDER) {
-    const n = p.manaPool[c];
-    if (n) extra.append(h(`span.chip.mana.m${c}`, { title: `{${c}} ×${n}` }, manaNodes(`{${c}}`), ` ×${n}`));
+  if (view.activePlayer === p.id) head.append(phaseStrip(view));
+  if (mine && !ui.editable && hooks.toggleHoldStack) {
+    const on = !!ui.holdStack;
+    head.append(h("button.sumchip.holdstack" + (on ? ".on" : ""), {
+      type: "button",
+      "data-hold-stack": "1",
+      "aria-pressed": String(on),
+      title: t("player.holdStack.title"),
+      onclick: (ev: Event) => { ev.stopPropagation(); hooks.toggleHoldStack!(); },
+    }, icon("stack"), h("span", null, t("player.holdStack"))));
   }
+  if (mine && !ui.editable && hooks.toggleOrderStack) {
+    const on = !!ui.orderStack;
+    head.append(h("button.sumchip.holdstack" + (on ? ".on" : ""), {
+      type: "button",
+      "data-order-stack": "1",
+      "aria-pressed": String(on),
+      title: t("player.orderStack.title"),
+      onclick: (ev: Event) => { ev.stopPropagation(); hooks.toggleOrderStack!(); },
+    }, icon("stack"), h("span", null, t("player.orderStack"))));
+  }
+  const extra = h("span.pextra");
+  if (!mine) extra.append(...manaChips(p));
   if (p.poison) extra.append(h("span.chip", null, t("player.poison", { n: p.poison })));
   head.append(extra);
   return head;
 }
 
-function phaseStrip(view: GameView, ui: BoardUi): HTMLElement {
+const RESTRICTION_KEYS: readonly string[] = [
+  "Activated", "Creature", "Artifact", "Enchantment", "Instant", "Sorcery", "Planeswalker", "Spell",
+];
+
+function restrictionLabel(restriction: string): string {
+  const exactKey = `mana.restricted.${restriction}` as MessageKey;
+  const exact = t(exactKey);
+  if (exact !== exactKey) return exact;
+  for (const k of RESTRICTION_KEYS) {
+    if (restriction.includes(k)) return t(`mana.restricted.${k}` as MessageKey);
+  }
+  return t("mana.restricted");
+}
+
+export interface ManaChipItem {
+  color: ManaColor;
+  count: number;
+  restriction?: string;
+  label?: string;
+  title: string;
+}
+
+export function splitManaPool(p: Pick<PlayerView, "manaPool" | "restrictedMana">): ManaChipItem[] {
+  const items: ManaChipItem[] = [];
+  const restrictedList = p.restrictedMana ?? [];
+  const restrictedByColor = new Map<ManaColor, number>();
+  for (const r of restrictedList) {
+    if (r.count > 0) restrictedByColor.set(r.color, (restrictedByColor.get(r.color) ?? 0) + r.count);
+  }
+  for (const c of MANA_ORDER) {
+    const total = p.manaPool[c] ?? 0;
+    const restCount = restrictedByColor.get(c) ?? 0;
+    const free = Math.max(0, total - restCount);
+    if (free > 0) {
+      items.push({ color: c, count: free, title: `{${c}} ×${free}` });
+    }
+    for (const r of restrictedList) {
+      if (r.color !== c || r.count <= 0) continue;
+      const label = restrictionLabel(r.restriction);
+      const detail = label !== t("mana.restricted") ? label : `${label}: ${r.restriction}`;
+      const title = t("mana.restricted.title", { mana: `{${c}}`, n: r.count, label: detail });
+      items.push({ color: c, count: r.count, restriction: r.restriction, label, title });
+    }
+  }
+  return items;
+}
+
+function manaChips(p: PlayerView): HTMLElement[] {
+  return splitManaPool(p).map((it) =>
+    it.restriction
+      ? h(`span.chip.mana.m${it.color}.restricted`, { title: it.title, "data-restriction": it.restriction },
+          manaNodes(`{${it.color}}`), ` ×${it.count}`, h("span.mrestr", null, it.label))
+      : h(`span.chip.mana.m${it.color}`, { title: it.title }, manaNodes(`{${it.color}}`), ` ×${it.count}`),
+  );
+}
+
+function phaseStrip(view: GameView): HTMLElement {
   const strip = h("span.phases", { title: t("phase.turnTitle", { turn: view.turn }) });
   for (const g of PHASE_STRIP) {
     const cur = g.phases.includes(view.phase);
@@ -104,9 +185,21 @@ function phaseStrip(view: GameView, ui: BoardUi): HTMLElement {
     if (cur) ph.append(h("span.pstep", null, phaseName(view.phase)));
     strip.append(ph);
   }
-  const box = h("span.phasebox", null, strip);
-  if (view.turn === ui.startTurn) box.append(h("span.chip.deadline", { title: t("phase.deadline.title") }, t("phase.deadline")));
-  return box;
+  return h("span.phasebox", null, strip);
+}
+
+/** 勝利期限（「このターン中」）を相手の戦場の右隅に紋章・目標カードとして出す */
+function goalCard(): HTMLElement {
+  return h("div.goalcard", {
+    "data-goal-card": "1",
+    role: "note",
+    title: t("phase.deadline.title"),
+  },
+    h("div.gckicker", null, t("header.goal.title")),
+    h("div.gcicon", null, icon("resolve")),
+    h("div.gctitle", null, t("phase.deadline")),
+    h("div.gctext", null, t("phase.deadline.title")),
+  );
 }
 
 // ---------------------------------------------------------------- 相手の側（最小限）
@@ -144,6 +237,7 @@ function opponentSide(view: GameView, p: PlayerView, ui: BoardUi, hooks: BoardHo
     if (others.length && lgroups.length) lgroups[0].classList.add("kgap");
     row.append(...lgroups);
   }
+  if (view.turn === ui.startTurn) row.append(goalCard());
   side.append(row);
   if (ui.editable && isOpen("hand", hand)) side.append(opened(t("opened.oppHand"), hand, ui, hooks));
   if (ui.editable && isOpen("library", lib)) side.append(opened(t("opened.oppLibrary"), lib, ui, hooks));
@@ -200,6 +294,7 @@ function mySide(view: GameView, p: PlayerView, ui: BoardUi, hooks: BoardHooks): 
   );
   const field = h("div.field", null,
     h("div.row.bfrow", null, kindGroups(others, p, ui, hooks)),
+    h("div.manapool", { "data-mana-pool": p.id }, manaChips(p)),
     h("div.row.bfrow.lands", null, landGroups(lands, ui, hooks)),
   );
   // 手札は土地に少し重ね、欄の下の端で切る（mtgtable と同じ。押すと浮かせて全体を見せる）

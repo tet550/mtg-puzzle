@@ -18,6 +18,8 @@ export interface CardDef {
   summoningSick?: boolean;
   /** 計画済み（追放領域のカードだけ。後のターンにソーサリーとしてマナ・コストを支払わずに唱えられる） */
   plotted?: boolean;
+  /** トークン（戦場のカード。新生コピーなど） */
+  token?: boolean;
   counters?: Record<string, number>;
 }
 

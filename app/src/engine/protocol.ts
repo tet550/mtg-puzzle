@@ -79,11 +79,19 @@ export interface GameView {
 
 export type ManaColor = "W" | "U" | "B" | "R" | "G" | "C";
 
+export interface RestrictedManaView {
+  color: ManaColor;
+  count: number;
+  restriction: string;
+}
+
 export interface PlayerView {
   id: PlayerId;
   life: number;
   poison: number;
   manaPool: Partial<Record<ManaColor, number>>;
+  /** 用途制限付き浮きマナの内訳（manaPool の合計に含まれる分） */
+  restrictedMana?: RestrictedManaView[];
   handCount: number;
   libraryCount: number;
   cards: CardView[];

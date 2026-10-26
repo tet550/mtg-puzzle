@@ -188,6 +188,7 @@ export function normalizePuzzleForEngine(p: PuzzleJson): PuzzleJson {
         if (!isPermanentCard(c.cardId)) {
           delete c.tapped;
           delete c.summoningSick;
+          delete c.token;
           delete c.counters;
           (pl.hand ?? (pl.hand = [])).push(c);
         } else {
@@ -271,6 +272,7 @@ export function moveCardInPuzzle(
   if (targetZone !== "battlefield") {
     delete card.tapped;
     delete card.summoningSick;
+    delete card.token;
     delete card.counters;
   } else {
     const counters = defaultBattlefieldCounters(card.cardId, card.counters);

@@ -59,7 +59,6 @@ async function clickOption(page: Page, kind: string, opt: Opt, onBoard: boolean,
     await page.locator(`.board [data-id="${key}"], .board [data-player="${key}"] .avatar`).first().click();
     const ability = ref?.type === "ability" && (ref.abilityKind === "activated" || ref.abilityKind === "mana");
     if (menuIndex >= 0 || (ability && await page.locator(`.menu [data-option="${opt.id}"]`).count())) {
-      // 解答手順は 1 つずつ答えるので、能力の行は右の「積む」を押す（data-option。左の data-quick は解決まで進めてしまう）
       await page.locator(`.menu [data-option="${opt.id}"]`).click();
     }
     return;
@@ -77,6 +76,13 @@ for (const entry of catalog.filter((e) => existsSync(`${dir}${e.id}.solution.jso
     let seq = -1;
     for (const [n, step] of solution.steps.entries()) {
       const s = await waitFor(page, (x) => x.phase === "playing" && !!x.pending && x.pending.seq !== seq, `step ${n + 1} (${step.kind})`);
+      if (n === 0) {
+        // 解答手順はマナ支払いやスタック上のパス・同時誘発の順番も 1 手ずつ記録しているため、「スタックで止める」「積む順を選ぶ」を ON にして検証する
+        await page.locator("[data-hold-stack]").click();
+        await expect(page.locator("[data-hold-stack]")).toHaveAttribute("aria-pressed", "true");
+        await page.locator("[data-order-stack]").click();
+        await expect(page.locator("[data-order-stack]")).toHaveAttribute("aria-pressed", "true");
+      }
       const d = s.pending!;
       expect(d.kind, `step ${n + 1}`).toBe(step.kind);
       seq = d.seq;
@@ -103,6 +109,19 @@ for (const entry of catalog.filter((e) => existsSync(`${dir}${e.id}.solution.jso
     await expect(page.locator(".actions .result")).toHaveText(/^(クリア！|Cleared!)$/);
   });
 }
+
+test("デフォルト（スタックで止める OFF・積む順を選ぶ OFF）では、呪文と対象を選ぶだけで解決まで自動で進む", async ({ page }) => {
+  await page.goto("/#/play/t01-burn");
+  const s = await waitFor(page, (x) => x.phase === "playing" && !!x.pending, "初期状態");
+  await expect(page.locator("[data-hold-stack]")).toHaveAttribute("aria-pressed", "false");
+  await expect(page.locator("[data-order-stack]")).toHaveAttribute("aria-pressed", "false");
+  const spell = s.pending!.options.find((o) => o.ref?.type === "ability" && o.ref.abilityKind === "spell")!;
+  await page.locator(`.board [data-id="${spell.ref!.cardId}"]`).click();
+  await waitFor(page, (x) => x.phase === "playing" && x.pending?.kind === "TARGETS", "対象選択");
+  await page.locator('.board [data-player="p2"] .avatar').click();
+  const end = await waitFor(page, (x) => x.phase === "finished", "結果");
+  expect(end.verdict.result).toBe("CLEARED");
+});
 
 test("不正な問題データはエラーを表示する", async ({ page }) => {
   await page.goto("/#/play/no-such-puzzle");

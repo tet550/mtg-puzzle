@@ -6,7 +6,7 @@ import { setLang } from "../i18n";
 import { displayName, printedText } from "../ui/images";
 import { cardMeta, formatForgeManaCost, indexCardData, normalizeQuery, parseCardEntry, parseForgeTypes, searchCards, type RawCardData } from "./carddb";
 
-const SAMPLE_DATA = {
+const SAMPLE_DATA: RawCardData = {
   keys: {
     "lightning bolt": 0,
     "llanowar elves": 1,
@@ -36,6 +36,12 @@ const SAMPLE_DATA = {
       j: "Bonecrusher Giant|砕骨の巨人|クリーチャー — 巨人|砕骨の巨人が呪文の対象になるたび、砕骨の巨人はその呪文のコントローラーに２点のダメージを与える。\nStomp|踏みつけ|インスタント — 出来事|このターン、ダメージは軽減できない。\n",
     },
   ],
+  tokens: {
+    c_a_treasure_sac: {
+      s: "Name:Treasure Token\nTypes:Artifact Treasure\nOracle:{T}, Sacrifice this token: Add one mana of any color.\n",
+      j: "Treasure Token|宝物・トークン|トークン・アーティファクト — 宝物|{T}, このトークンを生け贄に捧げる：好きな色のマナ１点を加える。\n",
+    },
+  },
 };
 
 describe("carddb", () => {
@@ -78,10 +84,14 @@ describe("carddb", () => {
     // 出来事の面「踏みつけ」で探しても主カード名 Bonecrusher Giant が返る
     expect(searchCards("踏みつけ").map((c) => c.name)).toEqual(["Bonecrusher Giant"]);
 
-    // images.ts の displayName / printedText のフォールバックとしても働く
+    // images.ts の displayName / printedText のフォールバックとしても働く（2面目やトークンも含む）
     setLang("ja");
     expect(displayName("Lightning Bolt")).toBe("稲妻");
     expect(printedText("Llanowar Elves")).toContain("{G}を加える");
+    expect(displayName("Stomp")).toBe("踏みつけ");
+    expect(printedText("Stomp")).toBe("このターン、ダメージは軽減できない。");
+    expect(displayName("Treasure Token")).toBe("宝物・トークン");
+    expect(printedText("Treasure Token")).toContain("好きな色のマナ１点を加える");
   });
 
   it("public/engine/manifest.json の cards から実データを展開・インデックス化できる", () => {

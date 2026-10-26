@@ -79,8 +79,12 @@ export class PlayPage {
   private flashTimer = 0;
   private lastHistoryLength = 0;
   private images = imagesEnabled();
-  /** 進行中のおまかせ（ドラッグ・ダブルクリックで唱えて解決まで進める。quick.ts） */
+  /** 進行中のおまかせ（呪文・能力を唱えて解決まで進める。quick.ts） */
   private macro: Macro | null = null;
+  /** 呪文や能力を自動で解決せず、スタックに積んだところで止めるか（プレイヤー見出しで切り替える） */
+  private holdStack = false;
+  /** 同時に誘発した能力をスタックに積む順番を手動で選ぶか（初期状態 OFF＝自動で並べる） */
+  private orderStack = false;
   /** 手札のドラッグ */
   private drag: { id: string; el: HTMLElement; x: number; y: number; ghost: HTMLElement | null; over: HTMLElement | null;
     dx: number; dy: number; note: HTMLElement | null } | null = null;
@@ -195,8 +199,8 @@ export class PlayPage {
       if (this.menu && !this.menu.locked) this.closeMenu();
       else if (this.detail) this.detail = null;
       else if (this.replay) this.stopReplay();
-      else if (this.macro) this.macro = null;
       else if (!this.menu) {
+        this.macro = null;
         const cancel = this.session.state.phase === "playing" && this.session.state.step?.pending?.options.find((o) => o.ref?.type === "special" && o.ref.value === "cancel");
         if (cancel) { this.send([cancel.id]); return; }
       }
@@ -298,6 +302,7 @@ export class PlayPage {
       this.arrow?.setOrigin(this.el.querySelector<HTMLElement>(".stackbox [data-targeting]"));
       if (s.phase === "finished" && prev?.engine.state !== "GAME_OVER") verdictStamp(s.verdict.result === "CLEARED");
       if (this.macro && s.phase === "playing") queueMicrotask(() => this.stepMacro());
+      else if (!this.orderStack && !this.replay && s.phase === "playing") queueMicrotask(() => this.stepAutoOrder());
       if (this.replay && s.phase === "playing") {
         if (this.replay.stepOnceAfterReset) {
           this.replay.stepOnceAfterReset = false;
@@ -331,13 +336,23 @@ export class PlayPage {
     const s = this.session.state;
     const m = this.macro;
     if (!m || s.phase !== "playing" || !s.step?.pending) return;
-    const ans = macroAnswer(m, s.step.pending, s.step.view);
+    const ans = macroAnswer(m, s.step.pending, s.step.view, this.holdStack, this.orderStack);
     if (ans === "end") {
       this.macro = null;
       this.render();
       return;
     }
     if (ans) this.send(ans);
+  }
+
+  /** 「積む順を選ぶ」が OFF（自動）のとき、同時誘発の順番選択（orderSimultaneous）を自動で進める */
+  private stepAutoOrder() {
+    const s = this.session.state;
+    const d = s.step?.pending;
+    if (this.orderStack || this.replay || s.phase !== "playing" || !d) return;
+    if (d.promptKey === "orderSimultaneous" && d.options.length > 0) {
+      this.send([d.options[0].id]);
+    }
   }
 
   private startQuick(cardId: string, targetKey: string | null, optionId: string | null = null) {
@@ -362,7 +377,7 @@ export class PlayPage {
       // ダブルクリック（400 ms 以内に、ほぼ同じ所を 2 回押す）: 1 回目に押したカードを唱えて解決まで進める
       const prev = this.lastPress;
       const now = performance.now();
-      if (prev && now - prev.at < 400 && Math.hypot(ev.clientX - prev.x, ev.clientY - prev.y) < 12 && !this.macro) {
+      if (prev && now - prev.at < 400 && Math.hypot(ev.clientX - prev.x, ev.clientY - prev.y) < 12) {
         this.lastPress = null;
         const d = this.session.state.step?.pending;
         // 1 回目のクリックで唱え始めていれば、その続きから進める
@@ -370,7 +385,7 @@ export class PlayPage {
         if (this.castable(prev.id) || busy || (d && d.kind !== "PRIORITY")) {
           this.suppressClick = true; // 2 回目のクリックは、下にあった別のカードを押したことにしない
           if (this.detail?.instanceId === prev.id) this.detail = null;
-          this.startQuick(prev.id, null);
+          if (!this.macro) this.startQuick(prev.id, null);
           return;
         }
       }
@@ -509,6 +524,8 @@ export class PlayPage {
       startTurn: s.startTurn || view?.turn || 1,
       flash: this.flash,
       art: (name) => (this.images ? cardImage(name)?.normal ?? null : null),
+      holdStack: this.holdStack,
+      orderStack: this.orderStack,
       ...(view ? combatSets(view) : { attacking: new Set<string>(), blocking: new Set<string>() }),
     };
     const hooks: BoardHooks = {
@@ -524,6 +541,16 @@ export class PlayPage {
           if (closing) this.dismissed.set(key, closing);
         }
         this.render();
+      },
+      toggleHoldStack: () => {
+        this.holdStack = !this.holdStack;
+        if (this.holdStack) this.macro = null;
+        this.render();
+      },
+      toggleOrderStack: () => {
+        this.orderStack = !this.orderStack;
+        this.render();
+        if (!this.orderStack) this.stepAutoOrder();
       },
     };
     const scroll = this.el.querySelector<HTMLElement>(".hand")?.scrollLeft ?? 0;
@@ -583,8 +610,8 @@ export class PlayPage {
       if (!this.menu) return [];
       // 盤面に無い選択肢のメニューには、決定・パスなどのボタンも入れる（メニューが見出しの盤面の操作に重なっても答えられるように）
       const foot = this.menu.soft && interaction && s.phase === "playing" ? this.decisionButtons(s, interaction) : [];
-      return optionMenu(this.menu, this.selected, foot, (o) => this.choose(o, interaction),
-        interaction?.decision.kind === "PRIORITY" ? (o) => { if (o.ref?.type === "ability") this.startQuick(o.ref.cardId, null, o.id); } : null,
+      return optionMenu(this.menu, this.selected, foot, (o) => this.choose(o, interaction, true),
+        interaction?.decision.kind === "PRIORITY" ? (o) => this.choose(o, interaction) : null,
         () => { this.closeMenu(); this.render(); });
     };
 
@@ -834,6 +861,7 @@ export class PlayPage {
       const key = d.options[0].ref?.type === "color" ? d.options[0].ref.cardId : null;
       this.menu = { ...this.menuAnchor(key ? [key] : []), options: d.options, locked: true, soft: false, title };
     } else {
+      if (!this.orderStack && !this.replay && d.promptKey === "orderSimultaneous") return;
       const options = autoListed(i);
       if (!options.length || this.menuDismissed === d.seq) return;
       const view = this.session.state.step!.view;
@@ -864,9 +892,14 @@ export class PlayPage {
     this.menu = null;
   }
 
-  private choose(o: Option, i: Interaction | null) {
+  private choose(o: Option, i: Interaction | null, stackOnly = false) {
     if (!i) {
       this.menu = null;
+      return;
+    }
+    if (!stackOnly && i.decision.kind === "PRIORITY" && !this.holdStack
+      && o.ref?.type === "ability" && (o.ref.abilityKind === "spell" || o.ref.abilityKind === "activated")) {
+      this.startQuick(o.ref.cardId, null, o.id);
       return;
     }
     if (i.single || (i.decision.kind === "CHOOSE_MODE" && i.decision.max === 1)) {
@@ -1352,8 +1385,10 @@ export function previewView(p: PuzzleJson, opts?: { includeHidden?: boolean }): 
             counters.DEFENSE = meta.defense;
           }
           const delta = (counters.P1P1 ?? 0) - (counters.M1M1 ?? 0);
-          const baseP = meta?.basePower ?? null;
-          const baseT = meta?.baseToughness ?? null;
+          const isToken = zone === "battlefield" && !!c.token;
+          const isOffspringToken = isToken && (meta?.text?.includes("Offspring") ?? false);
+          const baseP = isOffspringToken ? 1 : (meta?.basePower ?? null);
+          const baseT = isOffspringToken ? 1 : (meta?.baseToughness ?? null);
           return {
             instanceId: c.id,
             name: c.cardId,
@@ -1371,7 +1406,7 @@ export function previewView(p: PuzzleJson, opts?: { includeHidden?: boolean }): 
             damage: 0,
             tapped: !!c.tapped,
             sick: !!c.summoningSick,
-            token: false,
+            token: isToken,
             faceDown: false,
             counters,
             attachedTo: null,

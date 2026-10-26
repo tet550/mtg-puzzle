@@ -75,6 +75,7 @@ public final class ResBundler {
             }
             // トークン: カードのスクリプトにある TokenScript$ の名前だけ
             Set<String> tokens = new TreeSet<>();
+            Set<String> tokenNamesLower = new java.util.HashSet<>();
             for (String name : names) {
                 Path f = cardFiles.get(name.toLowerCase());
                 if (f == null) continue;
@@ -88,24 +89,28 @@ public final class ResBundler {
             } else {
                 for (String t : tokens) {
                     Path f = res.resolve("tokenscripts").resolve(t + ".txt");
-                    if (Files.exists(f)) put(zip, "tokenscripts/" + t + ".txt", f);
+                    if (Files.exists(f)) {
+                        put(zip, "tokenscripts/" + t + ".txt", f);
+                        Files.lines(f, StandardCharsets.UTF_8)
+                                .filter(l -> l.startsWith("Name:"))
+                                .findFirst()
+                                .ifPresent(l -> tokenNamesLower.add(l.substring(5).trim().toLowerCase()));
+                    }
                 }
             }
 
-            // 日本語の訳（design/option-i18n.md の方式 A）: cardnames-ja-JP.txt のうち、問題のカードの行だけ
-            Path ja = res.resolve("languages").resolve("cardnames-ja-JP.txt");
-            if (Files.exists(ja)) {
-                Set<String> lower = new java.util.HashSet<>();
+            // 日本語の訳（design/option-i18n.md の方式 A）: cardnames-ja-JP.txt（＋ cardnames-ja-extra.txt）のうち、問題のカード・トークンの行だけ
+            Map<String, StringBuilder> ja = readJa(res);
+            if (!ja.isEmpty()) {
+                Set<String> lower = new java.util.TreeSet<>(tokenNamesLower);
                 names.forEach(n -> lower.add(n.toLowerCase()));
                 StringBuilder sb = new StringBuilder();
-                for (String line : Files.readAllLines(ja, java.nio.charset.StandardCharsets.UTF_8)) {
-                    String key = line.split("\\|", 2)[0].split("\\s*\\$", 2)[0].trim().toLowerCase();
-                    if (lower.contains(key)) {
-                        sb.append(line).append('\n');
-                    }
+                for (String key : lower) {
+                    StringBuilder l = ja.get(key);
+                    if (l != null) sb.append(l);
                 }
                 zip.putNextEntry(new ZipEntry("languages/cardnames-ja-JP.txt"));
-                zip.write(sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                zip.write(sb.toString().getBytes(StandardCharsets.UTF_8));
                 zip.closeEntry();
             }
 
@@ -133,6 +138,36 @@ public final class ResBundler {
             System.out.println("cards=" + cards + " missing=" + missing + " -> " + out + " (" + Files.size(out) / 1024 + " KB before close)");
         }
         System.out.println("size=" + Files.size(out) / 1024 + " KB");
+    }
+
+    /**
+     * Forge の cardnames-ja-JP.txt と、リポジトリの tools/cardnames-ja-extra.txt（Forge submodule を汚さずに補完した日本語訳）を読み、
+     * カード名（小文字、$ より前）→ 行の束を返す。extra 側に同じカード名があれば extra 側で上書きする。
+     */
+    static Map<String, StringBuilder> readJa(Path res) throws IOException {
+        Map<String, StringBuilder> ja = new HashMap<>();
+        Path jaFile = res.resolve("languages").resolve("cardnames-ja-JP.txt");
+        if (Files.exists(jaFile)) {
+            for (String line : Files.readAllLines(jaFile, StandardCharsets.UTF_8)) {
+                if (line.isBlank() || line.startsWith("#")) continue;
+                String key = line.split("\\|", 2)[0].split("\\s*\\$", 2)[0].trim().toLowerCase();
+                if (!key.isEmpty()) ja.computeIfAbsent(key, k -> new StringBuilder()).append(line).append('\n');
+            }
+        }
+        Path extra = res.toAbsolutePath().normalize().resolve("../../../../tools/cardnames-ja-extra.txt").normalize();
+        if (!Files.exists(extra)) extra = Path.of("tools/cardnames-ja-extra.txt");
+        if (!Files.exists(extra)) extra = Path.of("../tools/cardnames-ja-extra.txt");
+        if (Files.exists(extra)) {
+            Set<String> overridden = new java.util.HashSet<>();
+            for (String line : Files.readAllLines(extra, StandardCharsets.UTF_8)) {
+                if (line.isBlank() || line.startsWith("#")) continue;
+                String key = line.split("\\|", 2)[0].split("\\s*\\$", 2)[0].trim().toLowerCase();
+                if (key.isEmpty()) continue;
+                if (overridden.add(key)) ja.put(key, new StringBuilder());
+                ja.get(key).append(line).append('\n');
+            }
+        }
+        return ja;
     }
 
     private static void putDir(ZipOutputStream zip, Path res, String dir) throws IOException {

@@ -7,7 +7,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +33,7 @@ import java.util.zip.ZipOutputStream;
  * 使い方: CardData <forge res dir> <出力: 共通の zip> <出力: カードデータ .json.gz>
  */
 public final class CardData {
+    static final String FORGE_VERSION = "2.0.15";
     private static final Pattern NAME = Pattern.compile("^Name:(.*)$", Pattern.MULTILINE);
     /** スクリプトの中の、ほかのカードの名前を書く行（合体の相手・面のコピー元） */
     private static final Pattern NAME_LINE = Pattern.compile("^(?:MeldPair|CopyFaceFrom):(.*)$", Pattern.MULTILINE);
@@ -76,15 +76,10 @@ public final class CardData {
             for (String n : names) keys.putIfAbsent(n.toLowerCase(), i);
         }
 
-        // 日本語の訳: 名前（小文字）→ 行（ResBundler と同じ読み方）
-        Map<String, StringBuilder> ja = new HashMap<>();
-        Path jaFile = res.resolve("languages").resolve("cardnames-ja-JP.txt");
-        for (String line : Files.readAllLines(jaFile, StandardCharsets.UTF_8)) {
-            String key = line.split("\\|", 2)[0].split("\\s*\\$", 2)[0].trim().toLowerCase();
-            ja.computeIfAbsent(key, k -> new StringBuilder()).append(line).append('\n');
-        }
+        // 日本語の訳: 名前（小文字）→ 行（ResBundler.readJa と同じ読み方）
+        Map<String, StringBuilder> ja = ResBundler.readJa(res);
 
-        // トークン: 名前 → スクリプトと、そのトークンが作るトークン
+        // トークン: 名前 → スクリプトと、そのトークンが作るトークン、日本語の訳
         Map<String, Object> tokens = new TreeMap<>();
         List<String> always = new ArrayList<>(ALWAYS_TOKENS);
         try (Stream<Path> walk = Files.list(res.resolve("tokenscripts"))) {
@@ -96,6 +91,13 @@ public final class CardData {
                 Set<String> made = tokenNames(s);
                 made.remove(name);
                 if (!made.isEmpty()) t.put("t", new ArrayList<>(made));
+                Matcher tm = NAME.matcher(s);
+                StringBuilder tj = new StringBuilder();
+                while (tm.find()) {
+                    StringBuilder l = ja.get(tm.group(1).trim().toLowerCase());
+                    if (l != null) tj.append(l);
+                }
+                if (!tj.isEmpty()) t.put("j", tj.toString());
                 tokens.put(name, t);
                 if (s.lines().anyMatch(l -> l.startsWith("Types:") && l.contains("Dungeon"))) always.add(name);
             }
@@ -138,7 +140,7 @@ public final class CardData {
         }
 
         Map<String, Object> data = new LinkedHashMap<>();
-        data.put("forge", WebApi.FORGE_VERSION);
+        data.put("forge", FORGE_VERSION);
         data.put("keys", keys);
         data.put("cards", cards);
         data.put("editions", editions);
@@ -209,6 +211,7 @@ public final class CardData {
             Map<String, Object> tk = allTokens.get(t);
             if (tk == null || tokens.containsKey(t)) continue;
             tokens.put(t, tk.get("s"));
+            if (tk.get("j") != null) ja.append(tk.get("j"));
             if (tk.get("t") != null) tokenTodo.addAll((List<String>) tk.get("t"));
         }
         Map<String, Object> out = new LinkedHashMap<>();
