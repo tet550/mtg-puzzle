@@ -2,6 +2,10 @@
   "schemaVersion": 1,
   "title": "チュートリアル 1：火力呪文を唱える",
   "description": "手札の《ショック》を相手プレイヤーに唱えて、ライフを0にしましょう。",
+  "en": {
+    "title": "Tutorial 1: Cast a Burn Spell",
+    "description": "Cast Shock from your hand at your opponent to bring their life to 0."
+  },
   "engine": {
     "type": "forge",
     "version": "2.0.15"

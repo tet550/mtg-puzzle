@@ -2,6 +2,10 @@
   "schemaVersion": 1,
   "title": "簡単な問題 4：巨大化と噛み締め",
   "description": "《噛み締め》は自軍クリーチャーのパワー分のダメージを相手クリーチャーに与えます。唱える順番とマナエルフの使い方に注意しましょう。",
+  "en": {
+    "title": "Easy 4: Giant Growth and Bite Down",
+    "description": "Bite Down makes your creature deal damage equal to its power to an opposing creature. Mind the order you cast spells in and how you use your mana elf."
+  },
   "engine": {
     "type": "forge",
     "version": "2.0.15"

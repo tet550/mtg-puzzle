@@ -2,6 +2,10 @@
   "schemaVersion": 1,
   "title": "簡単な問題 3：幽霊による庇護",
   "description": "オーラ《幽霊による庇護》は自軍クリーチャーを強化しながら相手のブロッカーを追放できます。飛行・絆魂軍団で突破しましょう。",
+  "en": {
+    "title": "Easy 3: Sheltered by Ghosts",
+    "description": "The Aura Sheltered by Ghosts boosts your creature and exiles an opposing blocker. Break through with your flying, lifelinking team."
+  },
   "engine": {
     "type": "forge",
     "version": "2.0.15"

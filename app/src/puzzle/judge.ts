@@ -25,7 +25,7 @@ export interface JudgeInput {
 /** 1 ステップ分の出来事を順に見て判定する。先に起きた出来事が優先（期限の後の勝利はクリアにしない） */
 export function judge({ goal, startTurn, events, engine }: JudgeInput): Verdict {
   for (const e of events) {
-    if (e.type === "turnBegan" && e.turn > startTurn) {
+    if (goal.deadline === "current_turn" && e.type === "turnBegan" && e.turn > startTurn) {
       return { result: "FAILED", reason: "deadline" };
     }
     if (e.type === "gameOver") {

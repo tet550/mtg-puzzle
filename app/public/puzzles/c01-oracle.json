@@ -2,6 +2,10 @@
   "schemaVersion": 1,
   "title": "コンボ問題 1：神託者と無限への突入",
   "description": "《ジェイスの策謀》で生まれたジェイス・トークンは《謎の賢者、カズミナ》の忠誠度能力を得ます。ライブラリーを引き切り、《タッサの神託者》で特殊勝利しましょう。",
+  "en": {
+    "title": "Combo 1: The Oracle and Enter the Infinite",
+    "description": "The Jace token created by Jace's Machinations gains Kasmina, Enigma Sage's loyalty abilities. Draw your entire library and win with Thassa's Oracle."
+  },
   "engine": {
     "type": "forge",
     "version": "2.0.15"

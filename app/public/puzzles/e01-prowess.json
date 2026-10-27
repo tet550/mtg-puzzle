@@ -2,6 +2,10 @@
   "schemaVersion": 1,
   "title": "簡単な問題 1：果敢の連撃",
   "description": "《僧院の速槍》の「果敢」は非クリーチャー呪文を唱えるたび+1/+1されます。強化と火力を組み合わせて8点を削り切りましょう。",
+  "en": {
+    "title": "Easy 1: Prowess Barrage",
+    "description": "Monastery Swiftspear's prowess gives it +1/+1 whenever you cast a noncreature spell. Combine pump and burn to deal the full 8 damage."
+  },
   "engine": {
     "type": "forge",
     "version": "2.0.15"

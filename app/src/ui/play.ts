@@ -2,12 +2,12 @@
 
 import { puzzleCardNames, type EngineStatus, type ForgeEngine } from "../engine/client";
 import type { CardView, Decision, GameEvent, GameView, Option } from "../engine/protocol";
-import { cardMeta } from "../puzzle/carddb";
+import { cardMeta, isCardDbLoaded, loadCardDb } from "../puzzle/carddb";
 import { markCleared } from "../puzzle/catalog";
 import { verdictText } from "../puzzle/judge";
 import { parseManaPool, ZONES, type PuzzleJson } from "../puzzle/schema";
-import { PuzzleSession, type SessionState } from "../puzzle/session";
-import { buildSolutionShareUrl } from "../puzzle/share";
+import { PuzzleSession, type SessionLogStep, type SessionState } from "../puzzle/session";
+import { buildShareUrl, buildSolutionShareUrl, snapshotPuzzleFromView } from "../puzzle/share";
 import {
   deleteRegisteredSolution,
   formatSolutionStep,
@@ -26,11 +26,12 @@ import { manaNodes } from "./mana";
 import { icon, type IconName } from "./icons";
 import { buildInteraction, colorName, isColorAsk, isDirectManaLand, manaLabel, marksOf, optionLabel, type Interaction } from "./decision";
 import { h, patchChildren } from "./dom";
-import { cardImage, displayName, ensureCardImages, imagesEnabled, printedText, setImagesEnabled } from "./images";
-import { t, type MessageKey } from "../i18n";
-import { langSwitch } from "./lang";
+import { cardImage, displayName, ensureCardImages, imagesEnabled, printedText } from "./images";
+import { puzzleDescription, puzzleTitle, t, type MessageKey } from "../i18n";
+import { optionsButton } from "./options";
+import { openSnsShareDialog, type SnsShareKind } from "./sns";
 import { decisionPrompt, eventText, passLabel, phaseName } from "./text";
-import { capture, motionEnabled, play, setMotionEnabled, skip, verdictStamp } from "./motion";
+import { capture, motionEnabled, play, skip, verdictStamp } from "./motion";
 
 const VIEWER = "p1";
 
@@ -43,6 +44,10 @@ export interface PlayOptions {
   sharedSolution?: SolutionStep[] | null;
   /** 解答手順が登録されたときのコールバック（エディタのテストプレイ連携用） */
   onRegisterSolution?: (steps: SolutionStep[]) => void;
+  /** 一人回し（プレイテスト）で初手を引き直す・マリガン画面を開くコールバック */
+  onNewHand?: (() => void) | null;
+  /** 現在の盤面スナップショットを盤面エディタで開くコールバック */
+  onOpenEditor?: ((puzzle: PuzzleJson) => void) | null;
 }
 
 interface ReplayState {
@@ -118,8 +123,12 @@ export class PlayPage {
   private sharedSolution: SolutionStep[] | null = null;
   private registeredSolution: SolutionStep[] | null = null;
   private bundledSolution: SolutionStep[] | null = null;
+  private bundledRevealed = false;
   private solutionFeedback: { text: string; isError: boolean } | null = null;
+  private replayError: string | null = null;
   private replay: ReplayState | null = null;
+  private seeking = false;
+  private lastStepCount = 0;
   private disposed = false;
 
   constructor(engine: ForgeEngine, private readonly puzzleId: string, private readonly onBack: () => void, opts: PlayOptions = {}) {
@@ -130,10 +139,12 @@ export class PlayPage {
       recordClear: opts.recordClear ?? true,
       sharedSolution: opts.sharedSolution ?? null,
       onRegisterSolution: opts.onRegisterSolution ?? (() => {}),
+      onNewHand: opts.onNewHand ?? null,
+      onOpenEditor: opts.onOpenEditor ?? null,
     };
     this.sharedSolution = this.opts.sharedSolution;
     if (this.sharedSolution && this.sharedSolution.length > 0) {
-      this.solutionOpen = true;
+      this.logOpen = true;
     }
     this.el = h("div.play");
     this.session = new PuzzleSession(engine);
@@ -148,6 +159,12 @@ export class PlayPage {
   }
 
   async load(data: unknown) {
+    // カードDBが未ロードなら背景で読み込む（プレイテスト等の同梱外カードの日本語名・オラクル・タイプ行に使う）
+    if (!isCardDbLoaded()) {
+      void loadCardDb()
+        .then(() => { if (!this.disposed) this.render(); })
+        .catch(() => {});
+    }
     // 画像の一覧に無いカードは Scryfall で引く（問題の読み込みと並行。分かったら描き直す）
     void ensureCardImages(puzzleCardNames(data)).then((changed) => { if (changed && !this.disposed) this.render(); });
     void loadBundledSolution(this.puzzleId).then((sol) => {
@@ -205,8 +222,32 @@ export class PlayPage {
         if (cancel) { this.send([cancel.id]); return; }
       }
       this.render();
+      return;
     }
-    if (e.key === "l" && !(e.target instanceof HTMLInputElement)) { this.logOpen = !this.logOpen; this.render(); }
+    const inInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement;
+    if (!inInput) {
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod && !e.shiftKey && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        if (this.session.state.stepLogs.length > 0) {
+          const entries = this.timelineEntries(this.session.state);
+          void this.jumpToStep(this.session.state.stepLogs.length - 1, entries.map((x) => x.step));
+        }
+        return;
+      }
+      if ((mod && e.shiftKey && e.key.toLowerCase() === "z") || (mod && e.key.toLowerCase() === "y")) {
+        e.preventDefault();
+        const entries = this.timelineEntries(this.session.state);
+        if (this.session.state.stepLogs.length < entries.length) {
+          void this.jumpToStep(this.session.state.stepLogs.length + 1, entries.map((x) => x.step));
+        }
+        return;
+      }
+      if (e.key === "l") {
+        this.logOpen = !this.logOpen;
+        this.render();
+      }
+    }
   };
 
   private onSession(s: SessionState) {
@@ -276,11 +317,11 @@ export class PlayPage {
         }
       }
     }
-    // 演出: 前の盤面があって、新しい出来事が来たときだけ（開いた・やり直したときは描くだけ）
-    const animate = this.motion && !!prev && !!s.step && s.step !== prev && (fresh.length > 0 || triggered.length > 0);
+    // 演出: 前の盤面があって、新しい出来事が来たときだけ（開いた・やり直した・シーク移動したときは描くだけ）
+    const animate = !this.seeking && this.motion && !!prev && !!s.step && s.step !== prev && (fresh.length > 0 || triggered.length > 0);
     if (!animate) {
       // 演出を切っているときは、新しい出来事で変わったカードを短く光らせるだけ
-      this.flash = this.motion ? new Set() : changedCards(fresh, triggered);
+      this.flash = (this.motion || this.seeking) ? new Set() : changedCards(fresh, triggered);
       if (this.flash.size) {
         window.clearTimeout(this.flashTimer);
         this.flashTimer = window.setTimeout(() => { this.flash.clear(); this.render(); }, 900);
@@ -300,7 +341,7 @@ export class PlayPage {
     this.render();
     const after = () => {
       this.arrow?.setOrigin(this.el.querySelector<HTMLElement>(".stackbox [data-targeting]"));
-      if (s.phase === "finished" && prev?.engine.state !== "GAME_OVER") verdictStamp(s.verdict.result === "CLEARED");
+      if (!this.seeking && s.phase === "finished" && prev?.engine.state !== "GAME_OVER") verdictStamp(s.verdict.result === "CLEARED");
       if (this.macro && s.phase === "playing") queueMicrotask(() => this.stepMacro());
       else if (!this.orderStack && !this.replay && s.phase === "playing") queueMicrotask(() => this.stepAutoOrder());
       if (this.replay && s.phase === "playing") {
@@ -516,6 +557,7 @@ export class PlayPage {
     } else if (s.phase !== "busy") {
       this.lastMarks = new Map();
     }
+    const isPlaytest = s.puzzle?.goal.deadline === "none";
     const ui: BoardUi = {
       viewer: VIEWER,
       marks: this.lastMarks,
@@ -526,6 +568,7 @@ export class PlayPage {
       art: (name) => (this.images ? cardImage(name)?.normal ?? null : null),
       holdStack: this.holdStack,
       orderStack: this.orderStack,
+      noDeadline: isPlaytest,
       ...(view ? combatSets(view) : { attacking: new Set<string>(), blocking: new Set<string>() }),
     };
     const hooks: BoardHooks = {
@@ -555,26 +598,34 @@ export class PlayPage {
     };
     const scroll = this.el.querySelector<HTMLElement>(".hand")?.scrollLeft ?? 0;
     const logScroll = this.el.querySelector<HTMLElement>(".log");
+    const prevLogScrollTop = logScroll?.scrollTop ?? null;
     const stickLog = !logScroll || logScroll.scrollTop + logScroll.clientHeight >= logScroll.scrollHeight - 8;
 
     const header = h("header.bar", null,
       h("button.back", { type: "button", onclick: () => this.onBack(), title: t(this.opts.backTitleKey) }, t(this.opts.backKey)),
-      h("strong.ptitle", null, s.puzzle?.title ?? "…"),
-      h("span.chip.goal", { title: t("header.goal.title") }, t("header.goal")),
+      h("strong.ptitle", null, s.puzzle ? puzzleTitle(s.puzzle) : "…"),
+      h("span.chip.goal", { title: t(isPlaytest ? "header.playtestGoal.title" : "header.goal.title") }, t(isPlaytest ? "header.playtestGoal" : "header.goal")),
       view ? h("span.turn", null, t("header.turn", { turn: view.turn, phase: phaseName(view.phase) })) : null,
       h("span.spacer"),
       engineBadge(this.engineStatus),
+      this.opts.onNewHand
+        ? h("button", { type: "button", "data-action": "new-hand", onclick: () => { this.stopReplay(); this.opts.onNewHand?.(); }, disabled: s.phase === "loading" || s.phase === "busy", title: t("playtest.newHand.title") }, t("playtest.newHand"))
+        : null,
+      h("button", {
+        type: "button",
+        "data-action": "header-undo",
+        onclick: () => {
+          const entries = this.timelineEntries(s);
+          void this.jumpToStep(s.stepLogs.length - 1, entries.map((x) => x.step));
+        },
+        disabled: s.stepLogs.length === 0 || s.phase === "loading" || s.phase === "busy",
+        title: t("header.undo.title"),
+      }, t("header.undo")),
       h("button", { type: "button", onclick: () => { this.stopReplay(); void this.session.reset(); }, disabled: !s.puzzle || s.phase === "loading" || s.phase === "busy", title: t("header.reset.title") }, t("header.reset")),
-      h("button" + (this.solutionOpen || this.replay ? ".on" : ""), { type: "button", "data-action": "toggle-solution", "aria-pressed": String(this.solutionOpen), title: t("header.solution.title"),
-        onclick: () => { this.solutionOpen = !this.solutionOpen; this.solutionFeedback = null; this.render(); } }, t("header.solution")),
-      h("button" + (this.images ? ".on" : ""), { type: "button", "aria-pressed": String(this.images), title: t("header.images.title"),
-        onclick: () => { this.images = !this.images; setImagesEnabled(this.images); this.render(); } }, t("header.images")),
-      h("button" + (this.motion ? ".on" : ""), { type: "button", "aria-pressed": String(this.motion), title: t("header.motion.title"),
-        onclick: () => { this.motion = !this.motion; setMotionEnabled(this.motion); this.render(); } }, t("header.motion")),
-      h("button" + (this.logOpen ? ".on" : ""), { type: "button", onclick: () => { this.logOpen = !this.logOpen; this.render(); }, title: t("header.log.title") }, "Log"),
-      h("button" + (this.debug ? ".on" : ""), { type: "button", "aria-pressed": String(this.debug), title: t("header.debug.title"),
-        onclick: () => { this.debug = !this.debug; setDebugEnabled(this.debug); if (this.debug) this.logOpen = true; this.render(); } }, t("header.debug")),
-      langSwitch(),
+      h("button" + (this.solutionOpen ? ".on" : ""), { type: "button", "data-action": "toggle-solution", "aria-pressed": String(this.solutionOpen), title: t(isPlaytest ? "header.playtestSolution.title" : "header.solution.title"),
+        onclick: () => { this.solutionOpen = !this.solutionOpen; this.solutionFeedback = null; this.render(); } }, t(isPlaytest ? "header.playtestSolution" : "header.solution")),
+      h("button" + (this.logOpen || this.replay ? ".on" : ""), { type: "button", onclick: () => { this.logOpen = !this.logOpen; this.render(); }, title: t("header.log.title") }, "Log"),
+      optionsButton(() => { this.images = imagesEnabled(); this.motion = motionEnabled(); this.render(); }),
     );
 
     // 盤面の上に浮かぶ小窓（mtgtable と同じ）: スタックは右上、戦闘は右の中ほど、カードの詳細は左上
@@ -601,7 +652,8 @@ export class PlayPage {
         h("button.dbgbtn" + (this.debug ? ".on" : ""), { type: "button", "aria-pressed": String(this.debug), title: t("header.debug.title"),
           onclick: () => { this.debug = !this.debug; setDebugEnabled(this.debug); this.render(); } }, t("header.debug")),
         h("button", { type: "button", onclick: () => { this.logOpen = false; this.render(); }, title: t("card.close") }, "×")),
-        this.debug ? debugLogList(s) : logList(s.history, this.names)) : null,
+        !this.debug ? this.renderLogReplaySection(s) : null,
+        this.debug ? debugLogList(s) : this.renderUnifiedLog(s)) : null,
     );
 
     const panel = this.playPanel(s, interaction);
@@ -634,7 +686,26 @@ export class PlayPage {
     const hand = this.el.querySelector<HTMLElement>(".hand");
     if (hand) hand.scrollLeft = scroll;
     const log = this.el.querySelector<HTMLElement>(".log");
-    if (log && stickLog) log.scrollTop = log.scrollHeight;
+    if (log) {
+      if (this.debug) {
+        if (stickLog) log.scrollTop = log.scrollHeight;
+      } else {
+        if (prevLogScrollTop !== null) log.scrollTop = prevLogScrollTop;
+        if (s.stepLogs.length !== this.lastStepCount) {
+          this.lastStepCount = s.stepLogs.length;
+          const curEl = log.querySelector<HTMLElement>(".logstep.cur");
+          if (curEl) {
+            const top = curEl.offsetTop - log.offsetTop;
+            const bottom = top + curEl.offsetHeight;
+            if (top < log.scrollTop) {
+              log.scrollTop = Math.max(0, top - 8);
+            } else if (bottom > log.scrollTop + log.clientHeight) {
+              log.scrollTop = bottom - log.clientHeight + 12;
+            }
+          }
+        }
+      }
+    }
   }
 
   /** 盤面の上に浮かぶ小窓（見出しの「–」で畳む） */
@@ -674,26 +745,35 @@ export class PlayPage {
         bar.append(h("div.result", null, verdictText(s.verdict)),
           h("div.btns", null,
             h("button.on.big", { type: "button", onclick: () => { this.stopReplay(); void this.session.reset(); } }, t("action.again")),
+            this.opts.onNewHand
+              ? h("button.big", { type: "button", "data-action": "new-hand", onclick: () => { this.stopReplay(); this.opts.onNewHand?.(); } }, t("playtest.newHand"))
+              : null,
             h("button.big", { type: "button", onclick: () => this.onBack() }, t(this.opts.toBackKey))));
-        if (cleared && s.solutionSteps.length > 0) {
-          const isSameRegistered = this.isSameSteps(this.registeredSolution, s.solutionSteps);
+        if (cleared && s.puzzle) {
+          const hasSteps = s.solutionSteps.length > 0;
+          const isSameRegistered = hasSteps && this.isSameSteps(this.registeredSolution, s.solutionSteps);
           bar.append(
             h("div.solcleared", null,
-              h("button" + (isSameRegistered ? ".on" : ""), {
+              h("button.on", {
                 type: "button",
-                "data-action": "register-solution",
-                onclick: () => this.registerSolution(s.solutionSteps),
-              }, t(isSameRegistered ? "solution.registered" : "solution.register", { n: s.solutionSteps.length })),
-              h("button", {
-                type: "button",
-                "data-action": "share-solution",
-                onclick: () => void this.shareSolution(s.solutionSteps),
-              }, t("solution.share")),
-              h("button", {
-                type: "button",
-                "data-action": "replay-solution",
-                onclick: () => this.startReplay(s.solutionSteps, true),
-              }, t("solution.replay")),
+                "data-action": "sns-share-clear",
+                title: t("sns.btn.clear.title"),
+                onclick: () => this.openSnsShare("clear"),
+              }, t("sns.btn.clear")),
+              hasSteps
+                ? h("button" + (isSameRegistered ? ".on" : ""), {
+                    type: "button",
+                    "data-action": "register-solution",
+                    onclick: () => this.registerSolution(s.solutionSteps),
+                  }, t(isSameRegistered ? "solution.registered" : "solution.register", { n: s.solutionSteps.length }))
+                : null,
+              hasSteps
+                ? h("button", {
+                    type: "button",
+                    "data-action": "share-solution",
+                    onclick: () => void this.shareSolution(s.solutionSteps),
+                  }, t("solution.share"))
+                : null,
             ),
           );
         }
@@ -713,58 +793,6 @@ export class PlayPage {
         break;
     }
     if (s.notice) bar.prepend(h("div.notice", null, s.notice));
-    if (this.replay && (s.phase === "playing" || s.phase === "busy" || s.phase === "loading")) {
-      const curIdx = Math.min(this.replay.index, this.replay.steps.length - 1);
-      const stepText = curIdx >= 0 && this.replay.steps[curIdx]
-        ? formatSolutionStep(this.replay.steps[curIdx], (n) => displayName(n))
-        : "";
-      const statusMsg = t(this.replay.auto ? "solution.replaying" : "solution.replayPaused", {
-        cur: Math.min(this.replay.index + 1, this.replay.steps.length),
-        total: this.replay.steps.length,
-        step: stepText,
-      });
-      bar.prepend(
-        h("div.quick.replaybar", null,
-          h("span", null, statusMsg),
-          h("div.rbtns", null,
-            this.replay.auto
-              ? h("button", {
-                  type: "button",
-                  "data-action": "replay-pause",
-                  onclick: () => {
-                    if (!this.replay) return;
-                    window.clearTimeout(this.replay.timer);
-                    this.replay.auto = false;
-                    this.render();
-                  },
-                }, t("solution.replayPause"))
-              : h("button.on", {
-                  type: "button",
-                  "data-action": "replay-resume",
-                  onclick: () => {
-                    if (!this.replay) return;
-                    this.replay.auto = true;
-                    this.render();
-                    this.scheduleReplayStep(0);
-                  },
-                }, t("solution.replayResume")),
-            !this.replay.auto
-              ? h("button", {
-                  type: "button",
-                  "data-action": "replay-step",
-                  disabled: s.phase !== "playing",
-                  onclick: () => this.stepReplayOnce(),
-                }, t("solution.replayStep"))
-              : null,
-            h("button", {
-              type: "button",
-              "data-action": "replay-stop",
-              onclick: () => { this.stopReplay(); this.render(); },
-            }, t("solution.replayStop")),
-          ),
-        ),
-      );
-    }
     if (this.macro && (s.phase === "playing" || s.phase === "busy")) {
       bar.prepend(h("div.quick", null, h("span", null, t("quick.running", { card: displayName(this.names.get(this.macro.cardId) ?? "") })),
         h("button", { type: "button", onclick: () => { this.macro = null; this.render(); } }, t("quick.stop"))));
@@ -772,7 +800,8 @@ export class PlayPage {
     if (this.solutionOpen) {
       bar.append(this.renderSolutionSection(s));
     }
-    if (s.puzzle?.description) bar.prepend(h("details.pdesc", null, h("summary", null, s.puzzle.title), h("div.muted", null, s.puzzle.description)));
+    const desc = s.puzzle && puzzleDescription(s.puzzle);
+    if (desc) bar.prepend(h("details.pdesc", null, h("summary", null, puzzleTitle(s.puzzle!)), h("div.muted", null, desc)));
     return bar;
   }
 
@@ -973,16 +1002,87 @@ export class PlayPage {
   // ---------------------------------------------------------------- 解答手順の登録・公開・再生
 
   private puzzleStorageKey(): string {
+    const p = this.session.state.puzzle;
+    if (p?.goal.deadline === "none" || this.puzzleId.startsWith("playtest-")) {
+      const handSig = (p?.game.players[0]?.hand ?? []).map((c) => c.cardId).join(",");
+      return `${this.puzzleId}:${handSig}`;
+    }
     if (this.puzzleId && this.puzzleId !== "shared" && this.puzzleId !== "editor-test") {
       return this.puzzleId;
     }
-    const title = this.session.state.puzzle?.title?.trim();
+    const title = p?.title?.trim();
     return title ? `custom:${title}` : this.puzzleId;
   }
 
   private isSameSteps(a: SolutionStep[] | null | undefined, b: SolutionStep[] | null | undefined): boolean {
     if (!a || !b || a.length !== b.length) return false;
     return a.every((s, i) => s.kind === b[i].kind && s.labels.join("|") === b[i].labels.join("|"));
+  }
+
+  private isStepEqual(a: SolutionStep | undefined, b: SolutionStep | undefined): boolean {
+    if (!a || !b) return false;
+    return a.kind === b.kind && a.labels.join("|") === b.labels.join("|");
+  }
+
+  private isPrefixSteps(prefix: SolutionStep[], full: SolutionStep[]): boolean {
+    if (prefix.length > full.length) return false;
+    return prefix.every((st, idx) => this.isStepEqual(st, full[idx]));
+  }
+
+  /**
+   * 統合ログに表示する全手番（#1..#M）を組み立てる。
+   * - 1..curCount 手目は常に実行済みの s.stepLogs
+   * - それ以降は Undo 後の s.futureSteps、または現在と一致する共有・登録・公開済み公式解答の残り手番を繋げる
+   */
+  private timelineEntries(s: SessionState): SessionLogStep[] {
+    const executed = s.stepLogs;
+    const executedSteps = executed.map((e) => e.step);
+
+    if (this.replay && this.isPrefixSteps(executedSteps, this.replay.steps)) {
+      const rest = this.replay.steps.slice(executed.length).map((step, idx) => {
+        const f = s.futureSteps[idx];
+        return f && this.isStepEqual(f.step, step) ? f : { step, optionIds: [], events: [] };
+      });
+      return [...executed, ...rest];
+    }
+
+    if (s.futureSteps.length > 0) {
+      return [...executed, ...s.futureSteps];
+    }
+
+    const candidates: (SolutionStep[] | null)[] = [
+      this.sharedSolution,
+      this.registeredSolution,
+      this.bundledRevealed ? this.bundledSolution : null,
+    ];
+    for (const cand of candidates) {
+      if (cand && cand.length > executed.length && this.isPrefixSteps(executedSteps, cand)) {
+        const rest = cand.slice(executed.length).map((step) => ({ step, optionIds: [], events: [] }));
+        return [...executed, ...rest];
+      }
+    }
+
+    return [...executed];
+  }
+
+  private async jumpToStep(targetCount: number, externalSteps?: SolutionStep[]) {
+    const s = this.session.state;
+    if (s.phase === "loading" || s.phase === "busy" || s.phase === "idle" || s.phase === "error") return;
+    this.stopReplay();
+    this.macro = null;
+    this.replayError = null;
+    const curCount = s.stepLogs.length;
+    const isSingleStepForward = targetCount === curCount + 1 && s.phase === "playing";
+    this.seeking = !isSingleStepForward;
+    try {
+      const ok = await this.session.seekTo(targetCount, externalSteps);
+      if (!ok && this.session.state.notice) {
+        this.replayError = this.session.state.notice;
+      }
+    } finally {
+      this.seeking = false;
+      this.render();
+    }
   }
 
   private activeSolution(s: SessionState): { source: "shared" | "registered" | "recorded" | "bundled"; steps: SolutionStep[] } | null {
@@ -998,7 +1098,60 @@ export class PlayPage {
     if (this.bundledSolution && this.bundledSolution.length > 0) {
       return { source: "bundled", steps: this.bundledSolution };
     }
+    if (s.solutionSteps.length > 0) {
+      return { source: "recorded", steps: s.solutionSteps };
+    }
     return null;
+  }
+
+  private getCurrentBoardPuzzle(): PuzzleJson | null {
+    const s = this.session.state;
+    if (!s.puzzle) return null;
+    const view = s.step?.view;
+    return view ? snapshotPuzzleFromView(s.puzzle, view) : s.puzzle;
+  }
+
+  private async shareBoard(useCurrentView: boolean) {
+    const s = this.session.state;
+    if (!s.puzzle) return;
+    const targetPuzzle = useCurrentView ? (this.getCurrentBoardPuzzle() ?? s.puzzle) : s.puzzle;
+    try {
+      const url = await buildShareUrl(targetPuzzle, "play");
+      try {
+        await navigator.clipboard.writeText(url);
+      } catch {
+        // クリップボード権限がない環境でも続行
+      }
+      const toastKey = useCurrentView ? "solution.board.sharedCurrentToast" : "solution.board.sharedInitialToast";
+      this.solutionFeedback = { text: t(toastKey, { n: url.length }), isError: false };
+      this.solutionOpen = true;
+      this.render();
+    } catch (e) {
+      this.solutionFeedback = { text: String(e), isError: true };
+      this.solutionOpen = true;
+      this.render();
+    }
+  }
+
+  private openCurrentBoardInEditor() {
+    const snap = this.getCurrentBoardPuzzle();
+    if (!snap || !this.opts.onOpenEditor) return;
+    this.stopReplay();
+    this.opts.onOpenEditor(snap);
+  }
+
+  private openSnsShare(shareKind: SnsShareKind) {
+    const s = this.session.state;
+    if (!s.puzzle) return;
+    const steps = s.solutionSteps.length > 0 ? s.solutionSteps : (this.activeSolution(s)?.steps ?? null);
+    openSnsShareDialog({
+      puzzleId: this.puzzleId,
+      puzzle: s.puzzle,
+      initialView: previewView(s.puzzle),
+      currentView: s.step?.view ?? null,
+      shareKind,
+      steps,
+    });
   }
 
   private registerSolution(steps: SolutionStep[]) {
@@ -1066,18 +1219,28 @@ export class PlayPage {
 
   private startReplay(steps: SolutionStep[], auto: boolean) {
     if (!steps.length) return;
+    if (this.bundledSolution && this.isSameSteps(steps, this.bundledSolution)) {
+      this.bundledRevealed = true;
+    }
     this.macro = null;
     this.solutionFeedback = null;
+    this.replayError = null;
+    this.logOpen = true;
     const s = this.session.state;
+    if (!auto) {
+      const nextTarget = this.canContinueReplay(s, steps) ? s.stepLogs.length + 1 : 1;
+      void this.jumpToStep(nextTarget, steps);
+      return;
+    }
     if (this.canContinueReplay(s, steps)) {
-      this.replay = { steps, index: s.solutionSteps.length, auto, timer: 0 };
+      this.replay = { steps, index: s.solutionSteps.length, auto: true, timer: 0 };
       this.render();
       this.stepReplayOnce();
       return;
     }
-    this.replay = { steps, index: 0, auto, timer: 0, stepOnceAfterReset: !auto, resetting: true };
+    this.replay = { steps, index: 0, auto: true, timer: 0, stepOnceAfterReset: false, resetting: true };
     this.render();
-    void this.session.reset();
+    void this.session.seekTo(0, steps);
   }
 
   private stopReplay() {
@@ -1108,8 +1271,8 @@ export class PlayPage {
     const ids = matchSolutionStep(s.step.pending, step);
     if (!ids) {
       this.stopReplay();
-      this.solutionFeedback = { text: t("solution.replayMismatch"), isError: true };
-      this.solutionOpen = true;
+      this.replayError = t("solution.replayMismatch");
+      this.logOpen = true;
       this.render();
       return;
     }
@@ -1117,42 +1280,323 @@ export class PlayPage {
     this.send(ids);
   }
 
+  /** Log 画面の手番操作バー（最初へ・1手戻す・1手進める・自動再生） */
+  private renderLogReplaySection(s: SessionState): HTMLElement {
+    const busy = s.phase === "loading" || s.phase === "busy";
+    const entries = this.timelineEntries(s);
+    const timelineSteps = entries.map((e) => e.step);
+    const curCount = s.stepLogs.length;
+    const totalSteps = entries.length;
+    const active = this.activeSolution(s);
+    const box = h("div.logreplay");
+
+    if (this.replayError) {
+      box.append(h("div.solnote.err", null, this.replayError));
+    }
+
+    if (this.replay && (s.phase === "playing" || s.phase === "busy" || s.phase === "loading")) {
+      const curIdx = Math.min(this.replay.index, this.replay.steps.length - 1);
+      const stepText = curIdx >= 0 && this.replay.steps[curIdx]
+        ? formatSolutionStep(this.replay.steps[curIdx], (n) => displayName(n))
+        : "";
+      const statusMsg = t(this.replay.auto ? "solution.replaying" : "solution.replayPaused", {
+        cur: Math.min(this.replay.index + 1, this.replay.steps.length),
+        total: this.replay.steps.length,
+        step: stepText,
+      });
+      box.append(
+        h("div.quick.replaybar", null,
+          h("span", null, statusMsg),
+          h("div.rbtns", null,
+            this.replay.auto
+              ? h("button", {
+                  type: "button",
+                  "data-action": "replay-pause",
+                  onclick: () => {
+                    if (!this.replay) return;
+                    window.clearTimeout(this.replay.timer);
+                    this.replay.auto = false;
+                    this.render();
+                  },
+                }, t("solution.replayPause"))
+              : h("button.on", {
+                  type: "button",
+                  "data-action": "replay-resume",
+                  onclick: () => {
+                    if (!this.replay) return;
+                    this.replay.auto = true;
+                    this.render();
+                    this.scheduleReplayStep(0);
+                  },
+                }, t("solution.replayResume")),
+            h("button", {
+              type: "button",
+              "data-action": "replay-stop",
+              onclick: () => { this.stopReplay(); this.render(); },
+            }, t("solution.replayStop")),
+          ),
+        ),
+      );
+    }
+
+    const replayTargetSteps = timelineSteps.length > 0 ? timelineSteps : (active?.steps ?? []);
+    const canUndo = !busy && curCount > 0;
+    const canStepForward = !busy && (curCount < totalSteps || (totalSteps === 0 && !!active));
+    const canAutoReplay = !busy && replayTargetSteps.length > 0;
+
+    let subSourceLabel: string | null = null;
+    if (active && (active.source === "shared" || active.source === "registered" || (active.source === "bundled" && this.bundledRevealed))) {
+      if (this.isSameSteps(timelineSteps, active.steps)) {
+        subSourceLabel = t(`solution.source.${active.source}` as MessageKey, { n: active.steps.length });
+      }
+    }
+
+    box.append(
+      h("div.solhead", null,
+        h("div.solpos", null,
+          h("strong.solsrc", null, t("log.position", { cur: curCount, total: totalSteps })),
+          subSourceLabel ? h("span.muted.solsub", null, subSourceLabel) : null,
+        ),
+        h("div.solbtns", null,
+          h("button", {
+            type: "button",
+            "data-action": "seek-start",
+            disabled: !canUndo,
+            title: t("log.seekStart.title"),
+            onclick: () => void this.jumpToStep(0, timelineSteps),
+          }, t("log.seekStart")),
+          h("button", {
+            type: "button",
+            "data-action": "undo-step",
+            disabled: !canUndo,
+            title: t("log.undo.title"),
+            onclick: () => void this.jumpToStep(curCount - 1, timelineSteps),
+          }, t("log.undo")),
+          h("button", {
+            type: "button",
+            "data-action": "replay-step",
+            disabled: !canStepForward,
+            title: t("log.redo.title"),
+            onclick: () => {
+              if (curCount < totalSteps) {
+                void this.jumpToStep(curCount + 1, timelineSteps);
+              } else if (active) {
+                this.startReplay(active.steps, false);
+              }
+            },
+          }, t("solution.replayStep")),
+          h("button" + (canAutoReplay && !this.replay?.auto ? ".on" : ""), {
+            type: "button",
+            "data-action": "replay-auto",
+            disabled: !canAutoReplay,
+            onclick: () => this.startReplay(replayTargetSteps, true),
+          }, t("solution.replayAuto")),
+        ),
+      ),
+    );
+
+    if (this.bundledSolution && this.bundledSolution.length > 0 && !this.bundledRevealed && totalSteps === 0) {
+      box.append(
+        h("div.solcur", null,
+          h("button", {
+            type: "button",
+            "data-action": "load-bundled",
+            disabled: busy,
+            onclick: () => {
+              this.bundledRevealed = true;
+              this.render();
+            },
+          }, t("log.loadBundled", { n: this.bundledSolution.length })),
+        ),
+      );
+    } else if (active && active.source !== "recorded" && totalSteps > 0 && !this.isSameSteps(timelineSteps, active.steps)) {
+      const savedLabel = t(`solution.source.${active.source}` as MessageKey, { n: active.steps.length });
+      box.append(
+        h("div.solcur", null,
+          h("span.solsrc", null, savedLabel),
+          h("div.solbtns", null,
+            h("button", {
+              type: "button",
+              "data-action": "replay-saved-auto",
+              disabled: busy,
+              onclick: () => this.startReplay(active.steps, true),
+            }, t("solution.replayAuto")),
+            h("button", {
+              type: "button",
+              "data-action": "replay-saved-step",
+              disabled: busy,
+              onclick: () => {
+                this.bundledRevealed = true;
+                void this.jumpToStep(0, active.steps);
+              },
+            }, t("log.seekStart")),
+          ),
+        ),
+      );
+    } else if (totalSteps === 0 && !active) {
+      box.append(h("div.muted.solnote", null, t("log.replay.empty")));
+    }
+
+    return box;
+  }
+
+  /** 手順と出来事（Log）を統合したタイムライン。各手番をクリックするとその位置へ移動できる */
+  private renderUnifiedLog(s: SessionState): HTMLElement {
+    const busy = s.phase === "loading" || s.phase === "busy";
+    const entries = this.timelineEntries(s);
+    const timelineSteps = entries.map((e) => e.step);
+    const curCount = s.stepLogs.length;
+    const formatEv = (e: GameEvent) => eventText(e, (id) => displayName(this.names.get(id) ?? id), VIEWER);
+
+    const initLines = s.initialEvents.map(formatEv).filter((x): x is string => !!x);
+    const isAtInit = curCount === 0;
+    const canClickInit = !isAtInit && !busy;
+
+    const nodes: HTMLElement[] = [
+      h(
+        "div.logstep.init" + (isAtInit ? ".cur" : ".done") + (canClickInit ? ".clickable" : ""),
+        {
+          "data-step-index": "0",
+          title: canClickInit ? t("log.jumpHere") : null,
+          onclick: () => {
+            if (canClickInit) void this.jumpToStep(0, timelineSteps);
+          },
+        },
+        h(
+          "div.stephead",
+          null,
+          h("span.stepnum", null, "#0"),
+          h("span.steplabel", null, t("log.step0")),
+          isAtInit
+            ? h("span.stepcur", null, t("log.here"))
+            : h("span.stepjump", null, t("log.jumpHere")),
+        ),
+        initLines.length
+          ? h(
+              "div.stepevs",
+              null,
+              initLines.map((l) => h("div.ev" + (l.startsWith("──") ? ".turnline" : ""), null, l)),
+            )
+          : null,
+      ),
+    ];
+
+    entries.forEach((entry, idx) => {
+      const stepNum = idx + 1;
+      const isCur = stepNum === curCount;
+      const isDone = stepNum < curCount;
+      const stateCls = isCur ? ".cur" : isDone ? ".done" : ".future";
+      const canClick = !isCur && !busy;
+      const labelText = formatSolutionStep(entry.step, (n) => displayName(n));
+      const evLines = entry.events.map(formatEv).filter((x): x is string => !!x);
+
+      nodes.push(
+        h(
+          "div.logstep" + stateCls + (canClick ? ".clickable" : ""),
+          {
+            "data-step-index": String(stepNum),
+            title: canClick ? t("log.jumpHere") : null,
+            onclick: () => {
+              if (canClick) void this.jumpToStep(stepNum, timelineSteps);
+            },
+          },
+          h(
+            "div.stephead",
+            null,
+            h("span.stepnum", null, `#${stepNum}`),
+            h("span.steplabel", null, manaNodes(labelText)),
+            isCur
+              ? h("span.stepcur", null, t("log.here"))
+              : h("span.stepjump", null, t("log.jumpHere")),
+          ),
+          evLines.length
+            ? h(
+                "div.stepevs",
+                null,
+                evLines.map((l) => h("div.ev" + (l.startsWith("──") ? ".turnline" : ""), null, l)),
+              )
+            : null,
+        ),
+      );
+    });
+
+    return h("div.log.unified", null, ...nodes);
+  }
+
   private renderSolutionSection(s: SessionState): HTMLElement {
+    const isPlaytest = s.puzzle?.goal.deadline === "none";
+    const busy = s.phase === "loading" || s.phase === "busy";
     const active = this.activeSolution(s);
     const box = h("div.solbox");
     if (this.solutionFeedback) {
       box.append(h("div.solnote" + (this.solutionFeedback.isError ? ".err" : ".ok"), null, this.solutionFeedback.text));
     }
+    if (s.puzzle) {
+      box.append(
+        h("div.solboard", null,
+          h("strong.solsrc", null, t("solution.board.title")),
+          h("div.solbtns", null,
+            h("button.on", {
+              type: "button",
+              "data-action": "sns-share-board",
+              disabled: busy,
+              title: t(isPlaytest ? "sns.btn.playtest.title" : "sns.btn.puzzle.title"),
+              onclick: () => this.openSnsShare(s.verdict.result === "CLEARED" ? "clear" : isPlaytest ? "playtest" : "puzzle"),
+            }, t(s.verdict.result === "CLEARED" ? "sns.btn.clear" : isPlaytest ? "sns.btn.playtest" : "sns.btn.puzzle")),
+            h("button", {
+              type: "button",
+              "data-action": "share-current-board",
+              disabled: busy,
+              title: t("solution.board.shareCurrent.title"),
+              onclick: () => void this.shareBoard(true),
+            }, t("solution.board.shareCurrent")),
+            h("button", {
+              type: "button",
+              "data-action": "share-initial-board",
+              disabled: busy,
+              title: t("solution.board.shareInitial.title"),
+              onclick: () => void this.shareBoard(false),
+            }, t("solution.board.shareInitial")),
+            this.opts.onOpenEditor
+              ? h("button", {
+                  type: "button",
+                  "data-action": "edit-current-board",
+                  disabled: busy,
+                  title: t("solution.board.editCurrent.title"),
+                  onclick: () => this.openCurrentBoardInEditor(),
+                }, t("solution.board.editCurrent"))
+              : null,
+          ),
+        ),
+      );
+    }
     if (!active) {
-      box.append(h("div.muted.solnote", null, t("solution.empty")));
+      box.append(h("div.muted.solnote", null, t(isPlaytest ? "solution.emptyPlaytest" : "solution.empty")));
       return box;
     }
     const { source, steps } = active;
-    const sourceLabel = t(`solution.source.${source}` as MessageKey, { n: steps.length });
-    const busy = s.phase === "loading" || s.phase === "busy";
-    const curStepIdx = this.replay ? this.replay.index : (this.canContinueReplay(s, steps) ? s.solutionSteps.length : -1);
+    const isInProgressRecord = source === "recorded" && s.verdict.result !== "CLEARED";
+    const sourceLabel = isInProgressRecord
+      ? t("solution.source.inProgress", { n: steps.length })
+      : t(`solution.source.${source}` as MessageKey, { n: steps.length });
+    const hasDifferentCurrentSteps = s.solutionSteps.length > 0 && !this.isSameSteps(steps, s.solutionSteps);
 
     box.append(
       h("div.solhead", null,
         h("strong.solsrc", null, sourceLabel),
         h("div.solbtns", null,
-          h("button.on", {
-            type: "button",
-            "data-action": "replay-auto",
-            disabled: busy,
-            onclick: () => this.startReplay(steps, true),
-          }, t("solution.replayAuto")),
-          h("button", {
-            type: "button",
-            "data-action": "replay-step",
-            disabled: busy,
-            onclick: () => this.startReplay(steps, false),
-          }, t("solution.replayStep")),
+          source === "recorded"
+            ? h("button", {
+                type: "button",
+                "data-action": "register-solution",
+                onclick: () => this.registerSolution(steps),
+              }, t(isPlaytest ? "solution.registerSteps" : "solution.register", { n: steps.length }))
+            : null,
           h("button", {
             type: "button",
             "data-action": "share-solution",
             onclick: () => void this.shareSolution(steps),
-          }, t("solution.share")),
+          }, t(isPlaytest ? "solution.shareSteps" : "solution.share")),
           source === "registered"
             ? h("button", {
                 type: "button",
@@ -1162,17 +1606,26 @@ export class PlayPage {
             : null,
         ),
       ),
-      h("details.solsteps", { open: "open" },
-        h("summary", null, t("solution.stepsList", { n: steps.length })),
-        h("ol.sollist", null,
-          steps.map((st, idx) =>
-            h("li" + (idx === curStepIdx ? ".cur" : idx < curStepIdx ? ".done" : ""), null,
-              formatSolutionStep(st, (n) => displayName(n)),
-            ),
+    );
+    if (hasDifferentCurrentSteps) {
+      box.append(
+        h("div.solcur", null,
+          h("span.solsrc", null, t("solution.currentStepsLabel", { n: s.solutionSteps.length })),
+          h("div.solbtns", null,
+            h("button", {
+              type: "button",
+              "data-action": "register-current-steps",
+              onclick: () => this.registerSolution(s.solutionSteps),
+            }, t(isPlaytest ? "solution.registerSteps" : "solution.register", { n: s.solutionSteps.length })),
+            h("button", {
+              type: "button",
+              "data-action": "share-current-steps",
+              onclick: () => void this.shareSolution(s.solutionSteps),
+            }, t(isPlaytest ? "solution.shareSteps" : "solution.share")),
           ),
         ),
-      ),
-    );
+      );
+    }
     return box;
   }
 }
@@ -1191,11 +1644,6 @@ export function engineBadge(s: EngineStatus): HTMLElement {
 
 function statusText(s: EngineStatus): string {
   return t(`engine.${s}` as MessageKey);
-}
-
-function logList(history: GameEvent[], names: Map<string, string>): HTMLElement {
-  const lines = history.map((e) => eventText(e, (id) => displayName(names.get(id) ?? id), VIEWER)).filter((t): t is string => !!t);
-  return h("div.log", null, lines.length ? lines.map((l) => h("div.ev" + (l.startsWith("──") ? ".turnline" : ""), null, l)) : h("div.muted", null, t("log.empty")));
 }
 
 const DEBUG_KEY = "mtg-puzzle.debug";

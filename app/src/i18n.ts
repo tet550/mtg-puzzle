@@ -46,6 +46,21 @@ export function onLangChange(fn: (l: Lang) => void): () => void {
   return () => listeners.delete(fn);
 }
 
+/** 問題の題名と説明。title / description は日本語で、英語の画面では en の英訳があればそれを使う */
+export interface PuzzleText {
+  title: string;
+  description?: string;
+  en?: { title?: string; description?: string };
+}
+
+export function puzzleTitle(p: PuzzleText): string {
+  return (current === "en" && p.en?.title) || p.title;
+}
+
+export function puzzleDescription(p: PuzzleText): string | undefined {
+  return (current === "en" && p.en?.description) || p.description;
+}
+
 /** t("key", { n: 3 }) → 辞書の文の {n} を置き換える */
 export function t(key: MessageKey, params?: Record<string, string | number>): string {
   let s: string = DICTS[current][key] ?? ja[key] ?? key;

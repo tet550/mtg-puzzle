@@ -40,13 +40,17 @@ def main():
         if (src / f"{name}.solution.json").exists():
             shutil.copy(src / f"{name}.solution.json", OUT / f"{name}.solution.json")
         source = puzzle.get("source") or {}
-        index.append({
+        entry = {
             "id": name,
             "title": puzzle.get("title", name),
             "description": puzzle.get("description", ""),
             # 画面では「Forge のパズル（ファイル名）」と出す（文は画面の言語で app 側が作る）
             "sourceFile": source["file"] if source.get("type") == "forge-pzl" else None,
-        })
+        }
+        # 英語の画面で出す題名・説明（あれば）
+        if puzzle.get("en"):
+            entry["en"] = puzzle["en"]
+        index.append(entry)
     (OUT / "index.json").write_text(json.dumps(index, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(f"{len(index)} puzzles -> {OUT}")
 

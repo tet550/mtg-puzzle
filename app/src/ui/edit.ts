@@ -5,7 +5,7 @@
 
 import type { ForgeEngine } from "../engine/client";
 import type { CardView, ManaColor } from "../engine/protocol";
-import { t, type MessageKey } from "../i18n";
+import { puzzleTitle, t, type MessageKey } from "../i18n";
 import {
   cardMeta,
   loadCardDb,
@@ -35,10 +35,11 @@ import { formatSolutionStep } from "../puzzle/solution";
 import { detailBody, renderBoard, type BoardHooks, type BoardUi, type Mark } from "./board";
 import { h } from "./dom";
 import { fitHands, setupFloat } from "./float";
-import { cardImage, displayName, ensureCardImages, imagesEnabled, printedText, setImagesEnabled } from "./images";
-import { langSwitch } from "./lang";
+import { cardImage, displayName, ensureCardImages, imagesEnabled, printedText } from "./images";
+import { optionsButton } from "./options";
 import { manaNodes } from "./mana";
 import { engineBadge, previewView } from "./play";
+import { openSnsShareDialog } from "./sns";
 import { phaseName } from "./text";
 
 export const EDITOR_DRAFT_KEY = "mtg-puzzle.editor.draft.v1";
@@ -607,12 +608,28 @@ export class EditPage {
     fitHands(this.el);
   }
 
+  private openSnsShare(): void {
+    const normalized = normalizePuzzleForEngine(this.puzzle);
+    openSnsShareDialog({
+      puzzle: normalized,
+      initialView: previewView(normalized),
+      shareKind: "puzzle",
+      steps: normalized.solution ?? null,
+    });
+  }
+
   private render(): void {
     const topBar = h("header.bar", null,
       h("button.back", { type: "button", onclick: () => this.onBack(), title: t("header.back.title") }, t("header.back")),
       h("strong.ptitle", null, this.puzzle.title || t("editor.defaultTitle")),
       h("span.chip.goal", null, t("editor.badge")),
       h("span.spacer"),
+      h("button", {
+        type: "button",
+        "data-action": "sns-share-puzzle",
+        title: t("sns.btn.puzzle.title"),
+        onclick: () => this.openSnsShare(),
+      }, t("sns.btn.puzzle")),
       h("button.on", {
         type: "button",
         "data-action": "test-play",
@@ -620,17 +637,10 @@ export class EditPage {
         onclick: () => this.onTestPlay(normalizePuzzleForEngine(this.puzzle)),
       }, t("editor.testPlay")),
       engineBadge(this.engine.status),
-      h("button" + (this.images ? ".on" : ""), {
-        type: "button",
-        "aria-pressed": String(this.images),
-        title: t("header.images.title"),
-        onclick: () => {
-          this.images = !this.images;
-          setImagesEnabled(this.images);
-          this.render();
-        },
-      }, t("header.images")),
-      langSwitch(),
+      optionsButton(() => {
+        this.images = imagesEnabled();
+        this.render();
+      }),
     );
 
     const board = this.buildBoardElement();
@@ -1164,7 +1174,7 @@ export class EditPage {
         h("option", {
           value: e.id,
           selected: e.id === this.selectedTemplateId ? "selected" : null,
-        }, `${e.id}: ${e.title}`),
+        }, `${e.id}: ${puzzleTitle(e)}`),
       )),
       h("button", {
         type: "button",
@@ -1213,6 +1223,12 @@ export class EditPage {
     };
 
     const urlButtons = h("div.ebtns", null,
+      h("button.on", {
+        type: "button",
+        "data-action": "sns-share-data",
+        title: t("sns.btn.puzzle.title"),
+        onclick: () => this.openSnsShare(),
+      }, t("sns.btn.puzzle")),
       h("button.on", {
         type: "button",
         "data-action": "copy-play-url",

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createEmptyPuzzle, addCardToPuzzle, setCardCounter, adjustPlayerMana } from "../ui/edit";
+import { buildPlaytestPuzzle, extractDeckFromPlaytestPuzzle } from "./deck";
 import {
   buildShareUrl,
   buildSolutionShareUrl,
@@ -11,9 +12,35 @@ import {
   parsePlayRouteLocation,
   parsePuzzleInput,
   parseShareLocation,
+  snapshotPuzzleFromView,
   toBase64Url,
 } from "./share";
 import type { SolutionStep } from "./solution";
+import type { CardView, GameView } from "../engine/protocol";
+
+function makeCardView(overrides: Partial<CardView> & Pick<CardView, "instanceId" | "name" | "zone">): CardView {
+  return {
+    owner: "p1",
+    controller: "p1",
+    kinds: [],
+    typeLine: "",
+    manaCost: "",
+    text: "",
+    power: null,
+    toughness: null,
+    basePower: null,
+    baseToughness: null,
+    damage: 0,
+    tapped: false,
+    sick: false,
+    token: false,
+    faceDown: false,
+    counters: {},
+    attachedTo: null,
+    exiledBy: null,
+    ...overrides,
+  };
+}
 
 describe("puzzle URL sharing", () => {
   it("round-trips Base64URL byte encoding", () => {
@@ -104,7 +131,7 @@ describe("puzzle URL sharing", () => {
     expect(fromToken.ok).toBe(true);
   });
 
-  it("encodes and decodes solution steps in bundled and shared URLs", async () => {
+  it("encodes and decodes solution steps in bundled, shared, and playtest URLs", async () => {
     const steps: SolutionStep[] = [
       { kind: "PRIORITY", indexes: [1], labels: ["Mountain [1] — {T}: Add {R}."] },
       { kind: "PRIORITY", indexes: [1], labels: ["Burst Lightning [2] — Burst Lightning deals 2 damage to any target."] },
@@ -129,10 +156,97 @@ describe("puzzle URL sharing", () => {
     expect(parsedShared?.mode).toBe("play");
     expect(parsedShared?.solutionParam).toBe(sParam);
 
+    // Playtest puzzle ID ("playtest-*") must encode full puzzle + solution (#/play?p=...&s=...)
+    const playtestUrl = await buildSolutionShareUrl({
+      puzzleId: "playtest-deck-1",
+      puzzle: p,
+      steps,
+      baseHref: "https://example.com/mtg-puzzle/#/",
+    });
+    expect(playtestUrl).toContain("#/play?p=");
+    expect(playtestUrl).toContain("&s=");
+    expect(parseShareLocation(playtestUrl)?.solutionParam).toBe(sParam);
+
     const imported = await parsePuzzleInput(sharedUrl);
     expect(imported.ok).toBe(true);
     if (imported.ok) {
       expect(imported.puzzle.solution).toEqual(steps);
     }
+  });
+
+  it("snapshots current board from GameView and extracts deck from shared playtest puzzle", () => {
+    const deck = {
+      id: "deck-test",
+      name: "Burn Playtest",
+      cards: [
+        { cardId: "Mountain", count: 3 },
+        { cardId: "Lightning Bolt", count: 2 },
+      ],
+      updatedAt: 1000,
+    };
+    const initial = buildPlaytestPuzzle(
+      deck,
+      ["Mountain", "Lightning Bolt"],
+      ["Mountain", "Mountain", "Lightning Bolt"],
+    );
+
+    const view: GameView = {
+      turn: 3,
+      phase: "MAIN2",
+      activePlayer: "p1",
+      priorityPlayer: "p1",
+      stack: [],
+      combat: [],
+      players: [
+        {
+          id: "p1",
+          life: 18,
+          poison: 0,
+          manaPool: { R: 1 },
+          handCount: 1,
+          libraryCount: 2,
+          cards: [
+            makeCardView({ instanceId: "h1", name: "Mountain", zone: "Battlefield", tapped: true }),
+            makeCardView({ instanceId: "tok1", name: "Goblin Token", zone: "Battlefield", token: true }),
+            makeCardView({ instanceId: "h2", name: "Lightning Bolt", zone: "Graveyard" }),
+            makeCardView({ instanceId: "l1", name: "Mountain", zone: "Hand" }),
+          ],
+        },
+        {
+          id: "p2",
+          life: 17,
+          poison: 0,
+          manaPool: {},
+          handCount: 0,
+          libraryCount: 0,
+          cards: [],
+        },
+      ],
+    };
+
+    const snap = snapshotPuzzleFromView(initial, view);
+    expect(snap.game.turn).toBe(3);
+    expect(snap.game.phase).toBe("main2");
+    expect(snap.game.players[0].life).toBe(18);
+    expect(snap.game.players[0].manaPool).toBe("R");
+    // Pure token ("Goblin Token") is excluded so Forge validation does not fail
+    expect(snap.game.players[0].battlefield).toEqual([
+      { id: "h1", cardId: "Mountain", tapped: true },
+    ]);
+    expect(snap.game.players[0].hand).toEqual([
+      { id: "l1", cardId: "Mountain" },
+    ]);
+    expect(snap.game.players[0].graveyard).toEqual([
+      { id: "h2", cardId: "Lightning Bolt" },
+    ]);
+    // Remaining library cards (l2, l3) are preserved in order
+    expect(snap.game.players[0].library?.map((c) => c.id)).toEqual(["l2", "l3"]);
+
+    const extracted = extractDeckFromPlaytestPuzzle(snap);
+    expect(extracted).not.toBeNull();
+    expect(extracted?.cards).toEqual([
+      { cardId: "Mountain", count: 3 },
+      { cardId: "Lightning Bolt", count: 2 },
+    ]);
   });
 });

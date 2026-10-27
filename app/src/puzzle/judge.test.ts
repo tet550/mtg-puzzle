@@ -47,4 +47,15 @@ describe("judge", () => {
     const v = judge({ ...base, engine: { state: "AWAITING" }, events: [{ type: "turnBegan", turn: 1, player: "p1" }] });
     expect(v).toEqual({ result: "IN_PROGRESS" });
   });
+
+  it("deadline: none のときは次のターンが始まっても IN_PROGRESS のまま継続する", () => {
+    const noDeadlineGoal: PuzzleGoal = { type: "win", player: "p1", deadline: "none" };
+    const v = judge({
+      goal: noDeadlineGoal,
+      startTurn: 1,
+      engine: { state: "AWAITING" },
+      events: [{ type: "turnBegan", turn: 2, player: "p2" }, { type: "turnBegan", turn: 3, player: "p1" }],
+    });
+    expect(v).toEqual({ result: "IN_PROGRESS" });
+  });
 });

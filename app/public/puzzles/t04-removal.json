@@ -2,6 +2,10 @@
   "schemaVersion": 1,
   "title": "チュートリアル 4：ブロッカーを除去する",
   "description": "相手の《セラの天使》が立ち塞がっています。《喉首狙い》で破壊して《血に飢えた征服者》の攻撃を通しましょう。",
+  "en": {
+    "title": "Tutorial 4: Remove the Blocker",
+    "description": "Your opponent's Serra Angel stands in the way. Destroy it with Go for the Throat so Bloodthirsty Conqueror's attack gets through."
+  },
   "engine": {
     "type": "forge",
     "version": "2.0.15"

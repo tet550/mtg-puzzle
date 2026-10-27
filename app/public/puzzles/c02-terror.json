@@ -2,6 +2,10 @@
   "schemaVersion": 1,
   "title": "コンボ問題 2：峰の恐怖と執政の往復",
   "description": "《救助のけだもの、コーナ》は第2メイン・フェイズの開始時にタップ状態なら、手札のパーマネント・カードを戦場に出せます。《巨大な神核、ウスロス》の「配備」でコーナをタップし、《全知》から《峰の恐怖》と《マラング川の執政》2枚で20点を削り切りましょう。",
+  "en": {
+    "title": "Combo 2: Terror of the Peaks and the Regent Round Trip",
+    "description": "If Kona, Rescue Beastie is tapped at the beginning of your second main phase, you may put a permanent card from your hand onto the battlefield. Tap Kona by crewing Uthros, Titanic Godcore, then use Omniscience to deploy Terror of the Peaks and two Marang River Regents for 20 damage."
+  },
   "engine": {
     "type": "forge",
     "version": "2.0.15"

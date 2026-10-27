@@ -2,6 +2,10 @@
   "schemaVersion": 1,
   "title": "コンボ問題 5：レッドシフトと監視亀ラ",
   "description": "《アガサの魂の大釜》で墓地の《科学オタク、モナリザ》の能力を《ロケッティアの隊長、レッドシフト》に与え、《監視亀ラ》と《メカの天才》でマナと手札を伸ばして《ワカモレとマシュマロのピザ》と《クロームドーム》のコンボを揃えましょう。",
+  "en": {
+    "title": "Combo 5: Redshift and the Sewer-veillance Cam",
+    "description": "Use Agatha's Soul Cauldron to give Redshift, Rocketeer Chief the ability of Mona Lisa, Science Geek in your graveyard. Grow your mana and hand with Sewer-veillance Cam and Does Machines, and assemble the Guac & Marshmallow Pizza and Chrome Dome combo."
+  },
   "engine": {
     "type": "forge",
     "version": "2.0.15"

@@ -8,6 +8,8 @@ export interface CatalogEntry {
   id: string;
   title: string;
   description: string;
+  /** 英語の画面で出す題名・説明（任意） */
+  en?: { title?: string; description?: string };
   /** 問題のカテゴリ（チュートリアル・簡単な問題・コンボ問題） */
   category?: PuzzleCategory;
   /** Forge の .pzl から変換した問題なら、そのファイル名 */

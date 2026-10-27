@@ -2,7 +2,9 @@
 // - Web 標準の CompressionStream / DecompressionStream ("deflate-raw") を用い、バックエンド不要で URL フラグメントに格納する
 // - "#/play?p=<data>" / "#p=<data>"（プレイ用）および "#/edit?p=<data>"（編集用）の双方に対応する
 
-import { validatePuzzle, ZONES, type PlayerDef, type PuzzleJson, type ValidationResult } from "./schema";
+import type { CardView, GameView } from "../engine/protocol";
+import { cardMeta } from "./carddb";
+import { validatePuzzle, ZONES, type CardDef, type PlayerDef, type PuzzleJson, type ValidationResult } from "./schema";
 import { validateSolutionSteps, type SolutionStep } from "./solution";
 
 /** 一般的なブラウザ・チャットツール等で安全に共有できる URL 長の上限目安 */
@@ -160,7 +162,8 @@ export async function buildSolutionShareUrl(
     : optsOrId;
   const base = (opts.baseHref ?? (typeof location !== "undefined" ? `${location.origin}${location.pathname}${location.search}` : "")).replace(/#.*$/, "");
   const sParam = await encodeSolutionToParam(opts.steps);
-  if (opts.puzzleId && opts.puzzleId !== "shared" && opts.puzzleId !== "editor-test" && /^[\w-]+$/.test(opts.puzzleId)) {
+  const isPlaytest = opts.puzzle?.goal.deadline === "none";
+  if (opts.puzzleId && isBundledPuzzleId(opts.puzzleId) && !isPlaytest) {
     return `${base}#/play/${opts.puzzleId}?s=${sParam}`;
   }
   if (!opts.puzzle) {
@@ -252,4 +255,154 @@ export async function parsePuzzleInput(text: string): Promise<ValidationResult> 
   // 3. p=<data> または生の Base64URL パラメータの場合
   const rawParam = trimmed.startsWith("p=") ? trimmed.slice(2) : trimmed;
   return decodePuzzleFromParam(rawParam);
+}
+
+/** 同梱パズル（public/puzzles/<id>.json）の ID かどうかを判定する */
+export function isBundledPuzzleId(id: string): boolean {
+  if (!id || !/^[\w-]+$/.test(id)) return false;
+  if (id === "shared" || id === "editor-test" || id.startsWith("playtest-")) return false;
+  return true;
+}
+
+function normalizeSnapshotPhase(phase: GameView["phase"]): string {
+  switch (phase) {
+    case "UNTAP":
+      return "upkeep";
+    case "COMBAT_FIRST_STRIKE_DAMAGE":
+      return "combat_damage";
+    case "CLEANUP":
+      return "end_of_turn";
+    default:
+      return phase.toLowerCase();
+  }
+}
+
+/**
+ * 初期盤面 PuzzleJson と現在の GameView から、進行中の現在の盤面を表す PuzzleJson スナップショットを生成する。
+ * - 手札・戦場・墓地・追放領域は GameView の状態（タップ・召喚酔い・カウンター・ライフ・マナプール等）を反映する
+ * - 非公開領域（ライブラリー、相手の手札）は初期盤面のカード順序から GameView に出ている ID を除いて正確に復元する
+ */
+export function snapshotPuzzleFromView(puzzle: PuzzleJson, view: GameView): PuzzleJson {
+  const copy = JSON.parse(JSON.stringify(puzzle)) as PuzzleJson;
+  delete copy.solution;
+
+  const initialCardNames = new Set<string>();
+  for (const pl of puzzle.game.players) {
+    for (const z of ZONES) {
+      for (const c of pl[z] ?? []) {
+        initialCardNames.add(c.cardId);
+      }
+    }
+  }
+
+  const visibleIds = new Set<string>();
+  for (const pv of view.players) {
+    for (const cv of pv.cards) {
+      visibleIds.add(cv.instanceId);
+    }
+  }
+
+  copy.game.activePlayer = view.activePlayer || copy.game.activePlayer;
+  copy.game.phase = normalizeSnapshotPhase(view.phase);
+  copy.game.turn = view.turn || copy.game.turn || 1;
+
+  const toCardDef = (cv: CardView, onBattlefield: boolean): CardDef | null => {
+    // プレイ中に生成されたトークン名（"Elemental Token" 等）で Forge の commonCards に存在しないものは除外する
+    // （新生 / コピートークン等の実在カード名トークンは保持する）
+    if (cv.token && !initialCardNames.has(cv.name) && !cardMeta(cv.name)) {
+      return null;
+    }
+    const def: CardDef = {
+      id: cv.instanceId,
+      cardId: cv.name,
+    };
+    if (onBattlefield) {
+      if (cv.tapped) def.tapped = true;
+      if (cv.sick) def.summoningSick = true;
+      if (cv.token) def.token = true;
+      if (cv.counters) {
+        const counters: Record<string, number> = {};
+        let hasCounters = false;
+        for (const [k, v] of Object.entries(cv.counters)) {
+          if (typeof v === "number" && v > 0) {
+            counters[k] = v;
+            hasCounters = true;
+          }
+        }
+        if (hasCounters) def.counters = counters;
+      }
+    }
+    return def;
+  };
+
+  const manaOrder = ["W", "U", "B", "R", "G", "C"] as const;
+
+  copy.game.players = copy.game.players.map((pl: PlayerDef): PlayerDef => {
+    const pv = view.players.find((p) => p.id === pl.id);
+    if (!pv) return pl;
+
+    // 初期盤面のうち GameView の公開領域に現れていないカード（ライブラリーや相手手札に残っているカード）を元の順序で抽出
+    const initialOrdered = [
+      ...(pl.hand ?? []),
+      ...(pl.library ?? []),
+      ...(pl.battlefield ?? []),
+      ...(pl.graveyard ?? []),
+      ...(pl.exile ?? []),
+    ];
+    const remainingHidden = initialOrdered
+      .filter((c) => !visibleIds.has(c.id))
+      .map((c): CardDef => ({ id: c.id, cardId: c.cardId }));
+
+    // 手札（スタック上の呪文カードも手札に戻して欠損を防ぐ）
+    const visibleHand = pv.cards
+      .filter((c) => c.zone === "Hand" || c.zone === "Stack")
+      .map((c) => toCardDef(c, false))
+      .filter((c): c is CardDef => c !== null);
+
+    let hand: CardDef[];
+    let library: CardDef[];
+    if (visibleHand.length === 0 && pv.handCount > 0) {
+      const hiddenHandCount = Math.min(pv.handCount, remainingHidden.length);
+      hand = remainingHidden.slice(0, hiddenHandCount);
+      library = remainingHidden.slice(hiddenHandCount);
+    } else {
+      hand = visibleHand;
+      library = remainingHidden;
+    }
+
+    const battlefield = pv.cards
+      .filter((c) => c.zone === "Battlefield")
+      .map((c) => toCardDef(c, true))
+      .filter((c): c is CardDef => c !== null);
+
+    const graveyard = pv.cards
+      .filter((c) => c.zone === "Graveyard" && !c.token)
+      .map((c) => toCardDef(c, false))
+      .filter((c): c is CardDef => c !== null);
+
+    const exile = pv.cards
+      .filter((c) => c.zone === "Exile" && !c.token)
+      .map((c) => toCardDef(c, false))
+      .filter((c): c is CardDef => c !== null);
+
+    let manaPoolStr = "";
+    for (const col of manaOrder) {
+      const n = pv.manaPool?.[col] ?? 0;
+      if (n > 0) manaPoolStr += col.repeat(n);
+    }
+
+    const nextPl: PlayerDef = {
+      id: pl.id,
+      life: pv.life,
+      ...(manaPoolStr ? { manaPool: manaPoolStr } : {}),
+      hand,
+      battlefield,
+      graveyard,
+      exile,
+      library,
+    };
+    return nextPl;
+  });
+
+  return copy;
 }

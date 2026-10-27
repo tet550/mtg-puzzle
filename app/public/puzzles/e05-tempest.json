@@ -2,6 +2,10 @@
   "schemaVersion": 1,
   "title": "簡単な問題 5：スタック上の追撃",
   "description": "1枚目の除去呪文が解決して《灰色熊》が倒れてしまうと、2枚目の呪文の対象がいなくなってしまいます。プレイヤーバナーの「スタックで止める」をONにし、1枚目が解決する前に2枚目の呪文を重ねて「果敢」を2回誘発させましょう。",
+  "en": {
+    "title": "Easy 5: Follow-Up on the Stack",
+    "description": "If your first removal spell resolves and Grizzly Bears dies, your second spell loses its target. Turn on \"Stop on the stack\" in your player banner, cast the second spell before the first resolves, and trigger prowess twice."
+  },
   "engine": {
     "type": "forge",
     "version": "2.0.15"

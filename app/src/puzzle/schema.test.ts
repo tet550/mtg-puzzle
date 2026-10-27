@@ -24,6 +24,10 @@ describe("validatePuzzle", () => {
     expect(validatePuzzle(valid()).ok).toBe(true);
   });
 
+  it("プレイテスト用の deadline: none を通す", () => {
+    expect(validatePuzzle({ ...valid(), goal: { type: "win", player: "p1", deadline: "none" } }).ok).toBe(true);
+  });
+
   it("未対応の schemaVersion を弾く", () => {
     const r = validatePuzzle({ ...valid(), schemaVersion: 99 });
     expect(r.ok).toBe(false);

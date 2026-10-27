@@ -2,6 +2,10 @@
   "schemaVersion": 1,
   "title": "コンボ問題 8：オルゾフ・ライフゲインの怒涛の誘発",
   "description": "《世慣れた見張り、デルニー》により、パワー2以下の《内陸の聖別者》《星景の僧侶》（＋新生1/1トークン）《脈の新学部長、モセオ》、そして成長前の《本質の媒介者》の誘発型能力がすべて2倍に！まずは《月の集会》で2点のライフを支払って《光に導かれし者、ハリーヤ》を引き込みつつ《本質の媒介者》に飛行を与えましょう。《意志堅固なるアジャニ》の[-10]紋章（全体+2/+2）を起動するタイミングが早すぎるとクリーチャーのパワーが3以上になってデルニーの倍化が消えてしまいます。コンボパーツをすべて展開し終えてからアジャニの奥義を起動し、相手のライフ155点を削り切りましょう。",
+  "en": {
+    "title": "Combo 8: Orzhov Lifegain Trigger Cascade",
+    "description": "Delney, Streetwise Lookout doubles the triggered abilities of your power-2-or-less creatures: Hinterland Sanctifier, Starscape Cleric (plus the new 1/1 tokens), Moseo, Vein's New Dean, and Essence Channeler before it grows! First, pay 2 life with Lunar Convocation to draw Haliya, Guided by Light while giving Essence Channeler flying. If you activate Ajani Resolute's [-10] emblem (creatures get +2/+2) too early, your creatures' power rises to 3 or more and Delney's doubling stops. Deploy every combo piece before activating Ajani's ultimate, and deal the full 155 life."
+  },
   "engine": {
     "type": "forge",
     "version": "2.0.15"

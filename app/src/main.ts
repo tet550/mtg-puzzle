@@ -12,17 +12,19 @@ import {
 } from "./puzzle/share";
 import type { SolutionStep } from "./puzzle/solution";
 import { renderCatalog } from "./ui/catalog";
+import { DeckPage, openMulliganDialog } from "./ui/deck";
 import { h } from "./ui/dom";
 import { EditPage, saveEditorDraft } from "./ui/edit";
 import { loadCardImages } from "./ui/images";
 import { onLangChange } from "./i18n";
 import { PlayPage } from "./ui/play";
+import { extractDeckFromPlaytestPuzzle, type DeckDef } from "./puzzle/deck";
 
 // ?timeout=<秒> でエンジンの 1 回の呼び出しの待ち時間を変える（調査用）
 const timeout = Number(new URLSearchParams(location.search).get("timeout"));
 const engine = new ForgeEngine(timeout > 0 ? { callTimeoutMs: timeout * 1000 } : {});
 const root = document.getElementById("app")!;
-let page: PlayPage | EditPage | null = null;
+let page: PlayPage | EditPage | DeckPage | null = null;
 
 // 一覧を見ている間にエンジンの準備を始めておく（数秒かかるため）
 void engine.start().catch(() => { /* 画面ごとに状態を出す */ });
@@ -54,10 +56,54 @@ async function startTestPlay(puzzle: PuzzleJson) {
       backTitleKey: "editor.backToEdit.title",
       toBackKey: "editor.backToEdit",
       recordClear: false,
+      onOpenEditor: (snap) => {
+        openEditor(snap);
+      },
       onRegisterSolution: (steps: SolutionStep[]) => {
         if (steps.length > 0) puzzle.solution = steps;
         else delete puzzle.solution;
         saveEditorDraft(puzzle);
+      },
+    },
+  );
+  page = playPage;
+  root.replaceChildren(playPage.el);
+  await playPage.load(puzzle);
+}
+
+function openDecks(initialDeckId?: string) {
+  page?.dispose();
+  const deckPage = new DeckPage(
+    () => { location.hash = "#/"; },
+    (playtestPuzzle, deck) => {
+      void startDeckPlaytest(playtestPuzzle, deck);
+    },
+    initialDeckId,
+  );
+  page = deckPage;
+  root.replaceChildren(deckPage.el);
+}
+
+async function startDeckPlaytest(puzzle: PuzzleJson, deck: DeckDef) {
+  page?.dispose();
+  const playPage = new PlayPage(
+    engine,
+    `playtest-${deck.id}`,
+    () => {
+      openDecks(deck.id);
+    },
+    {
+      backKey: "playtest.backToDecks",
+      backTitleKey: "playtest.backToDecks.title",
+      toBackKey: "playtest.toDecks",
+      recordClear: false,
+      onOpenEditor: (snap) => {
+        openEditor(snap);
+      },
+      onNewHand: () => {
+        openMulliganDialog(deck, (nextPuzzle, nextDeck) => {
+          void startDeckPlaytest(nextPuzzle, nextDeck);
+        });
       },
     },
   );
@@ -89,17 +135,34 @@ async function route() {
       }
       return;
     }
+    let decoded: Awaited<ReturnType<typeof decodePuzzleFromParam>> | null = null;
+    let decodeErr: unknown = null;
+    try {
+      decoded = await decodePuzzleFromParam(share.param);
+    } catch (e) {
+      decodeErr = e;
+    }
+    const sharedDeck = decoded && decoded.ok ? extractDeckFromPlaytestPuzzle(decoded.puzzle) : null;
     const playPage = new PlayPage(engine, "shared", () => { location.hash = "#/"; }, {
       recordClear: false,
       sharedSolution,
+      onOpenEditor: (snap) => {
+        openEditor(snap);
+      },
+      onNewHand: sharedDeck
+        ? () => {
+            openMulliganDialog(sharedDeck, (nextPuzzle, nextDeck) => {
+              void startDeckPlaytest(nextPuzzle, nextDeck);
+            });
+          }
+        : undefined,
     });
     page = playPage;
     root.replaceChildren(playPage.el);
-    try {
-      const res = await decodePuzzleFromParam(share.param);
-      await playPage.load(res.ok ? res.puzzle : { error: res.errors.join(" / ") });
-    } catch (e) {
-      await playPage.load({ error: String(e) });
+    if (decodeErr != null) {
+      await playPage.load({ error: String(decodeErr) });
+    } else if (decoded) {
+      await playPage.load(decoded.ok ? decoded.puzzle : { error: decoded.errors.join(" / ") });
     }
     return;
   }
@@ -116,6 +179,9 @@ async function route() {
     }
     const playPage = new PlayPage(engine, id, () => { location.hash = "#/"; }, {
       sharedSolution,
+      onOpenEditor: (snap) => {
+        openEditor(snap);
+      },
     });
     page = playPage;
     root.replaceChildren(playPage.el);
@@ -124,6 +190,12 @@ async function route() {
     } catch (e) {
       await playPage.load({ error: String(e) });
     }
+    return;
+  }
+
+  const decksMatch = /^#\/decks(?:\/([\w-]+))?$/.exec(location.hash);
+  if (decksMatch) {
+    openDecks(decksMatch[1]);
     return;
   }
 
@@ -149,6 +221,7 @@ async function route() {
         await loadCatalog(),
         (id) => { location.hash = `#/play/${id}`; },
         (id) => { location.hash = id ? `#/edit/${id}` : "#/edit"; },
+        () => { location.hash = "#/decks"; },
       ),
     );
   } catch (e) {

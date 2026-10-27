@@ -1,11 +1,11 @@
 // 問題の一覧（トップ画面）。
 
 import { clearedIds, type CatalogEntry, type PuzzleCategory } from "../puzzle/catalog";
-import { t } from "../i18n";
+import { puzzleDescription, puzzleTitle, t } from "../i18n";
 import { h } from "./dom";
-import { avatarUrl, heroArtUrl, icon, portraitUrl } from "./icons";
-import { cardImage, displayName, ensureCardImages, imagesEnabled, setImagesEnabled } from "./images";
-import { langSwitch } from "./lang";
+import { avatarUrl, brandIconUrl, heroArtUrl, icon, portraitUrl } from "./icons";
+import { cardImage, displayName, ensureCardImages, imagesEnabled } from "./images";
+import { optionsButton } from "./options";
 import { manaNodes } from "./mana";
 
 interface PuzzleMeta {
@@ -184,6 +184,7 @@ export function renderCatalog(
   entries: CatalogEntry[],
   open: (id: string) => void,
   edit?: (id?: string) => void,
+  openDecks?: () => void,
 ): HTMLElement {
   const cleared = clearedIds();
   const totalCount = entries.length;
@@ -216,6 +217,7 @@ export function renderCatalog(
       const isDone = cleared.has(e.id);
       const cat = entryCategory(e);
       const meta = PUZZLE_META[e.id];
+      const desc = puzzleDescription(e);
       const thumbCards = (meta?.cards ?? []).slice(0, 2);
       const seriesLabel = t(`catalog.badge.${cat}`);
       const badgeCls = `chip.pz-badge.${cat}`;
@@ -238,12 +240,12 @@ export function renderCatalog(
               meta?.life ? renderLifeMatchup(meta.life) : null,
               isDone ? h("span.chip.ok", null, "✓ ", t("catalog.cleared")) : null,
             ),
-            h("span.pzt", null, e.title),
+            h("span.pzt", null, puzzleTitle(e)),
             meta?.cards.length
               ? h("div.pz-cards", null,
                   meta.cards.map((c) => h("span.pz-card-pill", null, displayName(c))))
               : null,
-            e.description ? h("span.pzd.muted", null, e.description.split("\n")[0]) : null,
+            desc ? h("span.pzd.muted", null, desc.split("\n")[0]) : null,
             e.sourceFile ? h("span.pzs.muted", null, t("catalog.source.forge", { file: e.sourceFile })) : null,
           ),
         ),
@@ -303,27 +305,27 @@ export function renderCatalog(
     const ctaLabel = !nextEntry
       ? t("catalog.hero.playAgain")
       : clearedCount === 0
-        ? t("catalog.hero.playFirst", { title: nextEntry.title })
+        ? t("catalog.hero.playFirst", { title: puzzleTitle(nextEntry) })
         : clearedCount === totalCount
           ? t("catalog.hero.playAgain")
-          : t("catalog.hero.playNext", { title: nextEntry.title });
+          : t("catalog.hero.playNext", { title: puzzleTitle(nextEntry) });
 
     root.replaceChildren(
       h("header.bar", null,
         h("strong.brand", null,
-          h("img.brand-icon", { src: avatarUrl("human"), alt: "", draggable: "false" }),
+          h("img.brand-icon", { src: brandIconUrl(), alt: "", draggable: "false" }),
           "MTG Puzzle",
         ),
         h("span.muted.bar-tagline", null, t("catalog.tagline")),
         h("span.spacer"),
-        h("button" + (imagesEnabled() ? ".on" : ""), {
-          type: "button",
-          title: t("header.images.title"),
-          onclick: () => {
-            setImagesEnabled(!imagesEnabled());
-            build();
-          },
-        }, t("header.images")),
+        openDecks
+          ? h("button.on", {
+              type: "button",
+              "data-action": "open-decks",
+              title: t("catalog.decks.title"),
+              onclick: () => openDecks(),
+            }, t("catalog.decks"))
+          : null,
         edit
           ? h("button.on", {
               type: "button",
@@ -332,7 +334,7 @@ export function renderCatalog(
               onclick: () => edit(),
             }, t("catalog.create"))
           : null,
-        langSwitch(),
+        optionsButton(() => build()),
       ),
       h("main.list", null,
         // ヒーローセクション
@@ -350,6 +352,13 @@ export function renderCatalog(
                     type: "button",
                     onclick: () => open(nextEntry.id),
                   }, ctaLabel)
+                : null,
+              openDecks
+                ? h("button.big.hero-secondary", {
+                    type: "button",
+                    "data-action": "hero-open-decks",
+                    onclick: () => openDecks(),
+                  }, t("catalog.decks"))
                 : null,
               edit
                 ? h("button.big.hero-secondary", {
@@ -374,7 +383,7 @@ export function renderCatalog(
           nextEntry
             ? h("button.hero-showcase", {
                 type: "button",
-                title: nextEntry.title,
+                title: puzzleTitle(nextEntry),
                 onclick: () => open(nextEntry.id),
               },
                 h("div.hero-backdrop", { "aria-hidden": "true" },
@@ -406,7 +415,7 @@ export function renderCatalog(
                 ),
                 h("div.hero-spot", null,
                   h("span.hero-spot-kicker", null, t("catalog.hero.featured")),
-                  h("strong.hero-spot-title", null, nextEntry.title),
+                  h("strong.hero-spot-title", null, puzzleTitle(nextEntry)),
                   nextMeta
                     ? h("div.hero-spot-meta", null,
                         h("span.pz-colors", null, manaNodes(nextMeta.colors)),

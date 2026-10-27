@@ -2,6 +2,10 @@
   "schemaVersion": 1,
   "title": "コンボ問題 3：目立ちたがりの独演会",
   "description": "計画済みの《精鋭射手団の目立ちたがり》は、クリーチャーでない呪文を唱えるたび+2/+0の修整を受けます。山3枚で呪文を重ね、戦闘と出来事《Burn Together》で18点を削り切りましょう。",
+  "en": {
+    "title": "Combo 3: The Show-Off's Solo Act",
+    "description": "The plotted Slickshot Show-Off gets +2/+0 whenever you cast a noncreature spell. Chain spells with three Mountains, then deal 18 damage with combat and the adventure Burn Together."
+  },
   "engine": {
     "type": "forge",
     "version": "2.0.15"

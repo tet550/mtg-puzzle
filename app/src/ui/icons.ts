@@ -46,6 +46,11 @@ export function portraitUrl(kind: "human" | "ai"): string {
   return `${BASE}icons/portrait-${kind}.png`;
 }
 
+/** ヘッダーのサイトロゴ（扇状に広げた3枚のカード） */
+export function brandIconUrl(): string {
+  return `${BASE}icons/brand.png`;
+}
+
 /** トップ画面ヒーロー用の背景イラスト */
 export function heroArtUrl(kind: "human" | "ai"): string {
   return `${BASE}icons/hero-${kind}.jpg`;

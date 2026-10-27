@@ -2,6 +2,10 @@
   "schemaVersion": 1,
   "title": "簡単な問題 2：雄姿と決死の突撃",
   "description": "《心火の英雄》は対象になると+1/+1カウンターが乗り、死亡時にパワー分のダメージを相手に与えます。5/5のブロッカーを逆手に取りましょう。",
+  "en": {
+    "title": "Easy 2: Valiant Last Stand",
+    "description": "Heartfire Hero gets a +1/+1 counter when it becomes the target of your spell, and when it dies it deals damage equal to its power to each opponent. Turn the 5/5 blocker to your advantage."
+  },
   "engine": {
     "type": "forge",
     "version": "2.0.15"

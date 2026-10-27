@@ -2,6 +2,10 @@
   "schemaVersion": 1,
   "title": "チュートリアル 3：強化呪文を使う",
   "description": "《巨大化》で《灰色熊》を+3/+3強化し、合計5点の戦闘ダメージを与えて勝利しましょう。",
+  "en": {
+    "title": "Tutorial 3: Use a Pump Spell",
+    "description": "Give Grizzly Bears +3/+3 with Giant Growth and deal 5 combat damage to win."
+  },
   "engine": {
     "type": "forge",
     "version": "2.0.15"

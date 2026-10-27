@@ -106,8 +106,8 @@ const DEFAULT_CARDS = [
 
 let indexed: IndexedCard[] = [];
 const byName = new Map<string, CardMeta>();
-const faceJaByName = new Map<string, { name?: string; text?: string }>();
-const tokenJaByName = new Map<string, { name?: string; text?: string }>();
+const faceJaByName = new Map<string, { name?: string; text?: string; typeLine?: string }>();
+const tokenJaByName = new Map<string, { name?: string; text?: string; typeLine?: string }>();
 let loadPromise: Promise<CardMeta[]> | null = null;
 
 /** ひらがなをカタカナに揃え、全角英数を半角小文字に揃える（日本語・英語のあいまい検索用） */
@@ -302,21 +302,33 @@ export function indexCardData(data: RawCardData): CardMeta[] {
       if (!byName.has(alt)) byName.set(alt, meta);
     }
     if (meta.jaName && !faceJaByName.has(enLower)) {
-      faceJaByName.set(enLower, { name: meta.jaName, ...(meta.jaText ? { text: meta.jaText } : {}) });
+      faceJaByName.set(enLower, {
+        name: meta.jaName,
+        ...(meta.jaText ? { text: meta.jaText } : {}),
+        ...(meta.jaTypeLine ? { typeLine: meta.jaTypeLine } : {}),
+      });
     }
     if (raw.j) {
-      for (const { enKey, jName, jTxt } of parseJaLines(raw.j)) {
+      for (const { enKey, jName, jType, jTxt } of parseJaLines(raw.j)) {
         if (!faceJaByName.has(enKey)) {
-          faceJaByName.set(enKey, { name: jName, ...(jTxt ? { text: jTxt } : {}) });
+          faceJaByName.set(enKey, {
+            name: jName,
+            ...(jTxt ? { text: jTxt } : {}),
+            ...(jType ? { typeLine: jType } : {}),
+          });
         }
       }
     }
   }
   for (const tk of Object.values(data.tokens ?? {})) {
     if (!tk.j) continue;
-    for (const { enKey, jName, jTxt } of parseJaLines(tk.j)) {
+    for (const { enKey, jName, jType, jTxt } of parseJaLines(tk.j)) {
       if (!tokenJaByName.has(enKey)) {
-        tokenJaByName.set(enKey, { name: jName, ...(jTxt ? { text: jTxt } : {}) });
+        tokenJaByName.set(enKey, {
+          name: jName,
+          ...(jTxt ? { text: jTxt } : {}),
+          ...(jType ? { typeLine: jType } : {}),
+        });
       }
     }
   }
@@ -329,7 +341,7 @@ export function indexCardData(data: RawCardData): CardMeta[] {
     if (faceJa) return faceJa;
     const m = cardMeta(cardName);
     if (!m) return null;
-    return { name: m.jaName, text: m.jaText };
+    return { name: m.jaName, text: m.jaText, typeLine: m.jaTypeLine };
   });
   return indexed.map((x) => x.meta);
 }

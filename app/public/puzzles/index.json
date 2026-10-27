@@ -3,6 +3,10 @@
     "id": "t01-burn",
     "title": "チュートリアル 1：火力呪文を唱える",
     "description": "手札の《ショック》を相手プレイヤーに唱えて、ライフを0にしましょう。",
+    "en": {
+      "title": "Tutorial 1: Cast a Burn Spell",
+      "description": "Cast Shock from your hand at your opponent to bring their life to 0."
+    },
     "category": "tutorial",
     "sourceFile": null
   },
@@ -10,6 +14,10 @@
     "id": "t02-attack",
     "title": "チュートリアル 2：クリーチャーで攻撃する",
     "description": "「戦闘へ」進んで《サバンナ・ライオン》で攻撃を宣言し、戦闘ダメージで勝利しましょう。",
+    "en": {
+      "title": "Tutorial 2: Attack with a Creature",
+      "description": "Move to combat, declare Savannah Lions as an attacker, and win with combat damage."
+    },
     "category": "tutorial",
     "sourceFile": null
   },
@@ -17,6 +25,10 @@
     "id": "t03-pump",
     "title": "チュートリアル 3：強化呪文を使う",
     "description": "《巨大化》で《灰色熊》を+3/+3強化し、合計5点の戦闘ダメージを与えて勝利しましょう。",
+    "en": {
+      "title": "Tutorial 3: Use a Pump Spell",
+      "description": "Give Grizzly Bears +3/+3 with Giant Growth and deal 5 combat damage to win."
+    },
     "category": "tutorial",
     "sourceFile": null
   },
@@ -24,6 +36,10 @@
     "id": "t04-removal",
     "title": "チュートリアル 4：ブロッカーを除去する",
     "description": "相手の《セラの天使》が立ち塞がっています。《喉首狙い》で破壊して《血に飢えた征服者》の攻撃を通しましょう。",
+    "en": {
+      "title": "Tutorial 4: Remove the Blocker",
+      "description": "Your opponent's Serra Angel stands in the way. Destroy it with Go for the Throat so Bloodthirsty Conqueror's attack gets through."
+    },
     "category": "tutorial",
     "sourceFile": null
   },
@@ -31,6 +47,10 @@
     "id": "t05-ability",
     "title": "チュートリアル 5：起動型能力の活用",
     "description": "戦場のクリーチャーをクリックすると「起動型能力」を使えることがあります。《狂信的扇動者》の能力で相手のブロッカーを除去し、《サバンナ・ライオン》の攻撃を通しましょう。",
+    "en": {
+      "title": "Tutorial 5: Use an Activated Ability",
+      "description": "Clicking a creature on the battlefield may let you use its activated ability. Use Fanatical Firebrand's ability to remove the opposing blocker and get Savannah Lions' attack through."
+    },
     "category": "tutorial",
     "sourceFile": null
   },
@@ -38,6 +58,10 @@
     "id": "e01-prowess",
     "title": "簡単な問題 1：果敢の連撃",
     "description": "《僧院の速槍》の「果敢」は非クリーチャー呪文を唱えるたび+1/+1されます。強化と火力を組み合わせて8点を削り切りましょう。",
+    "en": {
+      "title": "Easy 1: Prowess Barrage",
+      "description": "Monastery Swiftspear's prowess gives it +1/+1 whenever you cast a noncreature spell. Combine pump and burn to deal the full 8 damage."
+    },
     "category": "easy",
     "sourceFile": null
   },
@@ -45,6 +69,10 @@
     "id": "e02-valiant",
     "title": "簡単な問題 2：雄姿と決死の突撃",
     "description": "《心火の英雄》は対象になると+1/+1カウンターが乗り、死亡時にパワー分のダメージを相手に与えます。5/5のブロッカーを逆手に取りましょう。",
+    "en": {
+      "title": "Easy 2: Valiant Last Stand",
+      "description": "Heartfire Hero gets a +1/+1 counter when it becomes the target of your spell, and when it dies it deals damage equal to its power to each opponent. Turn the 5/5 blocker to your advantage."
+    },
     "category": "easy",
     "sourceFile": null
   },
@@ -52,6 +80,10 @@
     "id": "e03-shelter",
     "title": "簡単な問題 3：幽霊による庇護",
     "description": "オーラ《幽霊による庇護》は自軍クリーチャーを強化しながら相手のブロッカーを追放できます。飛行・絆魂軍団で突破しましょう。",
+    "en": {
+      "title": "Easy 3: Sheltered by Ghosts",
+      "description": "The Aura Sheltered by Ghosts boosts your creature and exiles an opposing blocker. Break through with your flying, lifelinking team."
+    },
     "category": "easy",
     "sourceFile": null
   },
@@ -59,6 +91,10 @@
     "id": "e04-bite",
     "title": "簡単な問題 4：巨大化と噛み締め",
     "description": "《噛み締め》は自軍クリーチャーのパワー分のダメージを相手クリーチャーに与えます。唱える順番とマナエルフの使い方に注意しましょう。",
+    "en": {
+      "title": "Easy 4: Giant Growth and Bite Down",
+      "description": "Bite Down makes your creature deal damage equal to its power to an opposing creature. Mind the order you cast spells in and how you use your mana elf."
+    },
     "category": "easy",
     "sourceFile": null
   },
@@ -66,6 +102,10 @@
     "id": "e05-tempest",
     "title": "簡単な問題 5：スタック上の追撃",
     "description": "1枚目の除去呪文が解決して《灰色熊》が倒れてしまうと、2枚目の呪文の対象がいなくなってしまいます。プレイヤーバナーの「スタックで止める」をONにし、1枚目が解決する前に2枚目の呪文を重ねて「果敢」を2回誘発させましょう。",
+    "en": {
+      "title": "Easy 5: Follow-Up on the Stack",
+      "description": "If your first removal spell resolves and Grizzly Bears dies, your second spell loses its target. Turn on \"Stop on the stack\" in your player banner, cast the second spell before the first resolves, and trigger prowess twice."
+    },
     "category": "easy",
     "sourceFile": null
   },
@@ -73,6 +113,10 @@
     "id": "c01-oracle",
     "title": "コンボ問題 1：神託者と無限への突入",
     "description": "《ジェイスの策謀》で生まれたジェイス・トークンは《謎の賢者、カズミナ》の忠誠度能力を得ます。ライブラリーを引き切り、《タッサの神託者》で特殊勝利しましょう。",
+    "en": {
+      "title": "Combo 1: The Oracle and Enter the Infinite",
+      "description": "The Jace token created by Jace's Machinations gains Kasmina, Enigma Sage's loyalty abilities. Draw your entire library and win with Thassa's Oracle."
+    },
     "category": "combo",
     "sourceFile": null
   },
@@ -80,6 +124,10 @@
     "id": "c02-terror",
     "title": "コンボ問題 2：峰の恐怖と執政の往復",
     "description": "《救助のけだもの、コーナ》は第2メイン・フェイズの開始時にタップ状態なら、手札のパーマネント・カードを戦場に出せます。《巨大な神核、ウスロス》の「配備」でコーナをタップし、《全知》から《峰の恐怖》と《マラング川の執政》2枚で20点を削り切りましょう。",
+    "en": {
+      "title": "Combo 2: Terror of the Peaks and the Regent Round Trip",
+      "description": "If Kona, Rescue Beastie is tapped at the beginning of your second main phase, you may put a permanent card from your hand onto the battlefield. Tap Kona by crewing Uthros, Titanic Godcore, then use Omniscience to deploy Terror of the Peaks and two Marang River Regents for 20 damage."
+    },
     "category": "combo",
     "sourceFile": null
   },
@@ -87,6 +135,10 @@
     "id": "c03-showoff",
     "title": "コンボ問題 3：目立ちたがりの独演会",
     "description": "計画済みの《精鋭射手団の目立ちたがり》は、クリーチャーでない呪文を唱えるたび+2/+0の修整を受けます。山3枚で呪文を重ね、戦闘と出来事《Burn Together》で18点を削り切りましょう。",
+    "en": {
+      "title": "Combo 3: The Show-Off's Solo Act",
+      "description": "The plotted Slickshot Show-Off gets +2/+0 whenever you cast a noncreature spell. Chain spells with three Mountains, then deal 18 damage with combat and the adventure Burn Together."
+    },
     "category": "combo",
     "sourceFile": null
   },
@@ -94,6 +146,10 @@
     "id": "c04-tokens",
     "title": "コンボ問題 4：トークン大爆発",
     "description": "《生体工学の専門家》と《サックビル＝バギンズ一家》が揃えば、アーティファクト・トークン1個の生け贄で3点。手札の《生けるスライム、ミュータンジェンマン》でトークンを並べ、20点を一気に削り切りましょう。",
+    "en": {
+      "title": "Combo 4: Token Explosion",
+      "description": "With Biotech Specialist and The Sackville-Bagginses together, sacrificing one artifact token deals 3 damage. Fill the board with tokens using Mutagen Man, Living Ooze from your hand and deal 20 damage in one go."
+    },
     "category": "combo",
     "sourceFile": null
   },
@@ -101,6 +157,10 @@
     "id": "c05-redshift",
     "title": "コンボ問題 5：レッドシフトと監視亀ラ",
     "description": "《アガサの魂の大釜》で墓地の《科学オタク、モナリザ》の能力を《ロケッティアの隊長、レッドシフト》に与え、《監視亀ラ》と《メカの天才》でマナと手札を伸ばして《ワカモレとマシュマロのピザ》と《クロームドーム》のコンボを揃えましょう。",
+    "en": {
+      "title": "Combo 5: Redshift and the Sewer-veillance Cam",
+      "description": "Use Agatha's Soul Cauldron to give Redshift, Rocketeer Chief the ability of Mona Lisa, Science Geek in your graveyard. Grow your mana and hand with Sewer-veillance Cam and Does Machines, and assemble the Guac & Marshmallow Pizza and Chrome Dome combo."
+    },
     "category": "combo",
     "sourceFile": null
   },
@@ -108,6 +168,10 @@
     "id": "c06-squirrel",
     "title": "コンボ問題 6：絶対無敵のリス軍団",
     "description": "《アナグマモグラの仔》の「土の技」とマナ倍増、《永劫の活力》、《カンフーの達人、シャン・チー》を組み合わせ、《茨越えの餌あさり》から《絶対無敵スクイレル・ガール》をサーチして無限マナ＆無限リス・トークンを完成させ、《自然の律動》でフィニッシャーを呼び出しましょう。",
+    "en": {
+      "title": "Combo 6: The Unbeatable Squirrel Army",
+      "description": "Combine Badgermole Cub's earthbend and mana doubling, Enduring Vitality, and Shang-Chi, Master of Kung Fu. Search out The Unbeatable Squirrel Girl with Thornvault Forager to make infinite mana and infinite Squirrel tokens, then fetch your finisher with Nature's Rhythm."
+    },
     "category": "combo",
     "sourceFile": null
   },
@@ -115,6 +179,10 @@
     "id": "c07-battlecrier",
     "title": "コンボ問題 7：戦告者と絶望的猛攻の連鎖",
     "description": "《ティムールの戦告者》のコスト軽減と計画済みの《荒野無頼団の先駆者》からチェインコンボを始動しましょう。墓地の《幻獣との交わり》と《量子の謎かけ屋》のワープでパワー4軍団を並べ、2発の《絶望的猛攻》でこのターン中に12点のライフを削り切ってください（《荒野無頼団の先駆者》の強制ドローによるライブラリーアウトに注意！）。",
+    "en": {
+      "title": "Combo 7: Battlecrier and the Devastating Onslaught Chain",
+      "description": "Start the chain with Temur Battlecrier's cost reduction and the plotted Outcaster Trailblazer. Build an army of power-4 creatures with Esper Origins from your graveyard and Quantum Riddler's warp, then deal 12 damage this turn with two Devastating Onslaughts (watch out for decking yourself with Outcaster Trailblazer's forced draws!)."
+    },
     "category": "combo",
     "sourceFile": null
   },
@@ -122,6 +190,10 @@
     "id": "c08-lifegain",
     "title": "コンボ問題 8：オルゾフ・ライフゲインの怒涛の誘発",
     "description": "《世慣れた見張り、デルニー》により、パワー2以下の《内陸の聖別者》《星景の僧侶》（＋新生1/1トークン）《脈の新学部長、モセオ》、そして成長前の《本質の媒介者》の誘発型能力がすべて2倍に！まずは《月の集会》で2点のライフを支払って《光に導かれし者、ハリーヤ》を引き込みつつ《本質の媒介者》に飛行を与えましょう。《意志堅固なるアジャニ》の[-10]紋章（全体+2/+2）を起動するタイミングが早すぎるとクリーチャーのパワーが3以上になってデルニーの倍化が消えてしまいます。コンボパーツをすべて展開し終えてからアジャニの奥義を起動し、相手のライフ155点を削り切りましょう。",
+    "en": {
+      "title": "Combo 8: Orzhov Lifegain Trigger Cascade",
+      "description": "Delney, Streetwise Lookout doubles the triggered abilities of your power-2-or-less creatures: Hinterland Sanctifier, Starscape Cleric (plus the new 1/1 tokens), Moseo, Vein's New Dean, and Essence Channeler before it grows! First, pay 2 life with Lunar Convocation to draw Haliya, Guided by Light while giving Essence Channeler flying. If you activate Ajani Resolute's [-10] emblem (creatures get +2/+2) too early, your creatures' power rises to 3 or more and Delney's doubling stops. Deploy every combo piece before activating Ajani's ultimate, and deal the full 155 life."
+    },
     "category": "combo",
     "sourceFile": null
   }

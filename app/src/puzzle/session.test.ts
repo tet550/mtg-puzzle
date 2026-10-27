@@ -137,4 +137,82 @@ describe("PuzzleSession", () => {
     expect(dbg).toContain("[AdapterEvent]");
     expect(dbg).toContain("verdict=CLEARED");
   });
+
+  it("stepLogs に手順と出来事を紐づけて記録し、undo / redo / seekTo で任意の手順位置に移動できる", async () => {
+    const initialStep = step({
+      events: [{ type: "turnBegan", turn: 1, player: "p1" }],
+      pending: {
+        seq: 1,
+        kind: "PRIORITY",
+        prompt: "",
+        min: 1,
+        max: 1,
+        options: [
+          { id: "cast-bolt", label: "Cast Lightning Bolt", ref: null },
+          { id: "pass", label: "Pass", ref: null },
+        ],
+      },
+    });
+    const afterCast = step({
+      events: [{ type: "cast", controller: "p1", sourceId: "c1", description: "Lightning Bolt" }],
+      pending: {
+        seq: 2,
+        kind: "TARGETS",
+        prompt: "",
+        min: 1,
+        max: 1,
+        options: [{ id: "t-p2", label: "p2", ref: null }],
+      },
+    });
+    const afterTarget = step({
+      events: [{ type: "damage", sourceId: "c1", target: "p2", amount: 3, combat: false }],
+      pending: {
+        seq: 3,
+        kind: "PRIORITY",
+        prompt: "",
+        min: 1,
+        max: 1,
+        options: [{ id: "pass", label: "Pass", ref: null }],
+      },
+    });
+
+    const engine = fakeEngine([
+      initialStep,
+      afterCast,
+      afterTarget,
+      initialStep,
+      afterCast,
+      afterTarget,
+      initialStep,
+    ]);
+
+    const s = new PuzzleSession(engine);
+    await s.open(puzzle);
+    expect(s.state.initialEvents).toEqual([{ type: "turnBegan", turn: 1, player: "p1" }]);
+    expect(s.state.stepLogs).toHaveLength(0);
+
+    await s.answer(["cast-bolt"]);
+    await s.answer(["t-p2"]);
+    expect(s.state.stepLogs).toHaveLength(2);
+    expect(s.state.stepLogs[0].step.labels).toEqual(["Cast Lightning Bolt"]);
+    expect(s.state.stepLogs[0].events).toEqual([{ type: "cast", controller: "p1", sourceId: "c1", description: "Lightning Bolt" }]);
+    expect(s.state.stepLogs[1].step.labels).toEqual(["p2"]);
+    expect(s.state.stepLogs[1].events).toEqual([{ type: "damage", sourceId: "c1", target: "p2", amount: 3, combat: false }]);
+    expect(s.state.futureSteps).toHaveLength(0);
+
+    const okUndo = await s.undo();
+    expect(okUndo).toBe(true);
+    expect(s.state.stepLogs).toHaveLength(1);
+    expect(s.state.futureSteps).toHaveLength(1);
+
+    const okRedo = await s.redo();
+    expect(okRedo).toBe(true);
+    expect(s.state.stepLogs).toHaveLength(2);
+    expect(s.state.futureSteps).toHaveLength(0);
+
+    const okSeek0 = await s.seekTo(0);
+    expect(okSeek0).toBe(true);
+    expect(s.state.stepLogs).toHaveLength(0);
+    expect(s.state.futureSteps).toHaveLength(2);
+  });
 });

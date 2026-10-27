@@ -350,7 +350,7 @@ public final class ForgeSession implements AutoCloseable {
         if (p.game == null || p.game.players.size() != 2) {
             throw new PuzzleValidationException("プレイヤーは 2 人である必要があります");
         }
-        if (p.goal == null || !"win".equals(p.goal.type) || !"current_turn".equals(p.goal.deadline)) {
+        if (p.goal == null || !"win".equals(p.goal.type) || !List.of("current_turn", "none").contains(p.goal.deadline)) {
             throw new PuzzleValidationException("未対応の goal です");
         }
         if (p.opponent != null && !List.of("minimize", "none").contains(p.opponent.block)) {
@@ -411,6 +411,10 @@ public final class ForgeSession implements AutoCloseable {
             GameState state = new GameState();
             state.parse(puzzle.toGameStateLines());
             match.startGame(g, () -> {
+                for (Player p : g.getRegisteredPlayers()) {
+                    p.setMaxHandSize(7);
+                    p.setStartingHandSize(7);
+                }
                 // ゲームスレッド上なので同期実行される。カードを作るときに日本語の訳の対応表ができるよう、日本語にしておく
                 Ja.run(() -> state.applyToGame(g));
                 setMainPhaseCount(g.getPhaseHandler());
@@ -614,7 +618,7 @@ public final class ForgeSession implements AutoCloseable {
             }
             boolean wasExceeded = deadlineExceeded;
             if (e instanceof GameEventTurnBegan tb) {
-                if (startTurn > 0 && tb.turnNumber() > startTurn) {
+                if (!"none".equals(puzzle.goal.deadline) && startTurn > 0 && tb.turnNumber() > startTurn) {
                     deadlineExceeded = true;
                     channel.requestHalt();
                 }

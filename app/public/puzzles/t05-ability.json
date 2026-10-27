@@ -2,6 +2,10 @@
   "schemaVersion": 1,
   "title": "チュートリアル 5：起動型能力の活用",
   "description": "戦場のクリーチャーをクリックすると「起動型能力」を使えることがあります。《狂信的扇動者》の能力で相手のブロッカーを除去し、《サバンナ・ライオン》の攻撃を通しましょう。",
+  "en": {
+    "title": "Tutorial 5: Use an Activated Ability",
+    "description": "Clicking a creature on the battlefield may let you use its activated ability. Use Fanatical Firebrand's ability to remove the opposing blocker and get Savannah Lions' attack through."
+  },
   "engine": {
     "type": "forge",
     "version": "2.0.15"

@@ -253,7 +253,7 @@ export function deleteRegisteredSolution(puzzleId: string): void {
 
 /** 同梱パズルの公式解答ファイル（public/puzzles/<id>.solution.json）を読み込む */
 export async function loadBundledSolution(id: string): Promise<SolutionStep[] | null> {
-  if (!/^[\w-]+$/.test(id) || id === "shared" || id === "editor-test") return null;
+  if (!/^[\w-]+$/.test(id) || id === "shared" || id === "editor-test" || id.startsWith("playtest-")) return null;
   try {
     const res = await fetch(`${BASE}puzzles/${id}.solution.json`);
     if (!res.ok) return null;

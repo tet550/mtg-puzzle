@@ -9,7 +9,7 @@ import type { CardKind, CardView, GameView, ManaColor, PlayerView } from "../eng
 import { h, onTapOrHold } from "./dom";
 import { t, type MessageKey } from "../i18n";
 import { avatarUrl, icon } from "./icons";
-import { displayName } from "./images";
+import { displayName, displayTypeLine } from "./images";
 import { localized } from "./localize";
 import { manaNodes } from "./mana";
 import { PHASE_STRIP, passLabel, phaseName } from "./text";
@@ -55,6 +55,8 @@ export interface BoardUi {
   holdStack?: boolean;
   /** 同時に誘発した能力をスタックに積む順番を手動で選ぶか（false なら自動） */
   orderStack?: boolean;
+  /** ターン期限なし（一人回し・プレイテスト用） */
+  noDeadline?: boolean;
 }
 
 export function combatSets(view: GameView): { attacking: Set<string>; blocking: Set<string> } {
@@ -92,7 +94,7 @@ function playerHead(view: GameView, p: PlayerView, ui: BoardUi, hooks: BoardHook
   const prio = h("span.prio" + (view.priorityPlayer === p.id ? "" : ".off"), { title: t("player.priority"), "aria-label": t("player.priority") });
   prio.append(icon("priority"));
   head.append(prio);
-  if (view.activePlayer === p.id) head.append(phaseStrip(view));
+  if (view.activePlayer === p.id) head.append(phaseStrip(view, ui));
   if (mine && !ui.editable && hooks.toggleHoldStack) {
     const on = !!ui.holdStack;
     head.append(h("button.sumchip.holdstack" + (on ? ".on" : ""), {
@@ -176,8 +178,11 @@ function manaChips(p: PlayerView): HTMLElement[] {
   );
 }
 
-function phaseStrip(view: GameView): HTMLElement {
+function phaseStrip(view: GameView, ui?: BoardUi): HTMLElement {
   const strip = h("span.phases", { title: t("phase.turnTitle", { turn: view.turn }) });
+  if (ui?.noDeadline) {
+    strip.append(h("span.ph.turnbadge", { "data-turn-badge": String(view.turn), title: t("phase.turnTitle", { turn: view.turn }) }, `T${view.turn}`));
+  }
   for (const g of PHASE_STRIP) {
     const cur = g.phases.includes(view.phase);
     const ph = h("span.ph" + (cur ? ".cur" : "") + (g.icon === "ending" ? ".fill" : ""), { title: t(g.key) });
@@ -237,7 +242,7 @@ function opponentSide(view: GameView, p: PlayerView, ui: BoardUi, hooks: BoardHo
     if (others.length && lgroups.length) lgroups[0].classList.add("kgap");
     row.append(...lgroups);
   }
-  if (view.turn === ui.startTurn) row.append(goalCard());
+  if (!ui.noDeadline && view.turn === ui.startTurn) row.append(goalCard());
   side.append(row);
   if (ui.editable && isOpen("hand", hand)) side.append(opened(t("opened.oppHand"), hand, ui, hooks));
   if (ui.editable && isOpen("library", lib)) side.append(opened(t("opened.oppLibrary"), lib, ui, hooks));
@@ -496,7 +501,7 @@ export function cardTile(c: CardView, ui: BoardUi, hooks: BoardHooks, extra: str
   } else {
     const cost = c.manaCost && c.manaCost !== "no cost" ? h("span.cost", null, manaNodes(c.manaCost)) : null;
     d.append(h("div.top", null, h("div.nm", null, displayName(c.name)), cost));
-    if (!small && !extra.includes("under")) d.append(h("div.tl", null, c.typeLine));
+    if (!small && !extra.includes("under")) d.append(h("div.tl", null, displayTypeLine(c.name, c.typeLine)));
     if (flags.length) d.append(h("div.flags", null, flags.join(" · ")));
     if (chips.length) d.append(h("div.over", null, chips));
     if (pt) d.append(pt);
@@ -522,7 +527,7 @@ export function detailBody(c: CardView, art: string | null, artist: string | nul
     art ? h("img.big", { src: art, alt: displayName(c.name) }) : null,
     h("div.dname", null, displayName(c.name), c.manaCost && c.manaCost !== "no cost" ? h("span.cost", null, " ", manaNodes(c.manaCost)) : null),
     displayName(c.name) !== c.name ? h("div.muted", null, c.name) : null,
-    h("div.tl", null, c.typeLine),
+    h("div.tl", null, displayTypeLine(c.name, c.typeLine)),
     c.power !== null ? h("div", null, `P/T ${c.power}/${c.toughness}` + (changed ? t("card.base", { p: c.basePower ?? "", t: c.baseToughness ?? "" }) : "")) : null,
     printed
       ? [h("div.otext", null, manaNodes(printed)), h("div.muted.onote", null, t("card.printedNote")),

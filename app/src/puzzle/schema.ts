@@ -37,13 +37,15 @@ export interface PlayerDef {
 export interface PuzzleGoal {
   type: "win";
   player: string;
-  deadline: "current_turn";
+  deadline: "current_turn" | "none";
 }
 
 export interface PuzzleJson {
   schemaVersion: number;
   title: string;
   description?: string;
+  /** 英語の画面で出す題名・説明（任意。無ければ title / description） */
+  en?: { title?: string; description?: string };
   source?: { type: string; file?: string; url?: string | null; difficulty?: string | null };
   engine: { type: "forge"; version: string };
   game: {
@@ -146,7 +148,7 @@ export function validatePuzzle(data: unknown): ValidationResult {
   if (typeof game.phase !== "string") errors.push(t("schema.phase"));
 
   const goal = data.goal;
-  if (!isObj(goal) || goal.type !== "win" || goal.deadline !== "current_turn") {
+  if (!isObj(goal) || goal.type !== "win" || (goal.deadline !== "current_turn" && goal.deadline !== "none")) {
     errors.push(t("schema.goal"));
   } else if (typeof goal.player !== "string" || !playerIds.has(goal.player)) {
     errors.push(t("schema.goalPlayer"));

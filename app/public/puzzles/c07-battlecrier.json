@@ -2,6 +2,10 @@
   "schemaVersion": 1,
   "title": "コンボ問題 7：戦告者と絶望的猛攻の連鎖",
   "description": "《ティムールの戦告者》のコスト軽減と計画済みの《荒野無頼団の先駆者》からチェインコンボを始動しましょう。墓地の《幻獣との交わり》と《量子の謎かけ屋》のワープでパワー4軍団を並べ、2発の《絶望的猛攻》でこのターン中に12点のライフを削り切ってください（《荒野無頼団の先駆者》の強制ドローによるライブラリーアウトに注意！）。",
+  "en": {
+    "title": "Combo 7: Battlecrier and the Devastating Onslaught Chain",
+    "description": "Start the chain with Temur Battlecrier's cost reduction and the plotted Outcaster Trailblazer. Build an army of power-4 creatures with Esper Origins from your graveyard and Quantum Riddler's warp, then deal 12 damage this turn with two Devastating Onslaughts (watch out for decking yourself with Outcaster Trailblazer's forced draws!)."
+  },
   "engine": {
     "type": "forge",
     "version": "2.0.15"

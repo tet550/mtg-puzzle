@@ -2,6 +2,10 @@
   "schemaVersion": 1,
   "title": "チュートリアル 2：クリーチャーで攻撃する",
   "description": "「戦闘へ」進んで《サバンナ・ライオン》で攻撃を宣言し、戦闘ダメージで勝利しましょう。",
+  "en": {
+    "title": "Tutorial 2: Attack with a Creature",
+    "description": "Move to combat, declare Savannah Lions as an attacker, and win with combat damage."
+  },
   "engine": {
     "type": "forge",
     "version": "2.0.15"

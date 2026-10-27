@@ -23,10 +23,10 @@ const HAS_JA_RE = /[ぁ-んァ-ヶー一-龠々]/;
 let table: Record<string, CardImage> = {};
 let fetched: Record<string, CardImage | null> = {};
 const inflight = new Set<string>();
-let jaFallback: ((name: string) => { name?: string; text?: string } | null) | null = null;
+let jaFallback: ((name: string) => { name?: string; text?: string; typeLine?: string } | null) | null = null;
 
-/** カードデータベース（carddb.ts）から日本語名・日本語テキストのフォールバックを登録する */
-export function setJaFallback(fn: ((name: string) => { name?: string; text?: string } | null) | null) {
+/** カードデータベース（carddb.ts）から日本語名・日本語テキスト・日本語タイプ行のフォールバックを登録する */
+export function setJaFallback(fn: ((name: string) => { name?: string; text?: string; typeLine?: string } | null) | null) {
   jaFallback = fn;
 }
 
@@ -260,6 +260,12 @@ export function displayName(name: string): string {
 export function printedText(name: string): string | null {
   if (lang() !== "ja") return null;
   return entry(name)?.ja?.text ?? jaFallback?.(name)?.text ?? null;
+}
+
+/** 画面に出すタイプ行（日本語の画面で日本語のタイプ行があればそれ、無ければ英語の typeLine） */
+export function displayTypeLine(name: string, fallbackTypeLine: string): string {
+  if (lang() !== "ja") return fallbackTypeLine;
+  return jaFallback?.(name)?.typeLine ?? fallbackTypeLine;
 }
 
 export function imagesEnabled(): boolean {

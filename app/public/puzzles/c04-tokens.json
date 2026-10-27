@@ -2,6 +2,10 @@
   "schemaVersion": 1,
   "title": "コンボ問題 4：トークン大爆発",
   "description": "《生体工学の専門家》と《サックビル＝バギンズ一家》が揃えば、アーティファクト・トークン1個の生け贄で3点。手札の《生けるスライム、ミュータンジェンマン》でトークンを並べ、20点を一気に削り切りましょう。",
+  "en": {
+    "title": "Combo 4: Token Explosion",
+    "description": "With Biotech Specialist and The Sackville-Bagginses together, sacrificing one artifact token deals 3 damage. Fill the board with tokens using Mutagen Man, Living Ooze from your hand and deal 20 damage in one go."
+  },
   "engine": {
     "type": "forge",
     "version": "2.0.15"

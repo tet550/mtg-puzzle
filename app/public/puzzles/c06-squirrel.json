@@ -2,6 +2,10 @@
   "schemaVersion": 1,
   "title": "コンボ問題 6：絶対無敵のリス軍団",
   "description": "《アナグマモグラの仔》の「土の技」とマナ倍増、《永劫の活力》、《カンフーの達人、シャン・チー》を組み合わせ、《茨越えの餌あさり》から《絶対無敵スクイレル・ガール》をサーチして無限マナ＆無限リス・トークンを完成させ、《自然の律動》でフィニッシャーを呼び出しましょう。",
+  "en": {
+    "title": "Combo 6: The Unbeatable Squirrel Army",
+    "description": "Combine Badgermole Cub's earthbend and mana doubling, Enduring Vitality, and Shang-Chi, Master of Kung Fu. Search out The Unbeatable Squirrel Girl with Thornvault Forager to make infinite mana and infinite Squirrel tokens, then fetch your finisher with Nature's Rhythm."
+  },
   "engine": {
     "type": "forge",
     "version": "2.0.15"
