@@ -32,6 +32,10 @@ export interface Snapshot {
   stack: Map<string, Shot>;
   /** スタックの小窓そのもの（最後の項目が解決して小窓が閉じるとき、解決の演出が終わるまで残す） */
   stackBox: Shot | null;
+  /** スタックの小窓の項目が見えている部分（巻き取りの枠） */
+  stackView: DOMRect | null;
+  /** スタックの小窓の項目の行（発生源ごとに一番上のもの。解決の演出で使う） */
+  rows: Map<string, Shot>;
   /** プレイヤーの見出し */
   players: Map<string, DOMRect>;
 }
@@ -57,9 +61,14 @@ export function capture(root: HTMLElement): Snapshot {
   }
   const sb = root.querySelector<HTMLElement>(".stackbox");
   const stackBox = sb ? shot(sb) : null;
+  const rows = new Map<string, Shot>();
+  for (const el of root.querySelectorAll<HTMLElement>(".stackbox .sitem[data-source]")) {
+    if (!rows.has(el.dataset.source!)) rows.set(el.dataset.source!, shot(el));
+  }
   const players = new Map<string, DOMRect>();
   for (const el of root.querySelectorAll<HTMLElement>(".phead[data-player]")) players.set(el.dataset.player!, el.getBoundingClientRect());
-  return { cards, stack, stackBox, players };
+  const stackView = sb ? (sb.querySelector<HTMLElement>(".fbody") ?? sb).getBoundingClientRect() : null;
+  return { cards, stack, stackBox, stackView, rows, players };
 }
 
 // ---------------------------------------------------------------- 再生
@@ -201,6 +210,9 @@ export async function play(a: PlayArgs): Promise<void> {
     for (const id of moved) {
       const el = now(id);
       if (el) { el.style.visibility = "hidden"; hidden.add(el); }
+      // スタックに積まれた呪文は、行（名前・文）ごと着くまで隠す
+      const row = el?.closest<HTMLElement>(".stackbox .sitem");
+      if (row) { row.style.visibility = "hidden"; hidden.add(row); }
       // 束の一番上に出ているなら、それも着くまで隠す
       for (const f of root.querySelectorAll<HTMLElement>(`[data-top="${CSS.escape(id)}"]`)) { f.style.visibility = "hidden"; hidden.add(f); }
       const old = before.cards.get(id) ?? before.stack.get(id);
@@ -244,6 +256,20 @@ export async function play(a: PlayArgs): Promise<void> {
         held.push(el);
       }
     }
+    // スタックの小窓で前からあった項目は、前の位置に留める（新しい項目が着いたとき・最後に滑らせる）
+    const rowSeen = new Set<string>();
+    for (const row of root.querySelectorAll<HTMLElement>(".stackbox .sitem[data-source]")) {
+      const id = row.dataset.source!;
+      const tile = row.querySelector<HTMLElement>(".card[data-id]");
+      const old = before.stack.get(id);
+      if (rowSeen.has(id) || moved.has(id) || !tile || !old) { rowSeen.add(id); continue; }
+      rowSeen.add(id);
+      const dy = old.rect.top - tile.getBoundingClientRect().top;
+      if (Math.abs(dy) > 1) {
+        row.style.translate = `0px ${dy}px`;
+        held.push(row);
+      }
+    }
     // ライフの数は、拍が来るまで前の値を出しておく
     for (const e of events) {
       if (e.type !== "life" || lifeEls.has(e.player)) continue;
@@ -262,7 +288,7 @@ export async function play(a: PlayArgs): Promise<void> {
 
     // 2. 出来事を順に再生する
     const card = (id: string | null) => (id ? nextCards.get(id) ?? prevCards.get(id) ?? a.known?.get(id) : undefined);
-    const ctx: Ctx = { a, layer, prevCards, nextCards, ghosts, hidden, lifeEls, struck: new Set(), now, card, closeStackGhost };
+    const ctx: Ctx = { a, layer, prevCards, nextCards, ghosts, hidden, held, lifeEls, struck: new Set(), landed: new Set(), now, card, closeStackGhost };
     const handled = new Set<string>();
     const triggeredDone = new Set<string>();
     for (const e of events) {
@@ -311,9 +337,16 @@ export async function play(a: PlayArgs): Promise<void> {
       await triggerFx(ctx, id);
     }
 
-    // 新しく積まれた対象のある項目: 発生源から対象へ光の線（対象に取った印）
+    // 新しく積まれた項目のうち、まだ着いた演出の無いもの（積む順を選び終えた誘発など）も、積まれた順（下から）に光らせる
     const was = new Set(prev.stack.map((s) => `${s.sourceId}:${s.description}`));
-    const aims = next.stack.filter((s) => s.targets.length && !was.has(`${s.sourceId}:${s.description}`));
+    const added = next.stack.filter((s) => !was.has(`${s.sourceId}:${s.description}`));
+    for (const s of [...added].reverse()) {
+      if (skipping || ctx.landed.has(s.sourceId)) continue;
+      stackLand(ctx, s.sourceId, colorOf(card(s.sourceId)));
+      await sleep(160);
+    }
+    // 新しく積まれた対象のある項目: 発生源から対象へ光の線（対象に取った印）
+    const aims = added.filter((s) => s.targets.length);
     for (const s of aims) {
       if (skipping) break;
       const from = liveCard(root, s.sourceId, true) ?? now(s.sourceId)
@@ -345,9 +378,13 @@ interface Ctx {
   nextCards: Map<string, CardView>;
   ghosts: Map<string, HTMLElement>;
   hidden: Set<HTMLElement>;
+  /** 前の位置に留めている要素（盤面のカード・スタックの行） */
+  held: HTMLElement[];
   lifeEls: Map<string, HTMLElement>;
   /** 解決の光弾が当たった対象（同じ解決のダメージで、もう一度飛ばさない） */
   struck: Set<string>;
+  /** スタックに着いた演出を出した項目の発生源 */
+  landed: Set<string>;
   now: (id: string) => HTMLElement | null;
   card: (id: string | null) => CardView | undefined;
   closeStackGhost: () => void;
@@ -447,6 +484,8 @@ function reveal(ctx: Ctx, id: string, land = false) {
   if (!el) return;
   el.style.visibility = "";
   ctx.hidden.delete(el);
+  const row = el.closest<HTMLElement>(".stackbox .sitem");
+  if (row) { row.style.visibility = ""; ctx.hidden.delete(row); }
   if (land) {
     anim(el, [{ scale: "1.12" }, { scale: "0.96", offset: 0.6 }, { scale: "1" }], { duration: 320, easing: "ease-out" });
     const r = el.getBoundingClientRect(), c = center(r);
@@ -488,7 +527,7 @@ async function moveCard(ctx: Ctx, id: string, from: string | null, to: string | 
     const src = from === "Library" ? pileRect(ctx, owner, "library") : null;
     if (!src) {
       reveal(ctx, id, to === "Battlefield");
-      if (to === "Stack") glow(ctx.layer, dest.getBoundingClientRect(), colorOf(card));
+      if (to === "Stack") stackLand(ctx, id, colorOf(card));
       return;
     }
     g = ghost(ctx.layer, dest, src, getComputedStyle(dest).getPropertyValue("--h"));
@@ -505,8 +544,17 @@ async function moveCard(ctx: Ctx, id: string, from: string | null, to: string | 
     const r = pileRect(ctx, owner, "graveyard");
     if (r) await fly(g, r, { duration: 460, fade: !dest });
   } else if (dest) {
-    await fly(g, dest.getBoundingClientRect(), { duration: to === "Stack" ? 460 : 520 });
-    if (to === "Stack") glow(ctx.layer, dest.getBoundingClientRect(), colorOf(card));
+    if (to === "Stack") {
+      g.style.filter = `drop-shadow(0 0 12px ${colorOf(card)})`;
+      await trailing(ctx.layer, g, colorOf(card), fly(g, dest.getBoundingClientRect(), { duration: 480 }));
+      g.remove();
+      reveal(ctx, id);
+      glow(ctx.layer, dest.getBoundingClientRect(), colorOf(card));
+      stackLand(ctx, id, colorOf(card));
+      await sleep(160);
+      return;
+    }
+    await fly(g, dest.getBoundingClientRect(), { duration: 520 });
   } else if (from === "Hand" && !ctx.nextCards.has(id)) {
     // 唱えている途中（対象・支払いを選んでいる間）は、エンジンの盤面のどの領域にも無い。スタックの置き場所へ飛ばして消す
     const r = stackArea(ctx, g);
@@ -574,7 +622,10 @@ async function bounceFx(ctx: Ctx, g: HTMLElement, dest: HTMLElement | null, owne
 
 // ---------------------------------------------------------------- 解決・対象・ダメージ・ライフ
 
-/** 誘発: 発生源のカードが黄金に脈打って光輪と「⚡ 誘発！」を出し、スタックの小窓へ写しを飛ばす */
+/**
+ * 誘発: 発生源のカードが二度脈打って黄金の輪郭波・閃光を出す。
+ * それから光の尾を引く写しをスタックの小窓へ飛ばし、着いた項目を光らせる（文字なし）
+ */
 async function triggerFx(ctx: Ctx, sourceId: string) {
   const root = ctx.a.root;
   const card = ctx.card(sourceId);
@@ -588,47 +639,161 @@ async function triggerFx(ctx: Ctx, sourceId: string) {
     ?? ctx.a.before.cards.get(sourceId)?.rect
     ?? liveCard(root, sourceId, true)?.getBoundingClientRect() ?? null;
   const sitem = root.querySelector<HTMLElement>(`.stackbox .sitem[data-source="${CSS.escape(sourceId)}"]`);
+  const color = colorOf(card);
   if (!r || (!r.width && !r.height)) {
     if (sitem) { sitem.style.visibility = ""; ctx.hidden.delete(sitem); }
+    stackLand(ctx, sourceId, color);
     return;
   }
   const c = center(r);
-  const color = colorOf(card);
   glow(ctx.layer, r, "#ffd23d");
-  for (const [scale, delay] of [[1.9, 0], [1.45, 90]] as const) {
-    const ring = fx(ctx.layer, "trig", { left: `${c.x}px`, top: `${c.y}px`, "--c": color });
-    gone(ring, anim(ring, [
-      { transform: "translate(-50%,-50%) scale(.35)", opacity: 1 },
-      { transform: `translate(-50%,-50%) scale(${scale})`, opacity: 0 },
-    ], { duration: 460, delay, easing: "ease-out", fill: "forwards" }));
+  // 二度の拍: 一拍目は黄金、二拍目はカードの色
+  for (const [beat, col] of [[0, "#ffd23d"], [380, color]] as const) {
+    for (const [scale, delay] of [[1.42, 0], [1.24, 110]] as const) {
+      const frame = fx(ctx.layer, "trig-frame", {
+        left: `${c.x}px`, top: `${c.y}px`, width: `${r.width}px`, height: `${r.height}px`, "--c": col,
+      });
+      frame.style.opacity = "0";
+      gone(frame, anim(frame, [
+        { transform: "translate(-50%,-50%) scale(.95)", opacity: 1 },
+        { transform: `translate(-50%,-50%) scale(${scale})`, opacity: 0 },
+      ], { duration: 620, delay: beat + delay, easing: "cubic-bezier(.16,1,.3,1)", fill: "forwards" }));
+    }
   }
-  sparks(ctx.layer, r, "#ffd23d", 10);
-  stamp(ctx.layer, r, t("motion.trigger"), "trig", 0.78);
+  const flare = fx(ctx.layer, "trig-flare", { left: `${c.x}px`, top: `${c.y}px`, "--c": color });
+  gone(flare, anim(flare, [
+    { transform: "translate(-50%,-50%) scale(.2) rotate(-35deg)", opacity: 0 },
+    { transform: "translate(-50%,-50%) scale(1.4) rotate(0deg)", opacity: 1, offset: 0.3 },
+    { transform: "translate(-50%,-50%) scale(.15) rotate(25deg)", opacity: 0 },
+  ], { duration: 620, easing: "cubic-bezier(.22,1,.36,1)", fill: "forwards" }));
+  const ring = fx(ctx.layer, "trig", { left: `${c.x}px`, top: `${c.y}px`, "--c": color });
+  gone(ring, anim(ring, [
+    { transform: "translate(-50%,-50%) scale(.35)", opacity: 1 },
+    { transform: "translate(-50%,-50%) scale(2.1)", opacity: 0 },
+  ], { duration: 620, easing: "cubic-bezier(.16,1,.3,1)", fill: "forwards" }));
+  sparks(ctx.layer, r, "#ffd23d", 12);
+  sparks(ctx.layer, r, color, 8);
   if (boardEl) {
     anim(boardEl, [
       { scale: "1", translate: "0px 0px", filter: "none" },
-      { scale: "1.14", translate: "0px -6px", filter: "brightness(1.7) drop-shadow(0 0 14px #ffd23d)", offset: 0.3 },
-      { scale: "1.06", translate: "0px -3px", filter: "brightness(1.3) drop-shadow(0 0 10px #ffd23d)", offset: 0.65 },
+      { scale: "1.2", translate: "0px -10px", filter: "brightness(1.8) drop-shadow(0 0 18px #ffd23d)", offset: 0.18 },
+      { scale: "1.08", translate: "0px -4px", filter: "brightness(1.3) drop-shadow(0 0 10px #ffd23d)", offset: 0.4 },
+      { scale: "1.17", translate: "0px -8px", filter: `brightness(1.6) drop-shadow(0 0 18px ${color})`, offset: 0.55 },
+      { scale: "1.06", translate: "0px -3px", filter: "brightness(1.2) drop-shadow(0 0 8px #ffd23d)", offset: 0.8 },
       { scale: "1", translate: "0px 0px", filter: "none" },
-    ], { duration: 520, easing: "ease-out" });
+    ], { duration: 1000, easing: "ease-out" });
   }
-  await sleep(220);
+  await sleep(640);
   const dest = liveCard(root, sourceId, true) ?? sitem;
   const srcEl = boardEl ?? ctx.a.before.cards.get(sourceId)?.el ?? liveCard(root, sourceId, true);
   if (dest && srcEl && dest !== boardEl) {
     const to = dest.getBoundingClientRect();
     if (to.width || to.height) {
       const g = ghost(ctx.layer, srcEl, r, getComputedStyle(srcEl).getPropertyValue("--h"));
-      g.style.filter = "brightness(1.35) drop-shadow(0 0 12px #ffd23d)";
-      await fly(g, to, { duration: 420 });
+      g.style.filter = "brightness(1.35) drop-shadow(0 0 14px #ffd23d)";
+      await trailing(ctx.layer, g, "#ffd23d", fly(g, to, { duration: 520 }));
       g.remove();
       if (sitem) { sitem.style.visibility = ""; ctx.hidden.delete(sitem); }
-      glow(ctx.layer, to, color);
+      stackLand(ctx, sourceId, color);
+      await sleep(200);
       return;
     }
   }
   if (sitem) { sitem.style.visibility = ""; ctx.hidden.delete(sitem); }
+  stackLand(ctx, sourceId, color);
   await sleep(180);
+}
+
+/** 前の位置に留めていたスタックの行を、新しい位置へ滑らせる */
+function slideRows(ctx: Ctx) {
+  for (const el of ctx.held.filter((x) => x.classList.contains("sitem"))) {
+    ctx.held.splice(ctx.held.indexOf(el), 1);
+    const from = el.style.translate;
+    el.style.translate = "";
+    anim(el, [{ translate: from }, { translate: "0px 0px" }], { duration: 360, easing: "cubic-bezier(.3,.7,.3,1)" });
+  }
+}
+
+/** 飛んでいる写しの後ろに光の粒を落としていく（p が終わるまで） */
+async function trailing(layer: HTMLElement, g: HTMLElement, color: string, p: Promise<void>): Promise<void> {
+  let flying = true;
+  void p.then(() => { flying = false; });
+  const drop = () => {
+    if (!flying || skipping) return;
+    const b = g.getBoundingClientRect();
+    if (b.width) {
+      const c = center(b);
+      const d = fx(layer, "trig-trail", {
+        left: `${c.x + (Math.random() - 0.5) * b.width * 0.5}px`, top: `${c.y + (Math.random() - 0.5) * b.height * 0.5}px`, "--c": color,
+      });
+      gone(d, anim(d, [
+        { transform: "translate(-50%,-50%) scale(1)", opacity: 0.95 },
+        { transform: "translate(-50%,-50%) scale(.2)", opacity: 0 },
+      ], { duration: 520, easing: "ease-out", fill: "forwards" }));
+    }
+    setTimeout(drop, 24);
+  };
+  drop();
+  await p;
+}
+
+/**
+ * スタックに積まれた: 小窓の縁が内側から光り、着いた項目の行に光が走って枠が締まる。
+ * 前からあった項目は、新しい項目の場所を空けるように滑って動く。光や枠は小窓の項目の見えている部分の中だけに出す
+ */
+function stackLand(ctx: Ctx, sourceId: string, color: string) {
+  ctx.landed.add(sourceId);
+  const box = ctx.a.root.querySelector<HTMLElement>(".stackbox");
+  const row = box?.querySelector<HTMLElement>(`.sitem[data-source="${CSS.escape(sourceId)}"]`);
+  // 位置は動かし始める前に測る（滑らせ・弾みの途中の位置に枠を置かないように）
+  const view = box ? (box.querySelector<HTMLElement>(".fbody") ?? box).getBoundingClientRect() : null;
+  const full = row?.getBoundingClientRect();
+  slideRows(ctx);
+  if (!box) return;
+  const shadow = getComputedStyle(box).boxShadow;
+  anim(box, [
+    { boxShadow: shadow },
+    { boxShadow: `${shadow === "none" ? "" : shadow + ", "}inset 0 0 0 2px ${color}, inset 0 0 22px ${color}`, offset: 0.25 },
+    { boxShadow: shadow },
+  ], { duration: 620, easing: "ease-out" });
+  if (!row || !full || !view) return;
+  anim(row, [
+    { translate: "-22px 0px", opacity: 0.3, filter: "brightness(2.2)" },
+    { translate: "3px 0px", opacity: 1, filter: "brightness(1.5)", offset: 0.55 },
+    { translate: "0px 0px", opacity: 1, filter: "none" },
+  ], { duration: 460, easing: "cubic-bezier(.2,.8,.3,1)" });
+  const clip = clipTo(ctx.layer, view);
+  const frame = rowFrame(clip, view, full, color);
+  if (!clip || !frame) return;
+  gone(clip, anim(frame, [
+    { opacity: 0, scale: "1.04" },
+    { opacity: 1, scale: "1", offset: 0.25 },
+    { opacity: 1, scale: "1", offset: 0.7 },
+    { opacity: 0, scale: "1" },
+  ], { duration: 900, easing: "ease-out", fill: "forwards" }));
+  anim(frame.firstElementChild!, [{ transform: "translateX(-110%) skewX(-20deg)" }, { transform: "translateX(260%) skewX(-20deg)" }],
+    { duration: 620, delay: 80, easing: "cubic-bezier(.4,0,.2,1)", fill: "both" });
+}
+
+/** 小窓の項目の見えている部分 view で切り抜く入れ物（中の物は view の左上からの位置で置く）。見えていなければ null */
+function clipTo(layer: HTMLElement, view: DOMRect): HTMLElement | null {
+  if (view.width < 1 || view.height < 1) return null;
+  return fx(layer, "clip", { left: `${view.left}px`, top: `${view.top}px`, width: `${view.width}px`, height: `${view.height}px` });
+}
+
+/** 行 r の枠と、行を横切る光（入れ物 clip の中）。行の見えている部分が細すぎるときは出さない */
+function rowFrame(clip: HTMLElement | null, view: DOMRect, r: DOMRect, color: string): HTMLElement | null {
+  if (!clip) return null;
+  if (Math.min(r.bottom, view.bottom) - Math.max(r.top, view.top) < 12) {
+    clip.remove();
+    return null;
+  }
+  const frame = h("div.fx.stack-land");
+  Object.assign(frame.style, { left: `${r.left - view.left}px`, top: `${r.top - view.top}px`, width: `${r.width}px`, height: `${r.height}px` });
+  frame.style.setProperty("--c", color);
+  frame.append(h("div.stack-sweep"));
+  clip.append(frame);
+  return frame;
 }
 
 /** 解決: 対象があれば発生源から対象へ光弾。立ち消えなら煙 */
@@ -641,20 +806,25 @@ async function resolve(ctx: Ctx, sourceId: string, fizzled: boolean, willMove = 
     return;
   }
   const color = colorOf(ctx.card(sourceId));
+  const row = stackRowOut(ctx, sourceId, fizzled ? "#9aa0a8" : color, willMove);
   if (fizzled) {
     motes(ctx.layer, src, "#9aa0a8", 10);
     await sleep(300);
+    row.exit();
     if (!willMove) ctx.closeStackGhost();
     return;
   }
   glow(ctx.layer, src, color);
   const targets = item?.targets ?? [];
   if (!targets.length) {
-    await sleep(240);
+    await sleep(420);
+    row.exit();
+    await sleep(200);
     if (!willMove) ctx.closeStackGhost();
     return;
   }
-  await sleep(120);
+  await sleep(200);
+  row.exit();
   await Promise.all(targets.map(async (tg) => {
     const to = targetRect(ctx, tg);
     if (!to) return;
@@ -662,6 +832,54 @@ async function resolve(ctx: Ctx, sourceId: string, fizzled: boolean, willMove = 
     ctx.struck.add(tg);
   }));
   if (!willMove) ctx.closeStackGhost();
+}
+
+/**
+ * スタックから解決する項目の行（積まれたときの枠・横切る光とは別）: 前の位置に行の写しを出し、内側から光が満ちて明るくなる。
+ * exit() で白く飛んで光の粒になって消え、残りの項目は空いた場所へ滑る。光は小窓の項目の見えている部分の中だけに出す。
+ * カードが別の領域へ移るなら、行の写しのカードは隠す（カードの写しが動く）
+ */
+function stackRowOut(ctx: Ctx, sourceId: string, color: string, willMove: boolean): { exit: () => void } {
+  const shotRow = ctx.a.before.rows.get(sourceId);
+  // 小窓の写し（最後の項目が解決して小窓が閉じるとき）の同じ行は隠す
+  const dup = ctx.layer.querySelector<HTMLElement>(`.stackbox.ghost .sitem[data-source="${CSS.escape(sourceId)}"]`);
+  if (dup) dup.style.visibility = "hidden";
+  // 解決の後の小窓はもう縮んでいる。前と今の見えている部分の重なりで切る（小窓が閉じたなら、残してある写しの大きさのまま）
+  const before = ctx.a.before.stackView;
+  const live = ctx.a.root.querySelector<HTMLElement>(".stackbox .fbody")?.getBoundingClientRect();
+  const view = before && live
+    ? new DOMRect(Math.max(before.left, live.left), Math.max(before.top, live.top),
+      Math.min(before.right, live.right) - Math.max(before.left, live.left), Math.min(before.bottom, live.bottom) - Math.max(before.top, live.top))
+    : before;
+  const clip = shotRow?.rect.width && view ? clipTo(ctx.layer, view) : null;
+  if (!shotRow || !view || !clip) return { exit: () => slideRows(ctx) };
+  const full = shotRow.rect;
+  const rel = new DOMRect(full.left - view.left, full.top - view.top, full.width, full.height);
+  const g = ghost(clip, shotRow.el, rel, shotRow.h);
+  if (willMove) g.querySelector<HTMLElement>(".card")?.style.setProperty("visibility", "hidden");
+  anim(g, [{ filter: "none" }, { filter: "brightness(1.9) saturate(.8)" }], { duration: 360, easing: "ease-out", fill: "forwards" });
+  const light = fx(clip, "stack-resolve", {
+    left: `${rel.left}px`, top: `${rel.top}px`, width: `${rel.width}px`, height: `${rel.height}px`, "--c": color,
+  });
+  anim(light, [{ opacity: 0 }, { opacity: 0.85 }], { duration: 360, easing: "ease-out", fill: "forwards" });
+  let out = false;
+  return {
+    exit: () => {
+      if (out) return;
+      out = true;
+      const opts = { duration: 520, easing: "ease-out", fill: "forwards" } as const;
+      // 光の粒が漂い終わるまで、入れ物を残す
+      const fade = anim(g, [
+        { opacity: 1, scale: "1", filter: "brightness(1.9) saturate(.8) blur(0px)" },
+        { opacity: 0.9, scale: "1.01", filter: "brightness(3) saturate(0) blur(1px)", offset: 0.3 },
+        { opacity: 0, scale: "1.03", filter: "brightness(3.5) saturate(0) blur(4px)" },
+      ], opts);
+      void done(fade).then(() => sleep(1000)).then(() => clip.remove());
+      anim(light, [{ opacity: 0.85 }, { opacity: 1, offset: 0.3 }, { opacity: 0 }], opts);
+      motes(clip, rel, color, 12);
+      void sleep(160).then(() => slideRows(ctx));
+    },
+  };
 }
 
 function targetRect(ctx: Ctx, id: string): DOMRect | null {
@@ -705,30 +923,73 @@ async function damage(ctx: Ctx, sourceId: string | null, target: string, amount:
     if (from) await bolt(ctx.layer, from, to, color);
   }
   ctx.struck.delete(target);
+  const hit = node.getBoundingClientRect();
+  if (combat) slash(ctx.layer, hit);
+  hurt(ctx.layer, hit, node.classList.contains("avatar"));
   await impact(ctx, node, color, amount >= 4);
   // プレイヤーへのダメージの数は、続く life の拍で LIFE の札に出す
-  if (!ctx.a.next.players.some((p) => p.id === target)) stamp(ctx.layer, node.getBoundingClientRect(), `−${amount}`, "dmg");
+  if (!ctx.a.next.players.some((p) => p.id === target)) numberPop(ctx.layer, node.getBoundingClientRect(), `−${amount}`, "dmg", amountSize(amount));
   await sleep(260);
+}
+
+/** ダメージ・回復の数の大きさ（多いほど大きく。上限あり） */
+function amountSize(n: number): number {
+  return 1 + Math.min(10, Math.max(0, n - 1)) * 0.06;
 }
 
 async function life(ctx: Ctx, player: string, from: number, to: number) {
   const head = ctx.a.root.querySelector<HTMLElement>(`.phead[data-player="${CSS.escape(player)}"] .life`);
+  const avatar = ctx.a.root.querySelector<HTMLElement>(`.phead[data-player="${CSS.escape(player)}"] .avatar`);
   const num = ctx.lifeEls.get(player);
   if (!head) return;
   const r = head.getBoundingClientRect();
+  const c = center(r);
   const diff = to - from;
+  // 数が変わっている間は、数の色をダメージ・回復の色にする
+  const tint = (col: string) => {
+    if (!num) return;
+    const base = getComputedStyle(num).color;
+    anim(num, [{ color: col, textShadow: `0 0 8px ${col}` }, { color: col, textShadow: `0 0 8px ${col}`, offset: 0.7 }, { color: base, textShadow: "none" }],
+      { duration: 900, easing: "ease-out" });
+  };
   if (diff < 0) {
-    anim(head, [{ translate: "0px 0px" }, { translate: "-5px 0px" }, { translate: "4px 0px" }, { translate: "-2px 0px" }, { translate: "0px 0px" }], { duration: 360 });
-    anim(head, [{ boxShadow: "0 0 0 3px #ff4b3e, 0 0 18px #ff4b3e" }, { boxShadow: "0 0 0 0 transparent" }], { duration: 700, easing: "ease-out" });
-    stamp(ctx.layer, r, `−${-diff}`, "dmg");
+    // ダメージ: 札が赤く光って揺れ、赤い破片が散る。顔の札も赤くひるむ
+    anim(head, [{ translate: "0px 0px" }, { translate: "-6px 0px" }, { translate: "5px 0px" }, { translate: "-3px 0px" }, { translate: "0px 0px" }], { duration: 380 });
+    anim(head, [{ boxShadow: "0 0 0 3px #ff4b3e, 0 0 22px #ff4b3e" }, { boxShadow: "0 0 0 0 transparent" }], { duration: 760, easing: "ease-out" });
+    const flash = fx(ctx.layer, "lifehit", { left: `${c.x}px`, top: `${c.y}px`, width: `${r.width + 8}px`, height: `${r.height + 8}px` });
+    gone(flash, anim(flash, [
+      { transform: "translate(-50%,-50%) scale(1)", opacity: 0.95 },
+      { transform: "translate(-50%,-50%) scale(1.25)", opacity: 0 },
+    ], { duration: 520, easing: "ease-out", fill: "forwards" }));
+    shards(ctx.layer, r, "#ff5a4a", Math.min(12, 4 - diff));
+    if (avatar) {
+      anim(avatar, [
+        { filter: "none", scale: "1" },
+        { filter: "brightness(1.4) sepia(1) saturate(6) hue-rotate(-40deg)", scale: "0.92", offset: 0.2 },
+        { filter: "none", scale: "1" },
+      ], { duration: 520, easing: "ease-out" });
+    }
+    tint("#ff6b5c");
+    numberPop(ctx.layer, r, `−${-diff}`, "dmg", amountSize(-diff));
   } else if (diff > 0) {
-    const c = center(r);
+    // 回復: 上から光の柱が降りて、札が緑に満ちて膨らみ、十字の光が立ち上る
+    const beam = fx(ctx.layer, "heal-beam", { left: `${c.x}px`, top: `${r.bottom}px`, width: `${Math.max(50, r.width)}px` });
+    gone(beam, anim(beam, [
+      { transform: "translate(-50%,-100%) scaleY(0)", opacity: 0 },
+      { transform: "translate(-50%,-100%) scaleY(1)", opacity: 0.9, offset: 0.3 },
+      { transform: "translate(-50%,-100%) scaleY(1) scaleX(.4)", opacity: 0 },
+    ], { duration: 820, easing: "ease-out", fill: "forwards" }));
     const ring = fx(ctx.layer, "heal", { left: `${c.x}px`, top: `${c.y}px` });
-    gone(ring, anim(ring, [{ transform: "translate(-50%,-50%) scale(.3)", opacity: 0.9 }, { transform: "translate(-50%,-50%) scale(2.2)", opacity: 0 }],
-      { duration: 640, easing: "ease-out", fill: "forwards" }));
-    rise(ctx.layer, r, "#7dffa0", 12);
-    anim(head, [{ boxShadow: "0 0 0 3px #4fd877, 0 0 18px #4fd877" }, { boxShadow: "0 0 0 0 transparent" }], { duration: 800, easing: "ease-out" });
-    stamp(ctx.layer, r, `+${diff}`, "heal");
+    gone(ring, anim(ring, [{ transform: "translate(-50%,-50%) scale(.3)", opacity: 0.9 }, { transform: "translate(-50%,-50%) scale(2)", opacity: 0 }],
+      { duration: 640, delay: 160, easing: "ease-out", fill: "both" }));
+    pluses(ctx.layer, r, "#7dffa0", Math.min(10, 4 + diff));
+    anim(head, [
+      { scale: "1", boxShadow: "0 0 0 0 transparent" },
+      { scale: "1.14", boxShadow: "0 0 0 3px #4fd877, 0 0 22px #4fd877", offset: 0.3 },
+      { scale: "1", boxShadow: "0 0 0 0 transparent" },
+    ], { duration: 860, easing: "ease-out" });
+    tint("#7dffa0");
+    numberPop(ctx.layer, r, `+${diff}`, "heal", amountSize(diff));
   }
   if (num) await countTo(num, from, to, 420 * TEMPO);
   ctx.lifeEls.delete(player);
@@ -739,7 +1000,7 @@ function counter(ctx: Ctx, cardId: string, diff: number, kind: string) {
   const el = ctx.now(cardId);
   if (!el) return;
   const label = kind === "P1P1" ? `${diff > 0 ? "+" : ""}${diff}/${diff > 0 ? "+" : ""}${diff}` : `${diff > 0 ? "+" : ""}${diff}`;
-  stamp(ctx.layer, el.getBoundingClientRect(), label, diff > 0 ? "heal" : "dmg", 0.9);
+  numberPop(ctx.layer, el.getBoundingClientRect(), label, diff > 0 ? "heal" : "dmg", 0.9);
   anim(el, [{ scale: "1.08" }, { scale: "1" }], { duration: 300 });
 }
 
@@ -747,9 +1008,16 @@ function countTo(el: HTMLElement, from: number, to: number, ms: number): Promise
   if (skipping) { el.textContent = String(to); return Promise.resolve(); }
   return new Promise((resolveDone) => {
     const t0 = performance.now();
+    let shown = from;
     const step = (now: number) => {
       const p = Math.min(1, (now - t0) / ms);
-      el.textContent = String(Math.round(from + (to - from) * p));
+      const v = Math.round(from + (to - from) * p);
+      // 数が変わるたびに、小さく弾ませる
+      if (v !== shown) {
+        shown = v;
+        el.animate([{ scale: "1.22" }, { scale: "1" }], { duration: 160, easing: "ease-out" });
+      }
+      el.textContent = String(v);
       if (p < 1 && !skipping) requestAnimationFrame(step);
       else { el.textContent = String(to); resolveDone(); }
     };
@@ -859,6 +1127,33 @@ async function bolt(layer: HTMLElement, from: DOMRect, to: DOMRect, color: strin
   orb.remove();
 }
 
+/** 痛手: 対象に赤い閃光がかぶさる（顔の札なら丸く） */
+function hurt(layer: HTMLElement, r: DOMRect, round: boolean) {
+  const c = center(r);
+  const d = fx(layer, "hurt" + (round ? ".round" : ""), { left: `${c.x}px`, top: `${c.y}px`, width: `${r.width}px`, height: `${r.height}px` });
+  gone(d, anim(d, [
+    { transform: "translate(-50%,-50%)", opacity: 0 },
+    { transform: "translate(-50%,-50%)", opacity: 0.85, offset: 0.15 },
+    { transform: "translate(-50%,-50%)", opacity: 0 },
+  ], { duration: 560, easing: "ease-out", fill: "forwards" }));
+}
+
+/** 戦闘の爪痕: 三本の斜めの光の筋が対象を切り裂く */
+function slash(layer: HTMLElement, r: DOMRect) {
+  const c = center(r);
+  const len = Math.max(90, Math.hypot(r.width, r.height) * 0.9);
+  for (let i = 0; i < 3; i++) {
+    const off = (i - 1) * Math.max(10, Math.min(18, r.width * 0.16));
+    const d = fx(layer, "slash", { left: `${c.x + off}px`, top: `${c.y}px`, width: `${len}px` });
+    gone(d, anim(d, [
+      { transform: "translate(-50%,-50%) rotate(-58deg) scaleX(0)", opacity: 1 },
+      { transform: "translate(-50%,-50%) rotate(-58deg) scaleX(1)", opacity: 1, offset: 0.25 },
+      { transform: "translate(-50%,-50%) rotate(-58deg) scaleX(1)", opacity: 1, offset: 0.6 },
+      { transform: "translate(-50%,-50%) rotate(-58deg) scaleX(1) scaleY(.3)", opacity: 0 },
+    ], { duration: 680, delay: i * 50, easing: "ease-out", fill: "both" }));
+  }
+}
+
 /** 着弾: 閃光・星形の弾け・衝撃の輪・対象の揺れ（ヒットストップの後に弾かれる） */
 async function impact(ctx: Ctx, node: HTMLElement, color: string, strong: boolean) {
   const r = node.getBoundingClientRect(), c = center(r);
@@ -887,32 +1182,148 @@ async function impact(ctx: Ctx, node: HTMLElement, color: string, strong: boolea
   await sleep(160);
 }
 
-/** 文字のスタンプ（−3・+2 など）。カードや LIFE の札の上で弾んで、上へ抜ける */
-function stamp(layer: HTMLElement, r: DOMRect, text: string, cls: string, size = 1) {
+/** 同じ場所に続けて出た数（まだ出ている数）。重ならないよう、後の数を上へずらす */
+const popsAt = new Map<string, number>();
+
+/**
+ * ダメージ・回復・カウンターの数（−3・+2・+1/+1）。傾けずに、ぼかしから弾んで現れ、少し留まってから上へ溶ける。
+ * 記号と数を分けて、記号は小さめに出す
+ */
+function numberPop(layer: HTMLElement, r: DOMRect, text: string, kind: "dmg" | "heal", size = 1) {
   // 画面の上の端に近いもの（相手の LIFE）は、下に出す（上へ抜ける動きが切れないように）
-  const y = r.top < 70 ? r.bottom + 34 : r.top + r.height * 0.35;
-  const s = fx(layer, `stamp.${cls}`, { left: `${r.left + r.width / 2}px`, top: `${y}px`, "--k": String(size) });
-  s.textContent = text;
-  gone(s, anim(s, [
-    { transform: "translate(-50%,-50%) scale(2.4) rotate(-12deg)", opacity: 0 },
-    { transform: "translate(-50%,-50%) scale(.92) rotate(-8deg)", opacity: 1, offset: 0.14 },
-    { transform: "translate(-50%,-50%) scale(1.05) rotate(-8deg)", opacity: 1, offset: 0.24 },
-    { transform: "translate(-50%,-90%) scale(1) rotate(-8deg)", opacity: 1, offset: 0.75 },
-    { transform: "translate(-50%,-130%) scale(.95) rotate(-8deg)", opacity: 0 },
-  ], { duration: 1200, easing: "ease-out", fill: "forwards" }));
+  const below = r.top < 70;
+  const x = r.left + r.width / 2;
+  const key = `${Math.round(x / 8)}:${Math.round(r.top / 8)}`;
+  const n = popsAt.get(key) ?? 0;
+  popsAt.set(key, n + 1);
+  const y = (below ? r.bottom + 30 : r.top + r.height * 0.35) - n * 26 * size;
+  // .fx.heal（回復の輪）と混ざらないよう、数の種類は up / down で付ける
+  const el = fx(layer, `num.${kind === "dmg" ? "down" : "up"}`, { left: `${x}px`, top: `${y}px`, "--k": String(size) });
+  const m = /^([+−-])(.*)$/.exec(text);
+  if (m) el.append(h("span.sign", null, m[1]), h("span.val", null, m[2]));
+  else el.append(h("span.val", null, text));
+  const a = anim(el, [
+    { transform: "translate(-50%,-50%) translateY(10px) scale(.4)", opacity: 0, filter: "blur(6px)" },
+    { transform: "translate(-50%,-50%) translateY(0px) scale(1.18)", opacity: 1, filter: "blur(0px)", offset: 0.12 },
+    { transform: "translate(-50%,-50%) translateY(0px) scale(.96)", opacity: 1, filter: "blur(0px)", offset: 0.2 },
+    { transform: "translate(-50%,-50%) translateY(0px) scale(1)", opacity: 1, filter: "blur(0px)", offset: 0.28 },
+    { transform: "translate(-50%,-50%) translateY(-12px) scale(1)", opacity: 1, filter: "blur(0px)", offset: 0.72 },
+    { transform: "translate(-50%,-50%) translateY(-30px) scale(.94)", opacity: 0, filter: "blur(3px)" },
+  ], { duration: 1250, easing: "cubic-bezier(.25,.8,.35,1)", fill: "forwards" });
+  void done(a).then(() => {
+    el.remove();
+    const left = (popsAt.get(key) ?? 1) - 1;
+    if (left > 0) popsAt.set(key, left);
+    else popsAt.delete(key);
+  });
 }
 
-/** 画面の中央の大きなスタンプ（クリア・失敗） */
-export function verdictStamp(cleared: boolean) {
+export interface VerdictStampOptions {
+  steps?: number;
+  root?: ParentNode;
+}
+
+/** 画面の中央の大きなスタンプ・シネマティックリボン（クリア・失敗） */
+export function verdictStamp(cleared: boolean, opts?: VerdictStampOptions) {
   if (!motionEnabled()) return;
   const layer = h("div.fxlayer.pass");
   document.body.append(layer);
-  const s = fx(layer, `stamp.big.${cleared ? "win" : "lose"}`, { left: "50%", top: "42%" });
-  s.textContent = cleared ? t("motion.cleared") : t("motion.failed");
   if (cleared) {
-    const r = new DOMRect(window.innerWidth / 2 - 120, window.innerHeight * 0.42 - 40, 240, 80);
-    sparks(layer, r, "#ffd75e", 24);
+    const D = 2600;
+    const dim = fx(layer, "verdict-dim", { inset: "0px" });
+    anim(dim, [
+      { opacity: 0 },
+      { opacity: 1, offset: 0.1 },
+      { opacity: 1, offset: 0.84 },
+      { opacity: 0 },
+    ], { duration: D, easing: "ease-out", fill: "forwards" });
+
+    const root = opts?.root ?? document;
+    const oppTarget = root.querySelector<HTMLElement>(".side.opp .avatar")
+      ?? root.querySelector<HTMLElement>(".phead[data-player='p2'] .avatar")
+      ?? root.querySelector<HTMLElement>(".side.opp .phead");
+    if (oppTarget) {
+      const oppRect = oppTarget.getBoundingClientRect();
+      if (oppRect.width > 0 && oppRect.height > 0) {
+        const cx = oppRect.left + oppRect.width / 2;
+        const cy = oppRect.top + oppRect.height / 2;
+        anim(oppTarget, [
+          { scale: "1", filter: "brightness(1)" },
+          { scale: "1.35", filter: "brightness(2.4) drop-shadow(0 0 12px #ffd75e)", offset: 0.18 },
+          { scale: "0.9", filter: "brightness(1.4) sepia(0.8) hue-rotate(-30deg)", offset: 0.45 },
+          { scale: "1", filter: "brightness(1)" },
+        ], { duration: 900, easing: "ease-out" });
+        const flash = fx(layer, "star", { left: `${cx}px`, top: `${cy}px`, "--c": "#ffd75e" });
+        gone(flash, anim(flash, [
+          { transform: "translate(-50%,-50%) scale(0.3) rotate(0deg)", opacity: 1 },
+          { transform: "translate(-50%,-50%) scale(1.35) rotate(25deg)", opacity: 0.9, offset: 0.35 },
+          { transform: "translate(-50%,-50%) scale(0.2) rotate(45deg)", opacity: 0 },
+        ], { duration: 680, easing: "ease-out", fill: "forwards" }));
+        const wave1 = fx(layer, "shock.defeat-ring", { left: `${cx}px`, top: `${cy}px`, "--c": "#ffd75e" });
+        gone(wave1, anim(wave1, [
+          { transform: "translate(-50%,-50%) scale(0.25)", opacity: 1 },
+          { transform: "translate(-50%,-50%) scale(3.8)", opacity: 0 },
+        ], { duration: 1050, easing: "cubic-bezier(.16,1,.3,1)", fill: "forwards" }));
+        const wave2 = fx(layer, "shock.defeat-ring", { left: `${cx}px`, top: `${cy}px`, "--c": "#ff6b6b" });
+        gone(wave2, anim(wave2, [
+          { transform: "translate(-50%,-50%) scale(0.2)", opacity: 0.95 },
+          { transform: "translate(-50%,-50%) scale(2.6)", opacity: 0 },
+        ], { duration: 920, delay: 110, easing: "cubic-bezier(.16,1,.3,1)", fill: "forwards" }));
+        sparks(layer, oppRect, "#ff6b6b", 12);
+        sparks(layer, oppRect, "#ffd75e", 14);
+      }
+    }
+    const bannerY = Math.round(window.innerHeight * 0.5);
+    const ribbon = fx(layer, "verdict-ribbon.win", { left: "0px", right: "0px", top: `${bannerY}px` });
+    const shine = h("div.verdict-shine");
+    const title = h("div.fx.stamp.big.win", null, t("motion.cleared"));
+    const subText = opts?.steps && opts.steps > 0
+      ? t("motion.clearedSub", { n: opts.steps })
+      : t("motion.clearedSubSimple");
+    const sub = h("div.verdict-sub", null, subText);
+    ribbon.append(shine, h("div.verdict-ribbon-inner", null, title, sub));
+
+    const r = new DOMRect(window.innerWidth / 2 - 180, bannerY - 40, 360, 80);
+    for (const c of ["#ffd75e", "#fff3c4", "#6ee7b7", "#60a5fa", "#f87171"]) {
+      sparks(layer, r, c, 8);
+    }
+    motes(layer, r, "#ffd75e", 18);
+
+    anim(shine, [
+      { transform: "translateX(-120%) skewX(-25deg)", opacity: 0 },
+      { transform: "translateX(-60%) skewX(-25deg)", opacity: 0.9, offset: 0.11 },
+      { transform: "translateX(120%) skewX(-25deg)", opacity: 0, offset: 0.42 },
+      { transform: "translateX(120%) skewX(-25deg)", opacity: 0 },
+    ], { duration: D, easing: "cubic-bezier(.22,1,.36,1)", fill: "forwards" });
+
+    anim(title, [
+      { transform: "scale(2.6) rotate(-10deg)", opacity: 0, filter: "brightness(2)" },
+      { transform: "scale(2.2) rotate(-8deg)", opacity: 0, offset: 0.04 },
+      { transform: "scale(0.9) rotate(2deg)", opacity: 1, filter: "brightness(1.4)", offset: 0.15 },
+      { transform: "scale(1.08) rotate(-1deg)", opacity: 1, filter: "brightness(1)", offset: 0.21 },
+      { transform: "scale(1) rotate(0deg)", opacity: 1, filter: "brightness(1)", offset: 0.27 },
+      { transform: "scale(1.04) rotate(0deg)", opacity: 1, filter: "brightness(1)" },
+    ], { duration: D, easing: "cubic-bezier(.22,1,.36,1)", fill: "forwards" });
+
+    anim(sub, [
+      { transform: "translateY(10px) scale(0.88)", opacity: 0 },
+      { transform: "translateY(10px) scale(0.88)", opacity: 0, offset: 0.13 },
+      { transform: "translateY(0px) scale(1)", opacity: 1, offset: 0.25 },
+      { transform: "translateY(0px) scale(1)", opacity: 1 },
+    ], { duration: D, easing: "ease-out", fill: "forwards" });
+
+    const a = anim(ribbon, [
+      { transform: "translateY(-50%) scaleX(0) scaleY(0.5)", opacity: 0, filter: "brightness(1.8)" },
+      { transform: "translateY(-50%) scaleX(1.03) scaleY(1.06)", opacity: 1, filter: "brightness(1.3)", offset: 0.1 },
+      { transform: "translateY(-50%) scaleX(1) scaleY(1)", opacity: 1, filter: "brightness(1)", offset: 0.16 },
+      { transform: "translateY(-50%) scaleX(1) scaleY(1)", opacity: 1, filter: "brightness(1)", offset: 0.85 },
+      { transform: "translateY(calc(-50% - 10px)) scaleX(0.96) scaleY(0.85)", opacity: 0, filter: "brightness(1)" },
+    ], { duration: D, easing: "cubic-bezier(.16,1,.3,1)", fill: "forwards" });
+    void done(a).then(() => layer.remove());
+    return;
   }
+  const s = fx(layer, "stamp.big.lose", { left: "50%", top: "42%" });
+  s.textContent = t("motion.failed");
   const a = anim(s, [
     { transform: "translate(-50%,-50%) scale(3) rotate(-14deg)", opacity: 0 },
     { transform: "translate(-50%,-50%) scale(.94) rotate(-8deg)", opacity: 1, offset: 0.12 },
@@ -961,7 +1372,9 @@ function motes(layer: HTMLElement, r: DOMRect, color: string, n: number) {
   }
 }
 
-/** 回復の粒: 札から立ち上る */
-function rise(layer: HTMLElement, r: DOMRect, color: string, n: number) {
-  particles(layer, r, color, n, "mote", () => ({ x: (Math.random() - 0.5) * r.width, y: -40 - Math.random() * 40, ms: 700 + Math.random() * 300, delay: Math.random() * 200 }));
+/** 回復の十字の光: 札の周りから立ち上る */
+function pluses(layer: HTMLElement, r: DOMRect, color: string, n: number) {
+  particles(layer, r, color, n, "plus", () => ({
+    x: (Math.random() - 0.5) * (r.width + 40), y: -50 - Math.random() * 50, ms: 800 + Math.random() * 300, delay: Math.random() * 260,
+  }));
 }

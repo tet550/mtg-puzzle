@@ -120,7 +120,7 @@ describe("SNS share text & board snapshot rendering", () => {
       shareKind: "puzzle",
     });
     expect(puzzleText).toContain("稲妻の詰めパズル");
-    expect(puzzleText).toContain("#詰めマジック");
+    expect(puzzleText).toContain("#MTGPuzzle");
 
     const boardText = buildSnsPostText({
       title,

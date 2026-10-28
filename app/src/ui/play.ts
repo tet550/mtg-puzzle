@@ -341,7 +341,9 @@ export class PlayPage {
     this.render();
     const after = () => {
       this.arrow?.setOrigin(this.el.querySelector<HTMLElement>(".stackbox [data-targeting]"));
-      if (!this.seeking && s.phase === "finished" && prev?.engine.state !== "GAME_OVER") verdictStamp(s.verdict.result === "CLEARED");
+      if (!this.seeking && s.phase === "finished" && prev?.engine.state !== "GAME_OVER") {
+        verdictStamp(s.verdict.result === "CLEARED", { steps: s.solutionSteps.length, root: this.el });
+      }
       if (this.macro && s.phase === "playing") queueMicrotask(() => this.stepMacro());
       else if (!this.orderStack && !this.replay && s.phase === "playing") queueMicrotask(() => this.stepAutoOrder());
       if (this.replay && s.phase === "playing") {
@@ -658,6 +660,7 @@ export class PlayPage {
 
     const panel = this.playPanel(s, interaction);
     this.el.classList.toggle("withpanelmin", this.minimized.has("play"));
+    this.el.classList.toggle("is-cleared", s.phase === "finished" && s.verdict.result === "CLEARED");
     const buildMenu = () => {
       if (!this.menu) return [];
       // 盤面に無い選択肢のメニューには、決定・パスなどのボタンも入れる（メニューが見出しの盤面の操作に重なっても答えられるように）
@@ -721,7 +724,8 @@ export class PlayPage {
   /** 操作パネル（mtgtable の「p1 として操作」）。広い画面では右下に浮かせ、狭い画面では下に固定する */
   private playPanel(s: SessionState, i: Interaction | null): HTMLElement {
     const min = this.minimized.has("play");
-    return h("div.float.playpanel" + (min ? ".min" : ""), { "data-phase": s.phase },
+    const verdictAttr = s.phase === "finished" ? (s.verdict.result === "CLEARED" ? "cleared" : "failed") : undefined;
+    return h("div.float.playpanel" + (min ? ".min" : ""), { "data-phase": s.phase, "data-verdict": verdictAttr },
       h("div.fhead", null, h("span", null, t("panel.play")),
         h("button", { type: "button", title: t("panel.min"), "aria-expanded": String(!min),
           onclick: () => { min ? this.minimized.delete("play") : this.minimized.add("play"); this.render(); } }, min ? "+" : "–")),
@@ -742,7 +746,16 @@ export class PlayPage {
       case "finished": {
         const cleared = s.verdict.result === "CLEARED";
         bar.classList.add(cleared ? "cleared" : "failed");
-        bar.append(h("div.result", null, verdictText(s.verdict)),
+        const resultNode = cleared
+          ? h("div.result-row", null,
+              h("span.result-trophy", { "aria-hidden": "true" }, "🏆"),
+              h("div.result", null, verdictText(s.verdict)),
+              s.solutionSteps.length > 0
+                ? h("span.clear-steps-badge", null, t("verdict.clearedSteps", { n: s.solutionSteps.length }))
+                : null,
+            )
+          : h("div.result", null, verdictText(s.verdict));
+        bar.append(resultNode,
           h("div.btns", null,
             h("button.on.big", { type: "button", onclick: () => { this.stopReplay(); void this.session.reset(); } }, t("action.again")),
             this.opts.onNewHand
