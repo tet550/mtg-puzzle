@@ -874,12 +874,9 @@ export class PlayPage {
   // ---------------------------------------------------------------- 入力
 
   private onCard(c: CardView, i: Interaction | null) {
+    // 操作できないカードのタップでは何もしない（詳細は長押し・右クリックだけで出す）
     const opts = i?.onBoard.get(c.instanceId);
-    if (!i || !opts) {
-      this.detail = c;
-      this.render();
-      return;
-    }
+    if (!i || !opts) return;
     this.pick(opts, i, c.instanceId, c);
   }
 
