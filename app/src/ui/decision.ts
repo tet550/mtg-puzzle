@@ -53,7 +53,10 @@ export function marksOf(i: Interaction | null, selected: Set<string>): Map<strin
   if (!i) return m;
   for (const [key, opts] of i.onBoard) {
     if (opts.every((o) => o.ref?.type === "ability" && o.ref.abilityKind === "mana")) continue;
-    m.set(key, opts.some((o) => selected.has(o.id)) ? "chosen" : "cand");
+    const mark = opts.some((o) => selected.has(o.id)) ? "chosen" : "cand";
+    m.set(key, mark);
+    // スタックの項目を指す選択肢は、スタックの項目にも印を付ける（発生源のカードの印とは分ける）
+    if (opts.some((o) => o.ref?.type === "stack")) m.set(`stack:${key}`, mark);
   }
   return m;
 }

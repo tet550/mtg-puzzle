@@ -253,7 +253,7 @@ img.ms { width: 1.05em; height: 1.05em; vertical-align: -0.15em; margin: 0 1px; 
 .phead { display: flex; flex-wrap: nowrap; gap: 8px; align-items: center; height: 28px; white-space: nowrap; min-width: 0; border-radius: 8px; }
 .phead > * { flex: none; }
 .phead.cand { outline: 3px solid var(--cand); outline-offset: 1px; cursor: pointer; }
-.phead.chosen { outline: 3px solid var(--accent); outline-offset: 1px; background: var(--hl); }
+.phead.chosen { outline: 3px solid var(--warn); outline-offset: 1px; background: var(--hl); }
 .avatar { display: inline-flex; align-self: center; width: 28px; height: 28px; }
 .avatar img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .35)); -webkit-user-drag: none; user-select: none; }
 /* ライフ: LIFE と数を横に並べた小さな塊 */
@@ -428,7 +428,7 @@ img.ms { width: 1.05em; height: 1.05em; vertical-align: -0.15em; margin: 0 1px; 
 .card .pt.mod { background: var(--hl); }
 .card.tapped { background: var(--tapped); transform: rotate(6deg); opacity: .85; }
 .card.cand { outline: 3px solid var(--cand); box-shadow: 0 0 0 5px color-mix(in srgb, var(--cand) 25%, transparent); }
-.card.chosen { outline: 3px solid var(--accent); background: var(--hl); }
+.card.chosen { outline: 3px solid var(--warn); background: var(--hl); }
 .card.flash { animation: flash .9s ease-out; }
 @keyframes flash { 0% { box-shadow: 0 0 0 6px var(--hl); } 100% { box-shadow: 0 0 0 0 transparent; } }
 
@@ -510,6 +510,7 @@ body.nosel, body.nosel * { user-select: none !important; -webkit-user-select: no
 .sitem { display: flex; gap: 8px; align-items: flex-start; padding: 6px; border-bottom: 1px solid var(--line); }
 .sitem:last-child { border-bottom: none; }
 .sitem.cand { outline: 3px solid var(--cand); border-radius: 6px; }
+.sitem.chosen { outline: 3px solid var(--warn); border-radius: 6px; }
 /* 対象を選んでいる呪文・能力: 矢印の元。薄くせず、縁で示す */
 .sitem.targeting { opacity: 1; outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 6px; }
 /* スタックからカーソルへの矢印（arrow.ts）。押せない層。候補の上では吸い付いて、色を変える */

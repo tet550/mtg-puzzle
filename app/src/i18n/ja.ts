@@ -230,6 +230,7 @@ export const ja = {
   "count.range": "{min}〜{max} 個",
   "action.attackN": "{n} 体で攻撃する",
   "action.noAttack": "攻撃しない",
+  "action.attackAll": "すべて攻撃",
   "action.confirm": "決定（{n}）",
   "action.clear": "選び直す",
   "action.again": "もう一度",

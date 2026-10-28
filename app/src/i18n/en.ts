@@ -225,6 +225,7 @@ export const en: Messages = {
   "count.range": "{min}–{max}",
   "action.attackN": "Attack with {n}",
   "action.noAttack": "Don't attack",
+  "action.attackAll": "Attack with all",
   "action.confirm": "Confirm ({n})",
   "action.clear": "Clear",
   "action.again": "Try again",

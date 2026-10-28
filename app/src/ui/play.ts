@@ -24,7 +24,7 @@ import { fitHands, setupFloat } from "./float";
 import { macroAnswer, startMacro, type Macro } from "./quick";
 import { manaNodes } from "./mana";
 import { icon, type IconName } from "./icons";
-import { buildInteraction, colorName, isColorAsk, isDirectManaLand, manaLabel, marksOf, optionLabel, type Interaction } from "./decision";
+import { buildInteraction, colorName, isColorAsk, isDirectManaLand, manaLabel, marksOf, optionLabel, refKey, type Interaction } from "./decision";
 import { h, patchChildren } from "./dom";
 import { cardImage, displayName, ensureCardImages, imagesEnabled, printedText } from "./images";
 import { puzzleDescription, puzzleTitle, t, type MessageKey } from "../i18n";
@@ -829,6 +829,22 @@ export class PlayPage {
       const ok = n >= d.min && n <= d.max;
       const label = d.kind === "ATTACKERS" ? (n ? t("action.attackN", { n }) : t("action.noAttack")) : t("action.confirm", { n });
       btns.push(h("button.on.big", { type: "button", "data-confirm": "1", disabled: !ok, onclick: () => this.send([...this.selected]) }, label));
+      if (d.kind === "ATTACKERS") {
+        // 攻撃できるクリーチャーを 1 体につき 1 つずつ（攻撃先が複数あれば最初の選択肢）選ぶ
+        const first = new Map<string, string>();
+        for (const o of d.options) {
+          const key = refKey(o, view);
+          if (key && o.ref?.type !== "special" && !first.has(key)) first.set(key, o.id);
+        }
+        const all = [...first.values()].slice(0, d.max);
+        if (all.some((id) => !this.selected.has(id))) {
+          btns.push(h("button.big", { type: "button", "data-attack-all": "1", onclick: () => {
+            this.selected.clear();
+            for (const id of all) this.selected.add(id);
+            this.render();
+          } }, t("action.attackAll")));
+        }
+      }
       if (n) btns.push(h("button", { type: "button", "data-clear": "1", onclick: () => { this.selected.clear(); this.render(); } }, t("action.clear")));
     }
     for (const o of i.specials) {

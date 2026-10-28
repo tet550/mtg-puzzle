@@ -448,7 +448,7 @@ export function stackBody(view: GameView, ui: BoardUi, hooks: BoardHooks, names:
   // 唱えている途中（対象・支払いを選んでいる間）の呪文も、まだスタックに載っていない項目として出す
   const casting = view.players.flatMap((p) => p.cards).filter((c) => c.zone === "Stack" && !onStack.has(c.instanceId));
   const item = (c: CardView | undefined, name: string, text: string, top: string, targets: string[], cls: string, source: string, aiming = false) =>
-    h("li.sitem" + cls + (aiming ? ".targeting" : "") + (c && ui.marks.has(c.instanceId) ? ".cand" : ""),
+    h("li.sitem" + cls + (aiming ? ".targeting" : "") + stackMark(c, source, ui),
       aiming ? { "data-source": source, "data-targeting": "1" } : { "data-source": source },
       c ? cardTile(c, ui, hooks, ".instack" + (c.zone === "Stack" ? "" : ".src")) : null,
       h("div.sbody", null,
@@ -467,20 +467,32 @@ export function stackBody(view: GameView, ui: BoardUi, hooks: BoardHooks, names:
       localized(it.description.replace(/\s*\(\d+\)/g, ""), it.descriptionJa), it.index === 0 ? t("stack.top") : String(it.index + 1), it.targets, "", it.sourceId)));
 }
 
+/**
+ * スタックの項目の印。スタックの項目そのもの（stack:発生源）か、スタックにある呪文のカードを指す選択肢だけ光らせる
+ * （能力の発生源が戦場で起動できるだけなら、スタックの項目は光らせない）
+ */
+function stackMark(c: CardView | undefined, source: string, ui: BoardUi): string {
+  const mark = ui.marks.get(`stack:${source}`) ?? (c?.zone === "Stack" ? ui.marks.get(c.instanceId) : undefined);
+  return mark ? `.${mark}` : "";
+}
+
 // ---------------------------------------------------------------- カード
 
 export function cardTile(c: CardView, ui: BoardUi, hooks: BoardHooks, extra: string): HTMLElement {
-  const mark = ui.marks.get(c.instanceId);
+  // スタックの中のカード（能力の発生源を含む）には、戦場での状態（タップ・選択の印・戦闘・召喚酔い）を出さない。印は項目（.sitem）に付ける
+  const inStack = extra.includes("instack");
+  const mark = inStack ? undefined : ui.marks.get(c.instanceId);
+  const tapped = c.tapped && !inStack;
   const small = extra.includes("small");
   const url = small || c.faceDown ? null : ui.art(c.name);
-  const cls = "div.card" + extra + (url ? ".withart" : "") + (c.tapped ? ".tapped" : "") + (mark ? `.${mark}` : "")
-    + (ui.flash.has(c.instanceId) ? ".flash" : "");
-  const d = h(cls as "div", { "data-id": c.instanceId, title: `${displayName(c.name)}${c.tapped ? t("card.tapped") : ""}` });
+  const cls = "div.card" + extra + (url ? ".withart" : "") + (tapped ? ".tapped" : "") + (mark ? `.${mark}` : "")
+    + (!inStack && ui.flash.has(c.instanceId) ? ".flash" : "");
+  const d = h(cls as "div", { "data-id": c.instanceId, title: `${displayName(c.name)}${tapped ? t("card.tapped") : ""}` });
   const flags: string[] = [];
-  if (ui.attacking.has(c.instanceId)) flags.push(t("card.attacking"));
-  if (ui.blocking.has(c.instanceId)) flags.push(t("card.blocking"));
+  if (!inStack && ui.attacking.has(c.instanceId)) flags.push(t("card.attacking"));
+  if (!inStack && ui.blocking.has(c.instanceId)) flags.push(t("card.blocking"));
   if (c.token) flags.push(t("card.token"));
-  if (c.sick && c.kinds.includes("creature") && c.zone === "Battlefield") flags.push(t("card.sick"));
+  if (!inStack && c.sick && c.kinds.includes("creature") && c.zone === "Battlefield") flags.push(t("card.sick"));
   if (c.controller !== c.owner) flags.push(t("card.owner", { owner: c.owner }));
   const chips: HTMLElement[] = Object.entries(c.counters).map(([k, n]) => h("span.chip.strong", null, `${counterName(k)} ×${n}`));
   if (c.damage) chips.push(h("span.chip.strong.dmg", null, t("card.damage", { n: c.damage })));
