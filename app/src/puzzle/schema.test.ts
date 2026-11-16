@@ -7,7 +7,7 @@ import { validatePuzzle } from "./schema";
 const valid = () => ({
   schemaVersion: 1,
   title: "S1",
-  engine: { type: "forge", version: "2.0.15" },
+  engine: { type: "forge", version: "2.0.16" },
   game: {
     activePlayer: "p1",
     phase: "main1",

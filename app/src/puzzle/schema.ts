@@ -8,7 +8,7 @@ import { validateSolutionSteps, type SolutionStep } from "./solution";
 
 export const SCHEMA_VERSION = 1;
 /** このアプリが同梱しているエンジンの Forge のバージョン */
-export const ENGINE_VERSION = "2.0.15";
+export const ENGINE_VERSION = "2.0.16";
 export const MANA_COLORS: ManaColor[] = ["W", "U", "B", "R", "G", "C"];
 
 export interface CardDef {

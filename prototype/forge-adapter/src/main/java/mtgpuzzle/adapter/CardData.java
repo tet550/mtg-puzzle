@@ -33,7 +33,7 @@ import java.util.zip.ZipOutputStream;
  * 使い方: CardData <forge res dir> <出力: 共通の zip> <出力: カードデータ .json.gz>
  */
 public final class CardData {
-    static final String FORGE_VERSION = "2.0.15";
+    static final String FORGE_VERSION = "2.0.16";
     private static final Pattern NAME = Pattern.compile("^Name:(.*)$", Pattern.MULTILINE);
     /** スクリプトの中の、ほかのカードの名前を書く行（合体の相手・面のコピー元） */
     private static final Pattern NAME_LINE = Pattern.compile("^(?:MeldPair|CopyFaceFrom):(.*)$", Pattern.MULTILINE);
@@ -45,7 +45,8 @@ public final class CardData {
 
     /**
      * どの問題にも入れるトークン。スクリプトに名前の出ないもの:
-     * ダンジョン（探索・イニシアチブ。VentureEffect が全トークンから探す）と、Forge のコードが名前で作るもの（Amass・Empower・Endure）
+     * ダンジョン（探索・イニシアチブ。VentureEffect が全トークンから探す）と、Forge のコードが名前で作るもの（Amass・Empower・Endure）。
+     * Empower の種類別のもの（u_empower_jace など）は、下でファイル名から加える
      */
     private static final List<String> ALWAYS_TOKENS = List.of("b_0_0_army", "u_empower", "w_x_x_spirit");
 
@@ -100,6 +101,9 @@ public final class CardData {
                 if (!tj.isEmpty()) t.put("j", tj.toString());
                 tokens.put(name, t);
                 if (s.lines().anyMatch(l -> l.startsWith("Types:") && l.contains("Dungeon"))) always.add(name);
+                // Empower は u_empower_<種類>（2.0.16 から。u_empower_jace など）を先に探し、無ければ u_empower を使う。
+                // 先に探す名前が無いと例外になるので、種類別のものもすべて入れる
+                if (name.startsWith("u_empower_")) always.add(name);
             }
         }
         always.removeIf(t -> !tokens.containsKey(t));

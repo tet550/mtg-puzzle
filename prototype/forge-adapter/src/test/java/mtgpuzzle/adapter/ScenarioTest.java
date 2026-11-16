@@ -532,7 +532,7 @@ class ScenarioTest {
     private static PuzzleDefinition customPuzzle(List<String> p1Hand, List<String> p1Battlefield,
             List<String> p1Graveyard, List<String> p1Library, int p2Life, List<String> p2Battlefield) {
         StringBuilder sb = new StringBuilder();
-        sb.append("{\"schemaVersion\":1,\"title\":\"test\",\"engine\":{\"type\":\"forge\",\"version\":\"2.0.15\"},");
+        sb.append("{\"schemaVersion\":1,\"title\":\"test\",\"engine\":{\"type\":\"forge\",\"version\":\"2.0.16\"},");
         sb.append("\"game\":{\"activePlayer\":\"p1\",\"phase\":\"main1\",\"players\":[");
         sb.append("{\"id\":\"p1\",\"life\":20,\"hand\":").append(cardsJson("h", p1Hand));
         sb.append(",\"battlefield\":").append(cardsJson("b", p1Battlefield));

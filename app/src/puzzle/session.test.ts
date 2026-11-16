@@ -8,7 +8,7 @@ import { PuzzleSession, type EngineLike } from "./session";
 const puzzle = {
   schemaVersion: 1,
   title: "S1",
-  engine: { type: "forge", version: "2.0.15" },
+  engine: { type: "forge", version: "2.0.16" },
   game: { activePlayer: "p1", phase: "main1", players: [{ id: "p1" }, { id: "p2" }] },
   goal: { type: "win", player: "p1", deadline: "current_turn" },
 };

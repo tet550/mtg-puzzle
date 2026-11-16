@@ -6,7 +6,7 @@
 
 | 項目 | 内容 |
 |---|---|
-| Forge | `prototype/forge`（git submodule、shallow）。タグ `forge-2.0.15`（commit `4ec5f1a2`）に固定 |
+| Forge | `prototype/forge`（git submodule、shallow）。タグ `forge-2.0.16`（commit `583714b8`）に固定 |
 | JDK | 21 以上（Forge の要件は 17 以上）。`JAVA_HOME` で指定する |
 | Maven | 3.9 以上 |
 | Node.js | 24（検証ページのサーバーと計測スクリプト） |
@@ -28,16 +28,16 @@ Windows では長いパスを許可しておく:
 git -C prototype/forge config core.longpaths true
 ```
 
-forge-game とその依存モジュールだけをビルドする:
+forge-game とその依存モジュールだけをビルドする（Forge の `.mvn/maven.config` が設定ファイルを相対パスで指すので、`prototype/forge` の中で実行する）:
 
 ```bash
-mvn -B -f prototype/forge/pom.xml -pl forge-game -am install -DskipTests -Dcheckstyle.skip
+(cd prototype/forge && mvn -B -pl forge-game -am install -DskipTests -Dcheckstyle.skip)
 ```
 
 forge-ai もビルドする場合（C3 以降、forge-adapter は forge-ai に依存していない。V1・V2 当時の構成を再現するときだけ必要）:
 
 ```bash
-mvn -B -f prototype/forge/pom.xml -pl forge-ai -am install -DskipTests -Dcheckstyle.skip
+(cd prototype/forge && mvn -B -pl forge-ai -am install -DskipTests -Dcheckstyle.skip)
 ```
 
 ## forge-adapter（V1）

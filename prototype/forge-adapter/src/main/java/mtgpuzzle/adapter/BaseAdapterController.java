@@ -344,6 +344,22 @@ abstract class BaseAdapterController extends PlayerControllerSupport {
         fallback("chooseSector"); return sectors.get(0);
     }
 
+    // ステッカー（Forge 2.0.16 で追加）。Unfinity などの銀枠系で、パズルでは使わない想定
+    @Override
+    public forge.game.card.sticker.Sticker chooseSticker(List<forge.game.card.sticker.Sticker> options, Card target, SpellAbility sa, boolean isOptional) {
+        fallback("chooseSticker"); return isOptional || options.isEmpty() ? null : options.get(0);
+    }
+
+    @Override
+    public int chooseStickerNamePosition(forge.game.card.sticker.Sticker sticker, Card target) {
+        fallback("chooseStickerNamePosition"); return 0;
+    }
+
+    @Override
+    public Card chooseCardToKeepStickers(CardCollectionView options) {
+        fallback("chooseCardToKeepStickers"); return options.isEmpty() ? null : options.get(0);
+    }
+
     @Override
     public List<Card> chooseContraptionsToCrank(List<Card> contraptions) {
         fallback("chooseContraptionsToCrank"); return contraptions;

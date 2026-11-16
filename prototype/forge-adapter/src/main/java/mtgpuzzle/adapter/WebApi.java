@@ -175,7 +175,7 @@ public final class WebApi {
     }
 
     static final int API_VERSION = 2;
-    static final String FORGE_VERSION = "2.0.15";
+    static final String FORGE_VERSION = "2.0.16";
 
     private static ForgeSession loaded() {
         if (session == null) {

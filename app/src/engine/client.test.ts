@@ -24,7 +24,7 @@ class FakeWorker {
           this.onmessage?.({ data: { id: req.id, result: "ok" } } as MessageEvent<WorkerResponse>);
           break;
         case "version":
-          reply({ api: API_VERSION, forge: "2.0.15" });
+          reply({ api: API_VERSION, forge: "2.0.16" });
           break;
         case "prepare":
           reply({ extractCached: true, extractMs: 1 });

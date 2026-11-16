@@ -13,6 +13,7 @@ JAVAP="${JAVA_HOME:?JAVA_HOME を設定してください}/bin/javap"
 echo "# $(basename "$JAR") のメソッドのうち ${MIN} バイト以上"
 unzip -Z1 "$JAR" | grep '\.class$' | sed 's/\.class$//; s#/#.#g' \
   | xargs "$JAVAP" -c -p -cp "$JAR" 2>/dev/null \
+  | tr -d '\r' \
   | awk -v min="$MIN" '
       /^(public |private |protected |final |abstract |static |sealed |non-sealed )*(class|interface|enum|record) / {
         cls = $0; sub(/.*(class|interface|enum|record) /, "", cls); sub(/[ <{].*/, "", cls)

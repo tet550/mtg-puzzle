@@ -51,8 +51,10 @@ Forge のサブモジュールには手を入れない。
 3. forge-game を入れ直す（`prototype/README.md` の手順）。
 
    ```bash
-   mvn -B -f prototype/forge/pom.xml -pl forge-game -am install -DskipTests -Dcheckstyle.skip
+   (cd prototype/forge && mvn -B -pl forge-game -am install -DskipTests -Dcheckstyle.skip)
    ```
+
+   2.0.16 から Forge の `.mvn/maven.config` が `--settings ./.mvn/local-settings.xml` を相対パスで渡すので、`prototype/forge` の中で実行する（外から `-f` で指定すると設定ファイルが見つからずに止まる）。
 
 4. Adapter のテストを流す。ここで上書きを生成する。生成が止まったら「4. 生成が止まったとき」へ。
 
@@ -95,24 +97,25 @@ Forge のサブモジュールには手を入れない。
 
 ## 5. 大きいメソッドの一覧
 
-Forge 2.0.15 の forge-game で、3000 バイト以上のメソッド（`tools/forge-overlay/method-sizes.sh 3000`）。
+Forge 2.0.16 の forge-game で、3000 バイト以上のメソッド（`tools/forge-overlay/method-sizes.sh 3000`。static 初期化子は除く）。
 
 | バイト | メソッド | ブラウザでの様子 |
 |---:|---|---|
-| 14081 | `CardProperty.cardHasProperty` | JIT に失敗する（`JIT failure` が出る）が、止まらない |
-| 10760 | `AbilityUtils.xCount` | 未確認 |
+| 14248 | `CardProperty.cardHasProperty` | JIT に失敗する（`JIT failure` が出る）が、止まらない（2.0.15 から +167） |
+| 10696 | `AbilityUtils.xCount` | 未確認 |
 | 9042 | `CardFactoryUtil.addTriggerAbility` | 未確認 |
 | 8390 | `CardFactoryUtil.addSpellAbility` | 未確認 |
-| 5387 | `StaticAbilityContinuous.applyContinuousAbility` | 未確認 |
-| 5031 | `ChangeZoneEffect.changeHiddenOriginResolve` | 未確認 |
-| 4602 | `Card.keywordsToText` | **止まる → 上書きで分けている** |
-| 3838 | `PlayerStatistics.playerHasProperty` | 未確認 |
+| 5714 | `StaticAbilityContinuous.applyContinuousAbility` | 未確認（2.0.15 から +327） |
+| 5067 | `ChangeZoneEffect.changeHiddenOriginResolve` | 未確認 |
+| 4624 | `Card.keywordsToText` | **止まる → 上書きで分けている** |
+| 3725 | `PlayerProperty.playerHasProperty` | 未確認 |
 | 3679 | `CardFactoryUtil.addReplacementEffect` | 未確認 |
-| 3526 | `GameAction.changeZone` | s11 で何度も通っており、止まらない |
-| 3215 | `CountersPutEffect.resolvePerType` | 未確認 |
-| 3197 | `AbilityUtils.calculateAmount` | 未確認 |
-| 3091 | `ChangeZoneEffect.changeKnownOriginResolve` | 未確認 |
-| 3081 | `AbilityUtils.getDefinedPlayers` | 未確認 |
+| 3673 | `GameAction.changeZone` | s11 で何度も通っており、止まらない（2.0.15 から +147） |
+| 3194 | `CountersPutEffect.resolvePerType` | 未確認 |
+| 3187 | `AbilityUtils.calculateAmount` | 未確認 |
+| 3125 | `AbilityUtils.getDefinedPlayers` | 未確認 |
+| 3094 | `ChangeZoneEffect.changeKnownOriginResolve` | 未確認 |
+| 3063 | `DigEffect.resolve` | 未確認（2.0.16 で 3000 を超えた。+42） |
 
 大きさだけでは止まるかどうかは決まらない（`cardHasProperty` は止まらず、それより小さい `keywordsToText` は止まる）。
 

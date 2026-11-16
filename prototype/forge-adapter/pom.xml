@@ -9,7 +9,7 @@
     <version>0.1.0-SNAPSHOT</version>
 
     <properties>
-        <forge.version>2.0.15</forge.version>
+        <forge.version>2.0.16</forge.version>
         <maven.compiler.release>17</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- Forge の res ディレクトリ（cardsfolder, editions など） -->

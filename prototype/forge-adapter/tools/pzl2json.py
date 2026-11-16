@@ -94,7 +94,7 @@ def convert(name, text):
         "description": description,
         "source": {"type": "forge-pzl", "file": name, "url": meta.get("URL", "").strip() or None,
                    "difficulty": meta.get("Difficulty", "").strip() or None},
-        "engine": {"type": "forge", "version": "2.0.15"},
+        "engine": {"type": "forge", "version": "2.0.16"},
         "game": {"activePlayer": "p1", "phase": "main1", "turn": int(st.get("turn", 1) or 1), "players": players},
         "goal": {"type": "win", "player": "p1", "deadline": "current_turn"},
         "opponent": {"policy": "pass"},
