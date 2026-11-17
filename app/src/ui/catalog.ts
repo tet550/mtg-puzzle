@@ -125,6 +125,12 @@ const PUZZLE_META: Record<string, PuzzleMeta> = {
     life: [20, 155],
     series: "Combo #08",
   },
+  "c09-fomo": {
+    cards: ["Gray and Adira, Forever Joined", "Fear of Missing Out", "Lively Dirge"],
+    colors: "{U}{B}{R}",
+    life: [20, 20],
+    series: "Combo #09",
+  },
 };
 
 const HERO_FALLBACK_CARDS = [

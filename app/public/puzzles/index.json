@@ -196,5 +196,16 @@
     },
     "category": "combo",
     "sourceFile": null
+  },
+  {
+    "id": "c09-fomo",
+    "title": "コンボ問題 9：グレイとアディラの無限戦闘",
+    "description": "《陽気な哀歌》の放題で、ライブラリーの《永遠に繋がりし二人、グレイとアディラ》を墓地に置いてそのまま戦場に戻しましょう。哀歌はクリーチャーでない呪文なので、戦闘開始時にグレイとアディラが《逸失への恐怖》のコピー・トークンを生み出します。コピーは速攻を持ち、初めて攻撃したときに墓地のカード・タイプが4種類以上（昂揚）ならクリーチャーを1体アンタップして戦闘フェイズを追加。追加の戦闘の開始時にもまたコピーが出るので、戦闘が終わりません。コピーが戦場に出たときに何を捨てるかに注意して昂揚を満たし、相手の《不屈の古樹》の壁を越えてライフ20点を削り切りましょう。",
+    "en": {
+      "title": "Combo 9: Gray and Adira's Endless Combat",
+      "description": "Use Lively Dirge's Spree to put Gray and Adira, Forever Joined from your library into your graveyard and return it straight to the battlefield. Dirge is a noncreature spell, so at the beginning of combat Gray and Adira makes a token copy of Fear of Missing Out. The copy has haste, and when it attacks for the first time with four or more card types in your graveyard (delirium), it untaps a creature and adds another combat phase. Each extra combat starts with another copy, so combat never ends. Choose carefully what to discard when the copy enters so delirium is on, then get past your opponent's Indomitable Ancients and deal 20 damage."
+    },
+    "category": "combo",
+    "sourceFile": null
   }
 ]

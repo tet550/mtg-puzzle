@@ -294,6 +294,18 @@
   "normal": "https://cards.scryfall.io/normal/front/d/1/d1296316-7781-4e98-95e6-7020648be6a5.jpg?1783909067",
   "small": "https://cards.scryfall.io/small/front/d/1/d1296316-7781-4e98-95e6-7020648be6a5.jpg?1783909067"
  },
+ "Fear of Missing Out": {
+  "artist": "John Stanko",
+  "ja": {
+   "artist": "Cacho Rubione",
+   "name": "逸失への恐怖",
+   "normal": "https://cards.scryfall.io/normal/front/3/d/3d9524cf-9c9d-4e74-a04a-3d8973a22855.jpg?1782784137",
+   "small": "https://cards.scryfall.io/small/front/3/d/3d9524cf-9c9d-4e74-a04a-3d8973a22855.jpg?1782784137",
+   "text": "逸失への恐怖が戦場に出たとき、カード１枚を捨て、その後カード１枚を引く。\n昂揚 — 逸失への恐怖が各ターン内で初めて攻撃するたび、あなたの墓地にあるカードの中に４種類以上のカード・タイプがある場合、クリーチャー１体を対象とする。それをアンタップする。このフェイズの後に、追加の戦闘フェイズ１つを加える。"
+  },
+  "normal": "https://cards.scryfall.io/normal/front/9/d/9d48aaff-46ab-411b-9456-171d4709f951.jpg?1783909470",
+  "small": "https://cards.scryfall.io/small/front/9/d/9d48aaff-46ab-411b-9456-171d4709f951.jpg?1783909470"
+ },
  "Forest": {
   "artist": "Samuele Bandini",
   "ja": {
@@ -355,6 +367,18 @@
   },
   "normal": "https://cards.scryfall.io/normal/front/5/4/5446e1ba-c745-45b2-ad05-b22abf04daec.jpg?1783917160",
   "small": "https://cards.scryfall.io/small/front/5/4/5446e1ba-c745-45b2-ad05-b22abf04daec.jpg?1783917160"
+ },
+ "Gray and Adira, Forever Joined": {
+  "artist": "Julia Metzger",
+  "ja": {
+   "artist": "Julia Metzger",
+   "name": "永遠に繋がりし二人、グレイとアディラ",
+   "normal": "https://cards.scryfall.io/normal/front/7/8/78850ebd-515e-42b2-a5d6-caf8ca93782f.jpg?1794261176",
+   "small": "https://cards.scryfall.io/small/front/7/8/78850ebd-515e-42b2-a5d6-caf8ca93782f.jpg?1794261176",
+   "text": "あなたのターンの戦闘の開始時に、このターンにあなたがクリーチャーでない呪文を唱えていた場合、あなたがコントロールしているクリーチャー１体を対象とする。それが伝説でないことを除き、それのコピーであるトークン１体を生成する。ターン終了時まで、それは速攻を得る。次の終了ステップの開始時に、それを生け贄に捧げる。"
+  },
+  "normal": "https://cards.scryfall.io/normal/front/e/e/eede6822-c8bc-4344-81a9-bc608245d5b6.jpg?1792508333",
+  "small": "https://cards.scryfall.io/small/front/e/e/eede6822-c8bc-4344-81a9-bc608245d5b6.jpg?1792508333"
  },
  "Greedy Freebooter": {
   "artist": "David Palumbo",
@@ -438,6 +462,17 @@
   "normal": "https://cards.scryfall.io/normal/front/6/3/632df69e-6377-43d0-bba5-65518a320aa5.jpg?1783908887",
   "small": "https://cards.scryfall.io/small/front/6/3/632df69e-6377-43d0-bba5-65518a320aa5.jpg?1783908887"
  },
+ "Indomitable Ancients": {
+  "artist": "Pete Venters",
+  "ja": {
+   "artist": "Pete Venters",
+   "name": "不屈の古樹",
+   "normal": "https://cards.scryfall.io/normal/front/9/9/99431b3e-2fe7-4c65-9e64-6117ada26b90.jpg?1782773900",
+   "small": "https://cards.scryfall.io/small/front/9/9/99431b3e-2fe7-4c65-9e64-6117ada26b90.jpg?1782773900"
+  },
+  "normal": "https://cards.scryfall.io/normal/front/a/4/a4e20d78-8c01-40ed-bc69-89d4d5028552.jpg?1783907123",
+  "small": "https://cards.scryfall.io/small/front/a/4/a4e20d78-8c01-40ed-bc69-89d4d5028552.jpg?1783907123"
+ },
  "Island": {
   "artist": "Eren Arik",
   "ja": {
@@ -490,6 +525,30 @@
   "normal": "https://cards.scryfall.io/normal/front/8/5/85ef1950-219f-401b-8ff5-914f9aaec122.jpg?1783905784",
   "small": "https://cards.scryfall.io/small/front/8/5/85ef1950-219f-401b-8ff5-914f9aaec122.jpg?1783905784"
  },
+ "Lightning Bolt": {
+  "artist": "Milivoj Ćeran",
+  "ja": {
+   "artist": "Milivoj Ćeran",
+   "name": "稲妻",
+   "normal": "https://cards.scryfall.io/normal/front/8/9/89ea9a01-a4e9-43c5-bdd7-3a0e4dcec0f3.jpg?1785282945",
+   "small": "https://cards.scryfall.io/small/front/8/9/89ea9a01-a4e9-43c5-bdd7-3a0e4dcec0f3.jpg?1785282945",
+   "text": "１つを対象とする。稲妻はそれに３点のダメージを与える。"
+  },
+  "normal": "https://cards.scryfall.io/normal/front/7/6/7673784e-db4b-43a1-8d55-1bb9fc1e284f.jpg?1783903008",
+  "small": "https://cards.scryfall.io/small/front/7/6/7673784e-db4b-43a1-8d55-1bb9fc1e284f.jpg?1783903008"
+ },
+ "Lively Dirge": {
+  "artist": "Warren Mahy",
+  "ja": {
+   "artist": "Warren Mahy",
+   "name": "陽気な哀歌",
+   "normal": "https://cards.scryfall.io/normal/front/d/e/debfca47-9bb1-4bcb-8dcf-de8d2d6a23c7.jpg?1782797156",
+   "small": "https://cards.scryfall.io/small/front/d/e/debfca47-9bb1-4bcb-8dcf-de8d2d6a23c7.jpg?1782797156",
+   "text": "放題（以下から１つ以上の追加コストを選ぶ。）\n＋ {1} ― あなたのライブラリーからカード１枚を探し、あなたの墓地に置く。その後、ライブラリーを切り直す。\n＋ {2} ― あなたの墓地にあるクリーチャー・カード最大２枚をマナ総量の合計が４以下になるように選び、戦場に戻す。"
+  },
+  "normal": "https://cards.scryfall.io/normal/front/0/c/0c35a0d3-12f7-46f3-a6b3-02a490d45ca0.jpg?1783911831",
+  "small": "https://cards.scryfall.io/small/front/0/c/0c35a0d3-12f7-46f3-a6b3-02a490d45ca0.jpg?1783911831"
+ },
  "Llanowar Elves": {
   "artist": "Kev Walker",
   "ja": {
@@ -523,6 +582,18 @@
   "artist": "John Tedrick",
   "normal": "https://cards.scryfall.io/normal/front/f/8/f890bdc7-32e6-4492-bac7-7cabf54a8bfd.jpg?1783907393",
   "small": "https://cards.scryfall.io/small/front/f/8/f890bdc7-32e6-4492-bac7-7cabf54a8bfd.jpg?1783907393"
+ },
+ "Millstone": {
+  "artist": "Yeong-Hao Han",
+  "ja": {
+   "artist": "Yeong-Hao Han",
+   "name": "石臼",
+   "normal": "https://cards.scryfall.io/normal/front/4/e/4e2ccdf1-91f8-43d9-97e5-a28cfae55c5c.jpg?1782838456",
+   "small": "https://cards.scryfall.io/small/front/4/e/4e2ccdf1-91f8-43d9-97e5-a28cfae55c5c.jpg?1782838456",
+   "text": "{2}, {T}：プレイヤー１人を対象とする。そのプレイヤーはカード２枚を切削する。"
+  },
+  "normal": "https://cards.scryfall.io/normal/front/c/2/c2051fd0-99cf-4e11-a625-8294e6767e5b.jpg?1783934511",
+  "small": "https://cards.scryfall.io/small/front/c/2/c2051fd0-99cf-4e11-a625-8294e6767e5b.jpg?1783934511"
  },
  "Mona Lisa, Science Geek": {
   "artist": "Oriana Menendez",

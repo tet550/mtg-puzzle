@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "title": "コンボ問題 9：グレイとアディラの無限戦闘",
+  "description": "《陽気な哀歌》の放題で、ライブラリーの《永遠に繋がりし二人、グレイとアディラ》を墓地に置いてそのまま戦場に戻しましょう。哀歌はクリーチャーでない呪文なので、戦闘開始時にグレイとアディラが《逸失への恐怖》のコピー・トークンを生み出します。コピーは速攻を持ち、初めて攻撃したときに墓地のカード・タイプが4種類以上（昂揚）ならクリーチャーを1体アンタップして戦闘フェイズを追加。追加の戦闘の開始時にもまたコピーが出るので、戦闘が終わりません。コピーが戦場に出たときに何を捨てるかに注意して昂揚を満たし、相手の《不屈の古樹》の壁を越えてライフ20点を削り切りましょう。",
+  "en": {
+    "title": "Combo 9: Gray and Adira's Endless Combat",
+    "description": "Use Lively Dirge's Spree to put Gray and Adira, Forever Joined from your library into your graveyard and return it straight to the battlefield. Dirge is a noncreature spell, so at the beginning of combat Gray and Adira makes a token copy of Fear of Missing Out. The copy has haste, and when it attacks for the first time with four or more card types in your graveyard (delirium), it untaps a creature and adds another combat phase. Each extra combat starts with another copy, so combat never ends. Choose carefully what to discard when the copy enters so delirium is on, then get past your opponent's Indomitable Ancients and deal 20 damage."
+  },
+  "engine": {
+    "type": "forge",
+    "version": "2.0.16"
+  },
+  "game": {
+    "activePlayer": "p1",
+    "phase": "main1",
+    "players": [
+      {
+        "id": "p1",
+        "life": 20,
+        "hand": [
+          { "id": "c1", "cardId": "Lively Dirge" },
+          { "id": "c2", "cardId": "Millstone" },
+          { "id": "c11", "cardId": "Shock" }
+        ],
+        "battlefield": [
+          { "id": "c3", "cardId": "Fear of Missing Out" },
+          { "id": "c4", "cardId": "Swamp" },
+          { "id": "c5", "cardId": "Swamp" },
+          { "id": "c6", "cardId": "Mountain" },
+          { "id": "c7", "cardId": "Mountain" },
+          { "id": "c8", "cardId": "Island" }
+        ],
+        "graveyard": [
+          { "id": "c9", "cardId": "Lightning Bolt" },
+          { "id": "c10", "cardId": "Mountain" }
+        ],
+        "library": [
+          { "id": "p1L0", "cardId": "Island" },
+          { "id": "p1L1", "cardId": "Island" },
+          { "id": "p1L2", "cardId": "Island" },
+          { "id": "p1L3", "cardId": "Island" },
+          { "id": "p1L4", "cardId": "Gray and Adira, Forever Joined" },
+          { "id": "p1L5", "cardId": "Island" },
+          { "id": "p1L6", "cardId": "Island" },
+          { "id": "p1L7", "cardId": "Island" },
+          { "id": "p1L8", "cardId": "Island" },
+          { "id": "p1L9", "cardId": "Island" },
+          { "id": "p1L10", "cardId": "Island" },
+          { "id": "p1L11", "cardId": "Island" },
+          { "id": "p1L12", "cardId": "Island" },
+          { "id": "p1L13", "cardId": "Island" },
+          { "id": "p1L14", "cardId": "Island" },
+          { "id": "p1L15", "cardId": "Island" }
+        ]
+      },
+      {
+        "id": "p2",
+        "life": 20,
+        "battlefield": [
+          { "id": "c20", "cardId": "Indomitable Ancients" }
+        ],
+        "library": [
+          { "id": "p2L0", "cardId": "Plains" },
+          { "id": "p2L1", "cardId": "Plains" },
+          { "id": "p2L2", "cardId": "Plains" }
+        ]
+      }
+    ]
+  },
+  "goal": {
+    "type": "win",
+    "player": "p1",
+    "deadline": "current_turn"
+  },
+  "opponent": {
+    "policy": "pass",
+    "block": "minimize"
+  }
+}
