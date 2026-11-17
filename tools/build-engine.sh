@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # エンジン一式を作り、app/public/engine/ に置く（Phase 1 M2）。
 #   1. forge-adapter の依存込み jar を作る
-#   2. ProGuard で縮め、スモークテストを通す
+#   2. ProGuard で縮める（壊れていないかは 4 で確かめる）
 #   3. カードを含まない共通の res バンドルと、全カードのデータ（.json.gz）を作る（CardData、design/carddata-runtime.md）
 #      ブラウザは問題を開くたびに、カードデータから問題のカードだけを抜き出して Forge を初期化する
 #   4. 解答手順（*.solution.json）がある問題を、縮めた jar とブラウザと同じ流れ（問題ごとに初期化し直す）で解き直して確かめる
@@ -16,9 +16,7 @@ OUT="$ROOT/app/public/engine"
 JAVA="${JAVA_HOME:?JAVA_HOME を Java 17 以上に設定してください}/bin/java"
 
 mvn -B -q -f "$ADAPTER/pom.xml" package -DskipTests
-# スモークテストは prototype/puzzles の検証シナリオで行う（shrink.sh が ../web/res-mini.zip を使う）
-"$JAVA" -cp "$ADAPTER/target/forge-adapter-all.jar" mtgpuzzle.adapter.ResBundler "$RES" "$ROOT/prototype/puzzles" "$ROOT/prototype/web/res-mini.zip" > /dev/null
-"$ADAPTER/shrink.sh" all | tail -1 | grep -q "ALL OK" || { echo "スモークテストに失敗しました"; exit 1; }
+"$ADAPTER/shrink.sh" all > /dev/null
 
 mkdir -p "$OUT"
 TMP="$ADAPTER/target/engine-out"

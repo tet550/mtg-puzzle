@@ -68,16 +68,16 @@ Forge のサブモジュールには手を入れない。
    tools/forge-overlay/method-sizes.sh 3000
    ```
 
-6. エンジンを作り直す。
+6. エンジンを作り直す。同梱の問題を解答手順どおりに解き直すので、全問 `OK` になることを見る（`NG` なら、その問題の手順を Forge の変更に照らして調べる）。
 
    ```bash
    tools/build-engine.sh
    ```
 
-7. ブラウザで確かめる。`engine-stall` が止まらないことと、同梱の問題が解けることを見る。
+7. ブラウザで確かめる。`engine-stall` で止まらないことを見て（約 20 秒）、あとは `npm run dev` で問題をいくつか実際に解いて動きを見る。
 
    ```bash
-   cd app && npx playwright test e2e/engine-stall.spec.ts e2e/solve.spec.ts --project=chrome
+   cd app && npx playwright test
    ```
 
 8. この文書の「5. 大きいメソッドの一覧」と、確かめた Forge の版を更新する。

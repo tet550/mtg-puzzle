@@ -56,7 +56,7 @@
 |---|---|
 | JVM の確かめ（`tools/build-engine.sh`） | `Solver --verify` の代わりに `ScenarioRunner`。縮めた jar と、問題ごとに抜き出したカードデータで、WebApi を通して解き直す（ブラウザと同じ流れ） |
 | JUnit（`mvn test`） | `app/public/puzzles/*.scenario.json` をすべて ForgeSession で解き直す。jar を作らずに、Adapter を変えたときにすぐ確かめられる |
-| E2E（`app/e2e/solve.spec.ts`） | シナリオどおりに画面のカード・ボタンを押して解く。セレクターから選択肢を決め、その選択肢を画面で押す |
+| （廃止）E2E | 画面を操作して解く E2E は、UI を変えるたびに直す手間と実行時間（約 24 分）に見合わないので置かない。画面の動きは実際に操作して確かめる |
 
 セレクターの照合は、Java（`ScenarioRunner`）と TypeScript（`app/src/engine/scenario.ts`、E2E から使う）の 2 か所に置く。照合の決まりは上の表だけに限り、両方に同じテストケースを持たせる。
 

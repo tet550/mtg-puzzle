@@ -9,8 +9,7 @@ interface Step { kind: string; labels: string[] }
 const dir = fileURLToPath(new URL("../public/puzzles/", import.meta.url));
 const steps: Step[] = JSON.parse(readFileSync(`${dir}s11-redshift.solution.json`, "utf-8")).steps;
 
-test("s11 を 30 手進めてリセットを 6 回繰り返し、最後に解き切っても止まらない", async ({ page }, info) => {
-  test.skip(info.project.name !== "chrome", "エンジンの確かめなので Chrome だけで行う");
+test("s11 を 30 手進めてリセットを 6 回繰り返し、最後に解き切っても止まらない", async ({ page }) => {
   test.setTimeout(600_000);
   await page.goto("/#/play/s11-redshift");
   await expect.poll(() => page.evaluate(() => (window as any).__page?.()?.snapshot()?.phase), { timeout: 120_000 }).toBe("playing");

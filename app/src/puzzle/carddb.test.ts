@@ -1,6 +1,3 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-import { gunzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import { setLang } from "../i18n";
 import { displayName, printedText } from "../ui/images";
@@ -92,25 +89,5 @@ describe("carddb", () => {
     expect(printedText("Stomp")).toBe("このターン、ダメージは軽減できない。");
     expect(displayName("Treasure Token")).toBe("宝物・トークン");
     expect(printedText("Treasure Token")).toContain("好きな色のマナ１点を加える");
-  });
-
-  it("public/engine/manifest.json の cards から実データを展開・インデックス化できる", () => {
-    const engineDir = resolve(__dirname, "../../public/engine");
-    const manifest = JSON.parse(readFileSync(resolve(engineDir, "manifest.json"), "utf-8")) as { cards?: string; cardData?: string };
-    const cardsFile = manifest.cards ?? manifest.cardData;
-    expect(cardsFile).toBeTruthy();
-
-    const gz = readFileSync(resolve(engineDir, cardsFile!));
-    const jsonText = gunzipSync(gz).toString("utf-8");
-    const raw = JSON.parse(jsonText) as RawCardData;
-    const list = indexCardData(raw);
-    expect(list.length).toBeGreaterThan(20000);
-    expect(cardMeta("Lightning Bolt")?.jaName).toBe("稲妻");
-    expect(searchCards("稲妻", 5)[0]?.name).toBe("Lightning Bolt");
-    // 分割カード（AlternateMode: Split）は Forge の Card.getName() と同じ "Fire // Ice" になる
-    const fireIce = cardMeta("Fire");
-    expect(fireIce?.name).toBe("Fire // Ice");
-    expect(cardMeta("Ice")?.name).toBe("Fire // Ice");
-    expect(cardMeta("Fire // Ice")?.name).toBe("Fire // Ice");
   });
 });

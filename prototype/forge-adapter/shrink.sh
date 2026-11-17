@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# forge-adapter-all.jar を ProGuard で縮め、スモークテストで壊れていないか確かめる（C2）。
+# forge-adapter-all.jar を ProGuard で縮める（C2）。壊れていないかは tools/build-engine.sh の解答手順の再生（Solver --verify）で確かめる。
 # 使い方: ./shrink.sh <keep-mode>
 #   all   … forge.** をすべて残す（安全側）
 #   noai  … forge.ai.** は到達可能な部分だけ残す
@@ -57,6 +57,3 @@ CP=$(for j in "$PG_LIB"/*.jar; do printf '%s%s' "$(native "$PWD/$j")" "$SEP"; do
 "$JAVA_HOME/bin/java" -cp "$CP" proguard.ProGuard "@$CFG" > "target/proguard-$MODE.log" 2>&1 || { tail -20 "target/proguard-$MODE.log"; exit 1; }
 
 ls -la "target/forge-adapter-min-$MODE.jar"
-rm -rf "target/smoke-res-$MODE"
-"$JAVA_HOME/bin/java" -cp "target/forge-adapter-min-$MODE.jar" mtgpuzzle.adapter.Smoke ../web/res-mini.zip "target/smoke-res-$MODE" ../puzzles 2>&1 \
-  | grep -E "^(OK|NG|ALL|[0-9]+ FAILED)|Exception|Error" | head -20

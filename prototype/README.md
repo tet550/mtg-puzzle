@@ -66,7 +66,7 @@ mvn -B -f prototype/forge-adapter/pom.xml package -DskipTests
 "$JAVA_HOME/bin/java" -cp prototype/forge-adapter/target/forge-adapter-all.jar mtgpuzzle.adapter.ResBundler prototype/forge/forge-gui/res prototype/puzzles prototype/web/res-mini.zip
 ```
 
-2b. （任意）ProGuard で jar を縮める（`forge-adapter/target/forge-adapter-min-all.jar`）。ProGuard 7.10.0 は初回に Maven で取ってくる。JDK のクラスは `$JAVA_HOME/jmods` を使い、jmods の無い JDK（Android Studio の JBR など）では `~/tools/jdk21-classes` を使う（手順は [results/cheerpj.md](results/cheerpj.md)）:
+2b. （任意）ProGuard で jar を縮める（`forge-adapter/target/forge-adapter-min-all.jar`。壊れていないかは `tools/build-engine.sh` の解答手順の再生で確かめる）。ProGuard 7.10.0 は初回に Maven で取ってくる。JDK のクラスは `$JAVA_HOME/jmods` を使い、jmods の無い JDK（Android Studio の JBR など）では `~/tools/jdk21-classes` を使う（手順は [results/cheerpj.md](results/cheerpj.md)）:
 
 ```bash
 prototype/forge-adapter/shrink.sh all

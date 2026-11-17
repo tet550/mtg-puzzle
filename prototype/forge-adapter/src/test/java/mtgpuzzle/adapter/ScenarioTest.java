@@ -17,7 +17,7 @@ import mtgpuzzle.adapter.ForgeSession.GameSnapshot;
 import mtgpuzzle.adapter.ForgeSession.Status;
 import mtgpuzzle.adapter.ForgeSession.StepResult;
 
-/** 検証シナリオ（design/verification-plan.md の S1〜S5 と追加分） */
+/** アダプタの選択の扱いの検証（design/verification-plan.md）。同梱の問題を解けるかは tools/build-engine.sh の解答手順の再生で見るので、ここでは選択の種類・取り消し・判定の境目を扱う */
 class ScenarioTest {
 
     @BeforeAll
@@ -50,36 +50,6 @@ class ScenarioTest {
                 .filter(c -> instanceId.equals(c.instanceId())).findFirst().orElseThrow();
     }
 
-    @Test
-    void s1_boltToFaceWins() throws Exception {
-        try (ForgeSession s = ForgeSession.load(puzzle("s1-bolt"))) {
-            log("S1 load", s.lastStep());
-            GameSnapshot st = s.getState();
-            assertEquals("MAIN1", st.phase());
-            assertEquals(3, st.players().get(1).life());
-            assertFalse(card(st, "c2").tapped());
-
-            Decision d = expect(s, Decision.Kind.PRIORITY);
-            StepResult r = s.submit(d.findByLabelPrefix("Lightning Bolt").id());
-            log("S1 cast", r);
-            Decision t = expect(s, Decision.Kind.TARGETS);
-            r = s.submit(t.findByLabelPrefix("player:p2").id());
-            log("S1 target", r);
-            // マナの支払い: 起動するマナ源を手動で選ぶ
-            Decision pay = expect(s, Decision.Kind.PAY_MANA);
-            r = s.submit(pay.findByLabelPrefix("Mountain").id());
-            log("S1 pay", r);
-            // スタックに積まれた状態で p1 に優先権が戻る → パスすると解決
-            assertEquals(1, s.getState().stackSize());
-            assertTrue(card(s.getState(), "c2").tapped(), "選んだ Mountain がタップされている");
-            r = s.submit("pass");
-            log("S1 resolve", r);
-            assertEquals(Status.CLEARED, r.status(), r.reason());
-            System.out.println("[S1] fallback=" + s.fallbackLog());
-        }
-    }
-
-    /** マナ能力は優先権でも起動できる。出したマナはマナプールに残り、呪文の支払いに使われる（PAY_MANA は出ない） */
     @Test
     void manaAbilityAtPriority() throws Exception {
         try (ForgeSession s = ForgeSession.load(puzzle("s1-bolt"))) {
@@ -166,27 +136,6 @@ class ScenarioTest {
     }
 
     @Test
-    void s2_attackWins() throws Exception {
-        try (ForgeSession s = ForgeSession.load(puzzle("s2-attack"))) {
-            StepResult r = s.lastStep();
-            int guard = 0;
-            while (s.getPendingDecision() != null && s.getPendingDecision().kind() == Decision.Kind.PRIORITY && guard++ < 10) {
-                r = s.submit("pass");
-            }
-            log("S2 to combat", r);
-            Decision a = expect(s, Decision.Kind.ATTACKERS);
-            r = s.submit(a.findByLabelPrefix("Hill Giant").id());
-            log("S2 attack", r);
-            guard = 0;
-            while (s.getPendingDecision() != null && guard++ < 10) {
-                r = s.submit("pass");
-            }
-            log("S2 end", r);
-            assertEquals(Status.CLEARED, r.status(), r.reason());
-        }
-    }
-
-    @Test
     void s3_passingUntilEndOfTurnFails() throws Exception {
         try (ForgeSession s = ForgeSession.load(puzzle("s1-bolt"))) {
             StepResult r = s.lastStep();
@@ -267,17 +216,6 @@ class ScenarioTest {
                     .append(' ').append(c.counters()).append('\n'));
         });
         return sb.toString();
-    }
-
-    @Test
-    void s6_activatedAbilityWins() throws Exception {
-        try (ForgeSession s = ForgeSession.load(puzzle("s6-activated"))) {
-            s.submit(expect(s, Decision.Kind.PRIORITY).findByLabelPrefix("Prodigal Pyromancer").id());
-            s.submit(expect(s, Decision.Kind.TARGETS).findByLabelPrefix("player:p2").id());
-            StepResult r = s.submit("pass");
-            log("S6", r);
-            assertEquals(Status.CLEARED, r.status(), r.reason());
-        }
     }
 
     @Test
