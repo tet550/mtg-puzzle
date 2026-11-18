@@ -2,6 +2,7 @@
 
 import type { GameEvent, StepResult } from "../engine/protocol";
 import { t } from "../i18n";
+import { toEnginePuzzle } from "./goal";
 import { judge, type Verdict } from "./judge";
 import { validatePuzzle, type PuzzleJson } from "./schema";
 import { matchSolutionStep, recordDecisionStep, type SolutionStep } from "./solution";
@@ -108,7 +109,7 @@ export class PuzzleSession {
     }
     const p = v.puzzle;
     this.set({ ...INITIAL, phase: "loading", puzzle: p });
-    await this.run(() => this.engine.load(p), true, [`[Load] title=${JSON.stringify(p.title)} active=${p.game.activePlayer} phase=${p.game.phase}`]);
+    await this.run(() => this.engine.load(toEnginePuzzle(p)), true, [`[Load] title=${JSON.stringify(p.title)} active=${p.game.activePlayer} phase=${p.game.phase}`]);
   }
 
   async answer(optionIds: string[]): Promise<void> {
@@ -135,7 +136,7 @@ export class PuzzleSession {
         this.set({ phase: "error", errors: [message(e)], debugHistory: [`[RestartError] ${message(e)}`] });
         return;
       }
-      await this.run(() => this.engine.load(puzzle), true, [`[Restart+Load] title=${JSON.stringify(puzzle.title)}`]);
+      await this.run(() => this.engine.load(toEnginePuzzle(puzzle)), true, [`[Restart+Load] title=${JSON.stringify(puzzle.title)}`]);
       return;
     }
     this.set({ ...INITIAL, phase: "loading", puzzle });

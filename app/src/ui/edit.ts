@@ -23,6 +23,7 @@ import {
   ZONES,
   type CardDef,
   type PlayerDef,
+  type PuzzleGoal,
   type PuzzleJson,
   type ZoneKey,
 } from "../puzzle/schema";
@@ -32,6 +33,7 @@ import {
   parsePuzzleInput,
 } from "../puzzle/share";
 import { formatSolutionStep } from "../puzzle/solution";
+import { goalLabel, goalTurnLimit, MAX_GOAL_TURNS } from "../puzzle/goal";
 import { detailBody, renderBoard, type BoardHooks, type BoardUi, type Mark } from "./board";
 import { h } from "./dom";
 import { fitHands, setupFloat } from "./float";
@@ -557,6 +559,7 @@ export class EditPage {
       attacking: new Set(),
       blocking: new Set(),
       editable: true,
+      goal: { label: goalLabel(this.puzzle.goal, this.puzzle.game.activePlayer), limit: goalTurnLimit(this.puzzle.goal) },
     };
 
     const hooks: BoardHooks = {
@@ -1076,6 +1079,8 @@ export class EditPage {
 
     const curPhase = this.puzzle.game.phase.toUpperCase();
     const curBlock = this.puzzle.opponent?.block ?? "minimize";
+    const curGoalLimit = goalTurnLimit(this.puzzle.goal);
+    const curGoal = curGoalLimit === null ? "unlimited" : String(curGoalLimit);
 
     return h("div.esettings", null,
       h("h3", null, t("editor.settings.players")),
@@ -1111,6 +1116,27 @@ export class EditPage {
           h("option", { value: ph, selected: curPhase === ph ? "selected" : null }, `${phaseName(ph)} (${ph})`),
         )),
       ),
+      h("div.erow", null,
+        h("span.elbl", null, t("editor.settings.goal")),
+        h("select.eselect", {
+          "data-setting": "goal",
+          onchange: (ev: Event) => {
+            const v = (ev.target as HTMLSelectElement).value;
+            const next = clonePuzzle(this.puzzle);
+            const player = next.goal.player;
+            next.goal = v === "unlimited" ? { type: "win", player, deadline: "unlimited" }
+              : v === "1" ? { type: "win", player, deadline: "current_turn" }
+                : { type: "win", player, deadline: "turns", turns: Number(v) };
+            this.updatePuzzle(next);
+          },
+        }, [...Array.from({ length: MAX_GOAL_TURNS }, (_, i) => String(i + 1)), "unlimited"].map((v) => {
+          const goal: PuzzleGoal = v === "unlimited" ? { type: "win", player: this.puzzle.goal.player, deadline: "unlimited" }
+            : { type: "win", player: this.puzzle.goal.player, deadline: "turns", turns: Number(v) };
+          return h("option", { value: v, selected: curGoal === v ? "selected" : null },
+            goalLabel(goal, this.puzzle.game.activePlayer).chip);
+        })),
+      ),
+      curGoalLimit !== 1 ? h("div.muted.enote", { "data-goal-warn": "1" }, t("editor.settings.goalWarn")) : null,
       h("div.erow", null,
         h("span.elbl", null, t("editor.settings.oppBlock")),
         h("div.ebtns", null,

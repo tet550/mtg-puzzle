@@ -8,6 +8,7 @@
 import type { CardKind, CardView, GameView, ManaColor, PlayerView } from "../engine/protocol";
 import { h, onTapOrHold } from "./dom";
 import { t, type MessageKey } from "../i18n";
+import type { GoalLabel } from "../puzzle/goal";
 import { avatarUrl, icon } from "./icons";
 import { displayName, displayTypeLine } from "./images";
 import { localized } from "./localize";
@@ -57,6 +58,8 @@ export interface BoardUi {
   orderStack?: boolean;
   /** ターン期限なし（一人回し・プレイテスト用） */
   noDeadline?: boolean;
+  /** 勝利条件（目標カードの文と期限のターン数。無ければ「このターン中」） */
+  goal?: { label: GoalLabel; limit: number | null };
 }
 
 export function combatSets(view: GameView): { attacking: Set<string>; blocking: Set<string> } {
@@ -180,7 +183,7 @@ function manaChips(p: PlayerView): HTMLElement[] {
 
 function phaseStrip(view: GameView, ui?: BoardUi): HTMLElement {
   const strip = h("span.phases", { title: t("phase.turnTitle", { turn: view.turn }) });
-  if (ui?.noDeadline) {
+  if (ui?.noDeadline || (ui?.goal && ui.goal.limit !== 1)) {
     strip.append(h("span.ph.turnbadge", { "data-turn-badge": String(view.turn), title: t("phase.turnTitle", { turn: view.turn }) }, `T${view.turn}`));
   }
   for (const g of PHASE_STRIP) {
@@ -193,18 +196,27 @@ function phaseStrip(view: GameView, ui?: BoardUi): HTMLElement {
   return h("span.phasebox", null, strip);
 }
 
-/** 勝利期限（「このターン中」）を相手の戦場の右隅に紋章・目標カードとして出す */
-function goalCard(): HTMLElement {
+/** 勝利期限（「このターン中」など）を相手の戦場の右隅に紋章・目標カードとして出す */
+function goalCard(label?: GoalLabel): HTMLElement {
+  const card = label?.card ?? t("phase.deadline");
+  const text = label?.text ?? t("phase.deadline.title");
   return h("div.goalcard", {
     "data-goal-card": "1",
     role: "note",
-    title: t("phase.deadline.title"),
+    title: text,
   },
     h("div.gckicker", null, t("header.goal.title")),
     h("div.gcicon", null, icon("resolve")),
-    h("div.gctitle", null, t("phase.deadline")),
-    h("div.gctext", null, t("phase.deadline.title")),
+    h("div.gctitle", null, card),
+    h("div.gctext", null, text),
   );
+}
+
+/** 目標カードを出すか（期限内のターンだけ） */
+function showGoalCard(view: GameView, ui: BoardUi): boolean {
+  if (ui.noDeadline) return false;
+  const limit = ui.goal ? ui.goal.limit : 1;
+  return view.turn >= ui.startTurn && (limit === null || view.turn <= ui.startTurn + limit - 1);
 }
 
 // ---------------------------------------------------------------- 相手の側（最小限）
@@ -242,7 +254,7 @@ function opponentSide(view: GameView, p: PlayerView, ui: BoardUi, hooks: BoardHo
     if (others.length && lgroups.length) lgroups[0].classList.add("kgap");
     row.append(...lgroups);
   }
-  if (!ui.noDeadline && view.turn === ui.startTurn) row.append(goalCard());
+  if (showGoalCard(view, ui)) row.append(goalCard(ui.goal?.label));
   side.append(row);
   if (ui.editable && isOpen("hand", hand)) side.append(opened(t("opened.oppHand"), hand, ui, hooks));
   if (ui.editable && isOpen("library", lib)) side.append(opened(t("opened.oppLibrary"), lib, ui, hooks));

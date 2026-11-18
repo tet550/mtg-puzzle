@@ -1,11 +1,12 @@
 // クリア判定（要件 5 章）。エンジンが返した出来事と状態だけから決める純粋関数。
 // - 対象プレイヤーの勝利が確定したらクリア
-// - 期限（このターン）を過ぎたら失敗
+// - 期限（goal.ts の goalTurnLimit。このターン中など）を過ぎたら失敗
 // - 対象プレイヤーが敗北・引き分けなら失敗
 // - エンジンが異常終了したらクリアにしない（エラー）
 
 import type { EngineState, GameEvent } from "../engine/protocol";
 import { t } from "../i18n";
+import { goalTurnLimit, type GoalLabel } from "./goal";
 import type { PuzzleGoal } from "./schema";
 
 export type Verdict =
@@ -24,8 +25,9 @@ export interface JudgeInput {
 
 /** 1 ステップ分の出来事を順に見て判定する。先に起きた出来事が優先（期限の後の勝利はクリアにしない） */
 export function judge({ goal, startTurn, events, engine }: JudgeInput): Verdict {
+  const limit = goalTurnLimit(goal);
   for (const e of events) {
-    if (goal.deadline === "current_turn" && e.type === "turnBegan" && e.turn > startTurn) {
+    if (limit !== null && e.type === "turnBegan" && e.turn > startTurn + limit - 1) {
       return { result: "FAILED", reason: "deadline" };
     }
     if (e.type === "gameOver") {
@@ -49,13 +51,15 @@ function outcome(goal: PuzzleGoal, winner: string | null, draw: boolean): Verdic
   return winner === goal.player ? { result: "CLEARED", reason: "win" } : { result: "FAILED", reason: "lost" };
 }
 
-export function verdictText(v: Verdict): string {
+/** goal を渡すと、2 ターン以上の期限切れの文に期限を入れる */
+export function verdictText(v: Verdict, goal?: { limit: number | null; label: GoalLabel }): string {
   switch (v.result) {
     case "IN_PROGRESS":
       return t("verdict.playing");
     case "CLEARED":
       return t("verdict.cleared");
     case "FAILED":
+      if (v.reason === "deadline" && goal && goal.limit !== 1) return t("verdict.deadlineTurns", { deadline: goal.label.card });
       return t(`verdict.${v.reason}`);
     case "ERROR":
       return t("verdict.error", { message: v.message });

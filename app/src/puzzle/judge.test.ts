@@ -58,4 +58,13 @@ describe("judge", () => {
     });
     expect(v).toEqual({ result: "IN_PROGRESS" });
   });
+
+  it("turns: 期限のターン数を過ぎたら失敗（開始ターンを 1 と数える）", () => {
+    const g: PuzzleGoal = { type: "win", player: "p1", deadline: "turns", turns: 3 };
+    const awaiting = { state: "AWAITING" } as const;
+    expect(judge({ goal: g, startTurn: 1, engine: awaiting, events: [{ type: "turnBegan", turn: 3, player: "p1" }] }))
+      .toEqual({ result: "IN_PROGRESS" });
+    expect(judge({ goal: g, startTurn: 1, engine: awaiting, events: [{ type: "turnBegan", turn: 4, player: "p2" }] }))
+      .toEqual({ result: "FAILED", reason: "deadline" });
+  });
 });

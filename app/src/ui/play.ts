@@ -4,6 +4,7 @@ import { puzzleCardNames, type EngineStatus, type ForgeEngine } from "../engine/
 import type { CardView, Decision, GameEvent, GameView, Option } from "../engine/protocol";
 import { cardMeta, isCardDbLoaded, loadCardDb } from "../puzzle/carddb";
 import { markCleared } from "../puzzle/catalog";
+import { goalLabel, goalTurnLimit } from "../puzzle/goal";
 import { verdictText } from "../puzzle/judge";
 import { parseManaPool, ZONES, type PuzzleJson } from "../puzzle/schema";
 import { PuzzleSession, type SessionLogStep, type SessionState } from "../puzzle/session";
@@ -571,6 +572,7 @@ export class PlayPage {
       holdStack: this.holdStack,
       orderStack: this.orderStack,
       noDeadline: isPlaytest,
+      goal: goalInfo(s.puzzle),
       ...(view ? combatSets(view) : { attacking: new Set<string>(), blocking: new Set<string>() }),
     };
     const hooks: BoardHooks = {
@@ -606,7 +608,7 @@ export class PlayPage {
     const header = h("header.bar", null,
       h("button.back", { type: "button", onclick: () => this.onBack(), title: t(this.opts.backTitleKey) }, t(this.opts.backKey)),
       h("strong.ptitle", null, s.puzzle ? puzzleTitle(s.puzzle) : "…"),
-      h("span.chip.goal", { title: t(isPlaytest ? "header.playtestGoal.title" : "header.goal.title") }, t(isPlaytest ? "header.playtestGoal" : "header.goal")),
+      h("span.chip.goal", { title: t(isPlaytest ? "header.playtestGoal.title" : "header.goal.title") }, isPlaytest ? t("header.playtestGoal") : goalInfo(s.puzzle)?.label.chip ?? t("header.goal")),
       view ? h("span.turn", null, t("header.turn", { turn: view.turn, phase: phaseName(view.phase) })) : null,
       h("span.spacer"),
       engineBadge(this.engineStatus),
@@ -749,12 +751,12 @@ export class PlayPage {
         const resultNode = cleared
           ? h("div.result-row", null,
               h("span.result-trophy", { "aria-hidden": "true" }, "🏆"),
-              h("div.result", null, verdictText(s.verdict)),
+              h("div.result", null, verdictText(s.verdict, goalInfo(s.puzzle))),
               s.solutionSteps.length > 0
                 ? h("span.clear-steps-badge", null, t("verdict.clearedSteps", { n: s.solutionSteps.length }))
                 : null,
             )
-          : h("div.result", null, verdictText(s.verdict));
+          : h("div.result", null, verdictText(s.verdict, goalInfo(s.puzzle)));
         bar.append(resultNode,
           h("div.btns", null,
             h("button.on.big", { type: "button", onclick: () => { this.stopReplay(); void this.session.reset(); } }, t("action.again")),
@@ -1896,4 +1898,10 @@ function targetingOf(d: Decision | null): Targeting | null {
   if (!d || d.kind !== "TARGETS" || !d.source) return null;
   const a = d.promptArgs ?? {};
   return { cardId: d.source, text: localized(a.desc ?? "", a.descJa ?? null) };
+}
+
+/** 問題の勝利条件の表示と期限のターン数 */
+function goalInfo(p: PuzzleJson | null | undefined): { label: ReturnType<typeof goalLabel>; limit: number | null } | undefined {
+  if (!p) return undefined;
+  return { label: goalLabel(p.goal, p.game.activePlayer), limit: goalTurnLimit(p.goal) };
 }

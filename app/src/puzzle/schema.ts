@@ -4,6 +4,7 @@
 
 import type { ManaColor } from "../engine/protocol";
 import { t } from "../i18n";
+import { MAX_GOAL_TURNS } from "./goal";
 import { validateSolutionSteps, type SolutionStep } from "./solution";
 
 export const SCHEMA_VERSION = 1;
@@ -37,7 +38,10 @@ export interface PlayerDef {
 export interface PuzzleGoal {
   type: "win";
   player: string;
-  deadline: "current_turn" | "none";
+  /** 期限。意味は goal.ts を参照（"none" は一人回し専用） */
+  deadline: "current_turn" | "turns" | "unlimited" | "none";
+  /** deadline が "turns" のとき、開始ターンを 1 として相手のターンも含めて数えたターン数 */
+  turns?: number;
 }
 
 export interface PuzzleJson {
@@ -148,7 +152,12 @@ export function validatePuzzle(data: unknown): ValidationResult {
   if (typeof game.phase !== "string") errors.push(t("schema.phase"));
 
   const goal = data.goal;
-  if (!isObj(goal) || goal.type !== "win" || (goal.deadline !== "current_turn" && goal.deadline !== "none")) {
+  const deadlines = ["current_turn", "turns", "unlimited", "none"];
+  if (
+    !isObj(goal) || goal.type !== "win" || typeof goal.deadline !== "string" || !deadlines.includes(goal.deadline) ||
+    (goal.deadline === "turns" &&
+      (typeof goal.turns !== "number" || !Number.isInteger(goal.turns) || goal.turns < 1 || goal.turns > MAX_GOAL_TURNS))
+  ) {
     errors.push(t("schema.goal"));
   } else if (typeof goal.player !== "string" || !playerIds.has(goal.player)) {
     errors.push(t("schema.goalPlayer"));
